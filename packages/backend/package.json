@@ -4,8 +4,8 @@
   "description": "WebCAD REST API Server",
   "main": "dist/index.js",
   "scripts": {
-    "build": "npx tsc",
-    "dev": "npx ts-node-dev --respawn src/index.ts",
+    "build": "node ../../node_modules/typescript/bin/tsc",
+    "dev": "node ../../node_modules/ts-node-dev/lib/bin.js --respawn src/index.ts",
     "start": "node dist/index.js"
   },
   "dependencies": {

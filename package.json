@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "node ./node_modules/concurrently/dist/bin/concurrently.js \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev -w @webcad/frontend",
     "dev:backend": "npm run dev -w @webcad/backend",
     "build": "npm run build -w @webcad/shared && npm run build -w @webcad/kernel && npm run build -w @webcad/backend && npm run build -w @webcad/frontend",
@@ -17,7 +17,7 @@
     "build:frontend": "npm run build -w @webcad/frontend",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "clean": "npx rimraf packages/*/dist packages/*/.turbo node_modules/.cache"
+    "clean": "node ./node_modules/rimraf/dist/esm/bin.mjs packages/*/dist packages/*/.turbo node_modules/.cache"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
