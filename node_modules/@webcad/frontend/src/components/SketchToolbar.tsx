@@ -133,11 +133,12 @@ interface FlyoutItemProps {
   icon: React.ReactNode
   label: string
   shortcut?: string
+  description?: string
   active?: boolean
   onClick: () => void
 }
 
-function FlyoutItem({ icon, label, shortcut, active, onClick }: FlyoutItemProps) {
+function FlyoutItem({ icon, label, shortcut, description, active, onClick }: FlyoutItemProps) {
   return (
     <button
       className={`
