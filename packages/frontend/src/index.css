@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --cad-dark: #1a1d21;
+  --cad-darker: #131518;
+  --cad-panel: #252830;
+  --cad-border: #3a3f4b;
+  --cad-text: #e4e6eb;
+  --cad-text-dim: #9ca3af;
+  --cad-accent: #3b82f6;
+  --cad-accent-hover: #60a5fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--cad-darker);
+  color: var(--cad-text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cad-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cad-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4f5b;
+}
+
+/* Selection highlight */
+::selection {
+  background: var(--cad-accent);
+  color: white;
+}
+
+/* Input focus styles */
+input:focus, select:focus, textarea:focus, button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cad-accent);
+}
+
+/* Disable text selection on UI elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Panel styles */
+.cad-panel {
+  background: var(--cad-panel);
+  border: 1px solid var(--cad-border);
+  border-radius: 6px;
+}
+
+/* Button styles */
+.cad-btn {
+  @apply px-3 py-1.5 rounded text-sm font-medium transition-colors;
+  background: var(--cad-border);
+  color: var(--cad-text);
+}
+
+.cad-btn:hover {
+  background: #4a5568;
+}
+
+.cad-btn-primary {
+  background: var(--cad-accent);
+  color: white;
+}
+
+.cad-btn-primary:hover {
+  background: var(--cad-accent-hover);
+}
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: #1f2937;
+  color: white;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+}
+
+/* Canvas container */
+.canvas-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-container canvas {
+  display: block;
+}
+
+/* Feature tree item */
+.feature-item {
+  @apply flex items-center gap-2 px-2 py-1 rounded cursor-pointer;
+  transition: background-color 0.15s;
+}
+
+.feature-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.feature-item.selected {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Sketch mode overlay */
+.sketch-mode {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  background: var(--cad-accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 20px;
+  z-index: 100;
+}
+
