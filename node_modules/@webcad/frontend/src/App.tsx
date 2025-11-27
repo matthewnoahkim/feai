@@ -23,8 +23,10 @@ import { LinearPatternDialog } from './components/dialogs/LinearPatternDialog'
 import { CircularPatternDialog } from './components/dialogs/CircularPatternDialog'
 import { SketchDialog } from './components/dialogs/SketchDialog'
 import { Notifications } from './components/Notifications'
+import { ChatPanel, ChatToggleButton } from './components/chat'
 import { useDocumentStore } from './store/documentStore'
 import { useUIStore } from './store/uiStore'
+import { useChatStore } from './store/chatStore'
 
 function App() {
   const { document, createNewDocument } = useDocumentStore()
@@ -229,6 +231,10 @@ function App() {
       
       {/* Notifications */}
       <Notifications />
+      
+      {/* AI Chat Assistant */}
+      <ChatPanel />
+      <ChatToggleButton />
     </Layout>
   )
 }
