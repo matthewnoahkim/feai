@@ -6,6 +6,9 @@ import { Quaternion, Vector3 } from '@webcad/shared';
 import { Vec3 } from './vector';
 import { Mat4 } from './matrix';
 
+// Re-export Quaternion type
+export type { Quaternion };
+
 export class Quat implements Quaternion {
   constructor(
     public x: number = 0,

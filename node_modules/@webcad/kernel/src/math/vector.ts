@@ -2,9 +2,12 @@
 // Vector Mathematics
 // ============================================================================
 
-import { Vector2, Vector3, Vector4 } from '@webcad/shared';
+import { Vector2 as IVector2, Vector3 as IVector3, Vector4 as IVector4, Matrix4 as Matrix4Type, Quaternion as QuaternionType } from '@webcad/shared';
 
-export class Vec2 implements Vector2 {
+// Re-export interface types from shared
+export type { IVector2, IVector3, IVector4, Matrix4Type as Matrix4, QuaternionType as Quaternion };
+
+export class Vec2 implements IVector2 {
   constructor(public x: number = 0, public y: number = 0) {}
 
   static fromArray(arr: number[]): Vec2 {
@@ -27,11 +30,11 @@ export class Vec2 implements Vector2 {
     return [this.x, this.y];
   }
 
-  add(v: Vector2): Vec2 {
+  add(v: IVector2): Vec2 {
     return new Vec2(this.x + v.x, this.y + v.y);
   }
 
-  sub(v: Vector2): Vec2 {
+  sub(v: IVector2): Vec2 {
     return new Vec2(this.x - v.x, this.y - v.y);
   }
 
@@ -43,12 +46,11 @@ export class Vec2 implements Vector2 {
     return new Vec2(this.x / s, this.y / s);
   }
 
-  dot(v: Vector2): number {
+  dot(v: IVector2): number {
     return this.x * v.x + this.y * v.y;
   }
 
-  cross(v: Vector2): number {
-    // 2D cross product returns scalar (z component of 3D cross)
+  cross(v: IVector2): number {
     return this.x * v.y - this.y * v.x;
   }
 
@@ -73,28 +75,22 @@ export class Vec2 implements Vector2 {
   rotate(angle: number): Vec2 {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
-    return new Vec2(
-      this.x * cos - this.y * sin,
-      this.x * sin + this.y * cos
-    );
+    return new Vec2(this.x * cos - this.y * sin, this.x * sin + this.y * cos);
   }
 
-  distanceTo(v: Vector2): number {
+  distanceTo(v: IVector2): number {
     return this.sub(v).length();
   }
 
-  angleTo(v: Vector2): number {
+  angleTo(v: IVector2): number {
     return Math.atan2(v.y - this.y, v.x - this.x);
   }
 
-  lerp(v: Vector2, t: number): Vec2 {
-    return new Vec2(
-      this.x + (v.x - this.x) * t,
-      this.y + (v.y - this.y) * t
-    );
+  lerp(v: IVector2, t: number): Vec2 {
+    return new Vec2(this.x + (v.x - this.x) * t, this.y + (v.y - this.y) * t);
   }
 
-  equals(v: Vector2, epsilon: number = 1e-10): boolean {
+  equals(v: IVector2, epsilon: number = 1e-10): boolean {
     return Math.abs(this.x - v.x) < epsilon && Math.abs(this.y - v.y) < epsilon;
   }
 
@@ -106,16 +102,24 @@ export class Vec2 implements Vector2 {
     return new Vec2(Math.abs(this.x), Math.abs(this.y));
   }
 
-  min(v: Vector2): Vec2 {
+  min(v: IVector2): Vec2 {
     return new Vec2(Math.min(this.x, v.x), Math.min(this.y, v.y));
   }
 
-  max(v: Vector2): Vec2 {
+  max(v: IVector2): Vec2 {
     return new Vec2(Math.max(this.x, v.x), Math.max(this.y, v.y));
+  }
+
+  scale(s: number): Vec2 {
+    return this.mul(s);
+  }
+
+  subtract(v: IVector2): Vec2 {
+    return this.sub(v);
   }
 }
 
-export class Vec3 implements Vector3 {
+export class Vec3 implements IVector3 {
   constructor(public x: number = 0, public y: number = 0, public z: number = 0) {}
 
   static fromArray(arr: number[]): Vec3 {
@@ -150,27 +154,35 @@ export class Vec3 implements Vector3 {
     return [this.x, this.y, this.z];
   }
 
-  add(v: Vector3): Vec3 {
+  add(v: IVector3): Vec3 {
     return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z);
   }
 
-  sub(v: Vector3): Vec3 {
+  sub(v: IVector3): Vec3 {
     return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z);
+  }
+
+  subtract(v: IVector3): Vec3 {
+    return this.sub(v);
   }
 
   mul(s: number): Vec3 {
     return new Vec3(this.x * s, this.y * s, this.z * s);
   }
 
+  scale(s: number): Vec3 {
+    return this.mul(s);
+  }
+
   div(s: number): Vec3 {
     return new Vec3(this.x / s, this.y / s, this.z / s);
   }
 
-  dot(v: Vector3): number {
+  dot(v: IVector3): number {
     return this.x * v.x + this.y * v.y + this.z * v.z;
   }
 
-  cross(v: Vector3): Vec3 {
+  cross(v: IVector3): Vec3 {
     return new Vec3(
       this.y * v.z - this.z * v.y,
       this.z * v.x - this.x * v.z,
@@ -192,11 +204,11 @@ export class Vec3 implements Vector3 {
     return new Vec3(this.x / len, this.y / len, this.z / len);
   }
 
-  distanceTo(v: Vector3): number {
+  distanceTo(v: IVector3): number {
     return this.sub(v).length();
   }
 
-  lerp(v: Vector3, t: number): Vec3 {
+  lerp(v: IVector3, t: number): Vec3 {
     return new Vec3(
       this.x + (v.x - this.x) * t,
       this.y + (v.y - this.y) * t,
@@ -204,7 +216,7 @@ export class Vec3 implements Vector3 {
     );
   }
 
-  equals(v: Vector3, epsilon: number = 1e-10): boolean {
+  equals(v: IVector3, epsilon: number = 1e-10): boolean {
     return (
       Math.abs(this.x - v.x) < epsilon &&
       Math.abs(this.y - v.y) < epsilon &&
@@ -220,34 +232,27 @@ export class Vec3 implements Vector3 {
     return new Vec3(Math.abs(this.x), Math.abs(this.y), Math.abs(this.z));
   }
 
-  min(v: Vector3): Vec3 {
-    return new Vec3(
-      Math.min(this.x, v.x),
-      Math.min(this.y, v.y),
-      Math.min(this.z, v.z)
-    );
+  min(v: IVector3): Vec3 {
+    return new Vec3(Math.min(this.x, v.x), Math.min(this.y, v.y), Math.min(this.z, v.z));
   }
 
-  max(v: Vector3): Vec3 {
-    return new Vec3(
-      Math.max(this.x, v.x),
-      Math.max(this.y, v.y),
-      Math.max(this.z, v.z)
-    );
+  max(v: IVector3): Vec3 {
+    return new Vec3(Math.max(this.x, v.x), Math.max(this.y, v.y), Math.max(this.z, v.z));
   }
 
-  project(v: Vector3): Vec3 {
-    const denom = v.dot(v);
+  project(v: IVector3): Vec3 {
+    const vec = new Vec3(v.x, v.y, v.z);
+    const denom = vec.dot(vec);
     if (denom === 0) return Vec3.zero();
-    return new Vec3(v.x, v.y, v.z).mul(this.dot(v) / denom);
+    return vec.mul(this.dot(v) / denom);
   }
 
-  reflect(normal: Vector3): Vec3 {
+  reflect(normal: IVector3): Vec3 {
     const n = new Vec3(normal.x, normal.y, normal.z).normalize();
     return this.sub(n.mul(2 * this.dot(n)));
   }
 
-  angle(v: Vector3): number {
+  angle(v: IVector3): number {
     const denom = Math.sqrt(this.lengthSquared() * new Vec3(v.x, v.y, v.z).lengthSquared());
     if (denom === 0) return 0;
     const theta = this.dot(v) / denom;
@@ -259,7 +264,7 @@ export class Vec3 implements Vector3 {
   }
 }
 
-export class Vec4 implements Vector4 {
+export class Vec4 implements IVector4 {
   constructor(
     public x: number = 0,
     public y: number = 0,
@@ -283,11 +288,11 @@ export class Vec4 implements Vector4 {
     return [this.x, this.y, this.z, this.w];
   }
 
-  add(v: Vector4): Vec4 {
+  add(v: IVector4): Vec4 {
     return new Vec4(this.x + v.x, this.y + v.y, this.z + v.z, this.w + v.w);
   }
 
-  sub(v: Vector4): Vec4 {
+  sub(v: IVector4): Vec4 {
     return new Vec4(this.x - v.x, this.y - v.y, this.z - v.z, this.w - v.w);
   }
 
@@ -295,7 +300,7 @@ export class Vec4 implements Vector4 {
     return new Vec4(this.x * s, this.y * s, this.z * s, this.w * s);
   }
 
-  dot(v: Vector4): number {
+  dot(v: IVector4): number {
     return this.x * v.x + this.y * v.y + this.z * v.z + this.w * v.w;
   }
 
@@ -315,3 +320,5 @@ export class Vec4 implements Vector4 {
   }
 }
 
+// Export Vec3 as Vector3 for compatibility with code that uses `new Vector3()`
+export { Vec3 as Vector3, Vec2 as Vector2, Vec4 as Vector4 };
