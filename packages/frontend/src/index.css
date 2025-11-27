@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,6 +13,16 @@
   --cad-text-dim: #9ca3af;
   --cad-accent: #3b82f6;
   --cad-accent-hover: #60a5fa;
+  
+  /* Sketch colors */
+  --sketch-entity: #3b82f6;
+  --sketch-construction: #f59e0b;
+  --sketch-preview: #22c55e;
+  --sketch-constrained: #000000;
+  --sketch-underconstrained: #3b82f6;
+  --sketch-inference-h: #ef4444;
+  --sketch-inference-v: #22c55e;
+  --snap-highlight: #f59e0b;
 }
 
 * {
@@ -25,7 +37,7 @@ html, body, #root {
   overflow: hidden;
   background: var(--cad-darker);
   color: var(--cad-text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
 /* Custom scrollbar */
@@ -92,6 +104,18 @@ input:focus, select:focus, textarea:focus, button:focus {
   background: var(--cad-accent-hover);
 }
 
+/* Keyboard shortcuts */
+kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--cad-panel);
+  border: 1px solid var(--cad-border);
+  border-radius: 4px;
+  color: var(--cad-text-dim);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 /* Tooltip */
 .tooltip {
   position: relative;
@@ -143,18 +167,157 @@ input:focus, select:focus, textarea:focus, button:focus {
   background: rgba(59, 130, 246, 0.2);
 }
 
-/* Sketch mode overlay */
-.sketch-mode {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 6px 16px;
-  background: var(--cad-accent);
+/* Sketch mode indicator */
+.sketch-mode-badge {
+  @apply px-4 py-2 text-sm font-medium rounded-full shadow-lg;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   color: white;
-  font-size: 13px;
-  font-weight: 500;
-  border-radius: 20px;
-  z-index: 100;
+  animation: pulseGlow 2s infinite;
 }
 
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.7);
+  }
+}
+
+/* Tool flyout animation */
+@keyframes flyoutIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tool-flyout {
+  animation: flyoutIn 0.15s ease-out;
+}
+
+/* Dimension input */
+.dimension-input {
+  @apply bg-cad-dark border border-cad-accent rounded-lg shadow-xl overflow-hidden;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sketch cursor styles */
+.cursor-crosshair {
+  cursor: crosshair;
+}
+
+.cursor-draw {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2'%3E%3Cline x1='12' y1='0' x2='12' y2='24'/%3E%3Cline x1='0' y1='12' x2='24' y2='12'/%3E%3C/svg%3E") 12 12, crosshair;
+}
+
+/* Constraint icons */
+.constraint-icon {
+  @apply inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded;
+}
+
+.constraint-horizontal {
+  @apply bg-red-500/20 text-red-400;
+}
+
+.constraint-vertical {
+  @apply bg-green-500/20 text-green-400;
+}
+
+.constraint-coincident {
+  @apply bg-yellow-500/20 text-yellow-400;
+}
+
+.constraint-perpendicular {
+  @apply bg-purple-500/20 text-purple-400;
+}
+
+.constraint-parallel {
+  @apply bg-blue-500/20 text-blue-400;
+}
+
+/* Tool button active state */
+.tool-button-active {
+  @apply bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-lg;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Grid overlay for sketch mode */
+.sketch-grid {
+  background-image: 
+    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Sketch entity colors */
+.sketch-entity-line { stroke: var(--sketch-entity); }
+.sketch-entity-circle { stroke: var(--sketch-entity); }
+.sketch-entity-arc { stroke: var(--sketch-entity); }
+.sketch-entity-construction { stroke: var(--sketch-construction); stroke-dasharray: 5, 5; }
+.sketch-entity-preview { stroke: var(--sketch-preview); stroke-dasharray: 8, 4; }
+
+/* Snap indicators */
+.snap-indicator {
+  @apply absolute pointer-events-none;
+  animation: snapPulse 0.5s ease-out;
+}
+
+@keyframes snapPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Status bar styling */
+.status-bar {
+  @apply h-7 px-3 text-xs select-none;
+  background: linear-gradient(180deg, var(--cad-darker), #0f1012);
+  border-top: 1px solid var(--cad-border);
+}
+
+/* Notification animations */
+.notification-enter {
+  animation: notificationSlideIn 0.3s ease-out;
+}
+
+@keyframes notificationSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Glass effect for panels */
+.glass-panel {
+  background: rgba(37, 40, 48, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(58, 63, 75, 0.5);
+}
+
+/* Smooth transitions */
+.smooth-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}

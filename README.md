@@ -1,8 +1,8 @@
 # WebCAD - Web-Based CAD Software
 
-A professional-grade, web-based Computer-Aided Design (CAD) system inspired by Onshape, featuring parametric solid modeling, assembly design, technical drawings, and a comprehensive REST API.
+A professional-grade, web-based Computer-Aided Design (CAD) system, featuring parametric solid modeling, assembly design, technical drawings, and a comprehensive REST API.
 
-## 🚀 Features
+## Features
 
 ### Sketching System (2D CAD)
 - **Primitives**: Lines, circles, arcs, rectangles, splines, ellipses, construction geometry
@@ -74,7 +74,7 @@ webcad/
 | State Management | Zustand |
 | Build Tool | Vite |
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -105,7 +105,7 @@ The application will be available at:
 npm run build
 ```
 
-## 📡 REST API
+## REST API
 
 The WebCAD REST API provides programmatic access to all CAD operations.
 
@@ -205,7 +205,7 @@ const exportResponse = await fetch(
 const stepFile = await exportResponse.blob();
 ```
 
-## 🎨 UI Components
+## UI Components
 
 The frontend provides a professional CAD interface with:
 
@@ -228,7 +228,7 @@ The frontend provides a professional CAD interface with:
 | `W` | Toggle wireframe |
 | `G` | Toggle grid |
 
-## 🔧 Development
+## Development
 
 ### Project Structure
 
@@ -270,11 +270,11 @@ npm test
 
 The project uses TypeScript strict mode and follows standard ESLint/Prettier configuration.
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -282,7 +282,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📚 References
+## References
 
 - [NURBS Book](https://www.springer.com/gp/book/9783642973857) - The NURBS Book by Piegl & Tiller
 - [Open CASCADE](https://www.opencascade.com/) - B-rep modeling concepts

@@ -5,18 +5,39 @@
 import { create } from 'zustand'
 import { api } from '../api/client'
 
-export interface SketchEntity {
-  id: string
-  type: 'line' | 'circle' | 'arc' | 'rectangle' | 'spline' | 'point'
-  construction: boolean
-  data: Record<string, any>
-}
+export type SketchConstraintType = 
+  | 'coincident'     // Two points share location, or point on curve
+  | 'horizontal'     // Line or point pair is horizontal
+  | 'vertical'       // Line or point pair is vertical
+  | 'parallel'       // Two lines are parallel
+  | 'perpendicular'  // Two lines are perpendicular (90°)
+  | 'tangent'        // Line tangent to curve, or curves tangent
+  | 'equal'          // Two lengths or radii are equal
+  | 'concentric'     // Two circles share center
+  | 'midpoint'       // Point at midpoint of line
+  | 'symmetric'      // Two items symmetric about a line
+  | 'fixed'          // Entity position is locked
+
+export type ConstraintStatus = 'satisfied' | 'unsatisfied' | 'redundant'
 
 export interface SketchConstraint {
   id: string
-  type: string
-  entities: string[]
-  value?: number
+  type: SketchConstraintType
+  entityIds: string[]      // IDs of entities involved
+  referenceId?: string     // For symmetric: the mirror line ID
+  value?: number           // For dimensional constraints (angle, etc.)
+  status: ConstraintStatus // Whether constraint is satisfied
+  driven?: boolean         // If true, this is a reference constraint (doesn't drive geometry)
+}
+
+export type SketchStatus = 'under-constrained' | 'fully-constrained' | 'over-constrained'
+
+export interface SketchEntity {
+  id: string
+  type: 'line' | 'circle' | 'arc' | 'rectangle' | 'polygon' | 'spline' | 'point'
+  construction: boolean
+  data: Record<string, any>
+  constraintStatus?: 'under' | 'fully' | 'over' // Constraint status of this entity
 }
 
 export interface Sketch {
@@ -26,6 +47,7 @@ export interface Sketch {
   entities: SketchEntity[]
   constraints: SketchConstraint[]
   solved: boolean
+  status: SketchStatus  // Overall constraint status
 }
 
 export interface Feature {
@@ -108,6 +130,8 @@ interface DocumentState {
   updateSketchEntity: (sketchId: string, entityId: string, data: Record<string, any>) => void
   deleteSketchEntity: (sketchId: string, entityId: string) => void
   addSketchConstraint: (sketchId: string, constraint: Omit<SketchConstraint, 'id'>) => void
+  deleteSketchConstraint: (sketchId: string, constraintId: string) => void
+  updateEntityConstraintStatus: (sketchId: string) => void
   solveSketch: (sketchId: string) => void
   
   // Part operations
@@ -437,14 +461,20 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       plane = { origin: [0, 0, 0], normal: [1, 0, 0], xAxis: [0, 1, 0] }
     }
     
+    // Count existing sketches to generate sequential name
+    const partStudio = document.partStudios.find(ps => ps.id === partStudioId)
+    const existingSketchCount = partStudio?.sketches.size || 0
+    const sketchNumber = existingSketchCount + 1
+    
     const sketchId = generateId()
     const sketch: Sketch = {
       id: sketchId,
-      name: `Sketch ${Date.now()}`,
+      name: `Sketch ${sketchNumber}`,
       plane,
       entities: [],
       constraints: [],
-      solved: true
+      solved: true,
+      status: 'under-constrained'
     }
     
     // Add sketch as a feature
@@ -568,7 +598,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         const sketch = ps.sketches.get(sketchId)
         if (!sketch) return ps
         
-        const newConstraint: SketchConstraint = { ...constraint, id: generateId() }
+        const newConstraint: SketchConstraint = { 
+          ...constraint, 
+          id: generateId(),
+          status: constraint.status || 'satisfied'
+        }
         const updatedSketch = {
           ...sketch,
           constraints: [...sketch.constraints, newConstraint]
@@ -587,9 +621,299 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     })
   },
   
+  deleteSketchConstraint: (sketchId, constraintId) => {
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        const sketch = ps.sketches.get(sketchId)
+        if (!sketch) return ps
+        
+        const updatedSketch = {
+          ...sketch,
+          constraints: sketch.constraints.filter(c => c.id !== constraintId)
+        }
+        
+        const sketches = new Map(ps.sketches)
+        sketches.set(sketchId, updatedSketch)
+        
+        return { ...ps, sketches }
+      })
+      
+      return {
+        document: { ...state.document, partStudios },
+        isDirty: true
+      }
+    })
+  },
+  
+  updateEntityConstraintStatus: (sketchId) => {
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        const sketch = ps.sketches.get(sketchId)
+        if (!sketch) return ps
+        
+        // Count constraints per entity
+        const entityConstraintCount = new Map<string, number>()
+        sketch.constraints.forEach(constraint => {
+          constraint.entityIds.forEach(entityId => {
+            entityConstraintCount.set(entityId, (entityConstraintCount.get(entityId) || 0) + 1)
+          })
+        })
+        
+        // Update entity constraint status based on constraint count
+        // This is a simplified heuristic - real solver would be more sophisticated
+        const updatedEntities = sketch.entities.map(entity => {
+          const constraintCount = entityConstraintCount.get(entity.id) || 0
+          let constraintStatus: 'under' | 'fully' | 'over' = 'under'
+          
+          // Rough heuristic: 
+          // - Lines need 4 constraints (2 endpoints x 2 DOF each)
+          // - Circles need 3 constraints (center x,y + radius)
+          // - Points need 2 constraints (x, y)
+          const requiredConstraints = entity.type === 'line' ? 3 : 
+                                       entity.type === 'circle' ? 3 : 
+                                       entity.type === 'arc' ? 4 :
+                                       entity.type === 'point' ? 2 : 3
+          
+          if (constraintCount >= requiredConstraints + 2) {
+            constraintStatus = 'over'
+          } else if (constraintCount >= requiredConstraints) {
+            constraintStatus = 'fully'
+          } else {
+            constraintStatus = 'under'
+          }
+          
+          return { ...entity, constraintStatus }
+        })
+        
+        // Determine overall sketch status
+        const hasOver = updatedEntities.some(e => e.constraintStatus === 'over')
+        const allFully = updatedEntities.every(e => e.constraintStatus === 'fully' || e.constraintStatus === 'over')
+        const overallStatus: SketchStatus = hasOver ? 'over-constrained' : 
+                                             allFully ? 'fully-constrained' : 'under-constrained'
+        
+        const updatedSketch = {
+          ...sketch,
+          entities: updatedEntities,
+          status: overallStatus
+        }
+        
+        const sketches = new Map(ps.sketches)
+        sketches.set(sketchId, updatedSketch)
+        
+        return { ...ps, sketches }
+      })
+      
+      return {
+        document: { ...state.document, partStudios }
+      }
+    })
+  },
+  
   solveSketch: (sketchId) => {
-    // Placeholder for constraint solving
-    console.log('Solving sketch:', sketchId)
+    const { document } = get()
+    if (!document) return
+    
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        const sketch = ps.sketches.get(sketchId)
+        if (!sketch) return ps
+        
+        // Apply constraints to modify entity geometry
+        const entities = [...sketch.entities]
+        const constraints = sketch.constraints
+        
+        constraints.forEach(constraint => {
+          try {
+            switch (constraint.type) {
+              case 'horizontal': {
+                // Make line horizontal
+                const entityId = constraint.entityIds[0]
+                const entity = entities.find(e => e.id === entityId)
+                if (entity?.type === 'line' && entity.data.start && entity.data.end) {
+                  // Keep start point, adjust end point Y to match
+                  const avgY = (entity.data.start.y + entity.data.end.y) / 2
+                  entity.data.start = { ...entity.data.start, y: avgY }
+                  entity.data.end = { ...entity.data.end, y: avgY }
+                }
+                break
+              }
+              
+              case 'vertical': {
+                // Make line vertical
+                const entityId = constraint.entityIds[0]
+                const entity = entities.find(e => e.id === entityId)
+                if (entity?.type === 'line' && entity.data.start && entity.data.end) {
+                  const avgX = (entity.data.start.x + entity.data.end.x) / 2
+                  entity.data.start = { ...entity.data.start, x: avgX }
+                  entity.data.end = { ...entity.data.end, x: avgX }
+                }
+                break
+              }
+              
+              case 'equal': {
+                // Make two lines equal length
+                if (constraint.entityIds.length >= 2) {
+                  const entity1 = entities.find(e => e.id === constraint.entityIds[0])
+                  const entity2 = entities.find(e => e.id === constraint.entityIds[1])
+                  
+                  if (entity1?.type === 'line' && entity2?.type === 'line') {
+                    const len1 = Math.hypot(
+                      entity1.data.end.x - entity1.data.start.x,
+                      entity1.data.end.y - entity1.data.start.y
+                    )
+                    const len2 = Math.hypot(
+                      entity2.data.end.x - entity2.data.start.x,
+                      entity2.data.end.y - entity2.data.start.y
+                    )
+                    
+                    // Scale entity2 to match entity1's length
+                    const avgLen = (len1 + len2) / 2
+                    const scale = avgLen / len2
+                    
+                    const dx = entity2.data.end.x - entity2.data.start.x
+                    const dy = entity2.data.end.y - entity2.data.start.y
+                    
+                    entity2.data.end = {
+                      x: entity2.data.start.x + dx * scale,
+                      y: entity2.data.start.y + dy * scale,
+                      z: entity2.data.start.z || 0
+                    }
+                  }
+                  
+                  // Equal radius for circles
+                  if (entity1?.type === 'circle' && entity2?.type === 'circle') {
+                    const avgRadius = (entity1.data.radius + entity2.data.radius) / 2
+                    entity2.data.radius = avgRadius
+                  }
+                }
+                break
+              }
+              
+              case 'parallel': {
+                // Make two lines parallel
+                if (constraint.entityIds.length >= 2) {
+                  const entity1 = entities.find(e => e.id === constraint.entityIds[0])
+                  const entity2 = entities.find(e => e.id === constraint.entityIds[1])
+                  
+                  if (entity1?.type === 'line' && entity2?.type === 'line') {
+                    // Get direction of line1
+                    const dx1 = entity1.data.end.x - entity1.data.start.x
+                    const dy1 = entity1.data.end.y - entity1.data.start.y
+                    const len1 = Math.hypot(dx1, dy1)
+                    
+                    // Get length of line2
+                    const dx2 = entity2.data.end.x - entity2.data.start.x
+                    const dy2 = entity2.data.end.y - entity2.data.start.y
+                    const len2 = Math.hypot(dx2, dy2)
+                    
+                    if (len1 > 0 && len2 > 0) {
+                      // Adjust line2 direction to match line1
+                      const unitX = dx1 / len1
+                      const unitY = dy1 / len1
+                      
+                      entity2.data.end = {
+                        x: entity2.data.start.x + unitX * len2,
+                        y: entity2.data.start.y + unitY * len2,
+                        z: entity2.data.start.z || 0
+                      }
+                    }
+                  }
+                }
+                break
+              }
+              
+              case 'perpendicular': {
+                // Make two lines perpendicular
+                if (constraint.entityIds.length >= 2) {
+                  const entity1 = entities.find(e => e.id === constraint.entityIds[0])
+                  const entity2 = entities.find(e => e.id === constraint.entityIds[1])
+                  
+                  if (entity1?.type === 'line' && entity2?.type === 'line') {
+                    const dx1 = entity1.data.end.x - entity1.data.start.x
+                    const dy1 = entity1.data.end.y - entity1.data.start.y
+                    const len1 = Math.hypot(dx1, dy1)
+                    
+                    const dx2 = entity2.data.end.x - entity2.data.start.x
+                    const dy2 = entity2.data.end.y - entity2.data.start.y
+                    const len2 = Math.hypot(dx2, dy2)
+                    
+                    if (len1 > 0 && len2 > 0) {
+                      // Rotate line1's direction by 90°
+                      const perpX = -dy1 / len1
+                      const perpY = dx1 / len1
+                      
+                      entity2.data.end = {
+                        x: entity2.data.start.x + perpX * len2,
+                        y: entity2.data.start.y + perpY * len2,
+                        z: entity2.data.start.z || 0
+                      }
+                    }
+                  }
+                }
+                break
+              }
+              
+              case 'concentric': {
+                // Make two circles share the same center
+                if (constraint.entityIds.length >= 2) {
+                  const entity1 = entities.find(e => e.id === constraint.entityIds[0])
+                  const entity2 = entities.find(e => e.id === constraint.entityIds[1])
+                  
+                  if ((entity1?.type === 'circle' || entity1?.type === 'arc') && 
+                      (entity2?.type === 'circle' || entity2?.type === 'arc')) {
+                    entity2.data.center = { ...entity1.data.center }
+                  }
+                }
+                break
+              }
+              
+              case 'coincident': {
+                // Make two points coincide
+                // This is a simplified implementation
+                if (constraint.entityIds.length >= 2) {
+                  const entity1 = entities.find(e => e.id === constraint.entityIds[0])
+                  const entity2 = entities.find(e => e.id === constraint.entityIds[1])
+                  
+                  // Various combinations of coincident
+                  if (entity1?.type === 'point' && entity2?.type === 'point') {
+                    entity2.data = { ...entity1.data }
+                  }
+                }
+                break
+              }
+              
+              // Other constraints would be implemented similarly
+            }
+          } catch (e) {
+            console.warn('Constraint solving error:', e)
+          }
+        })
+        
+        const updatedSketch = {
+          ...sketch,
+          entities,
+          solved: true
+        }
+        
+        const sketches = new Map(ps.sketches)
+        sketches.set(sketchId, updatedSketch)
+        
+        return { ...ps, sketches }
+      })
+      
+      return {
+        document: { ...state.document, partStudios }
+      }
+    })
+    
+    // Update constraint status after solving
+    get().updateEntityConstraintStatus(sketchId)
   },
   
   updatePartMaterial: (partId, material) => {

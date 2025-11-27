@@ -2,7 +2,7 @@
  * 3D Viewport - Interactive Three.js scene for CAD visualization
  */
 
-import React, { useRef, useMemo, useCallback, useEffect } from 'react'
+import React, { useRef, useMemo, useCallback, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber'
 import { 
   OrbitControls, 
@@ -504,9 +504,43 @@ function CanvasEventHandler() {
 
 export function Viewport3D() {
   const { clearSelection } = useUIStore()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  
+  // Handle resize using ResizeObserver for responsive canvas
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    
+    const updateSize = () => {
+      setSize({
+        width: container.clientWidth,
+        height: container.clientHeight
+      })
+    }
+    
+    // Initial size
+    updateSize()
+    
+    // Use ResizeObserver for responsive updates
+    const resizeObserver = new ResizeObserver(updateSize)
+    resizeObserver.observe(container)
+    
+    // Also listen for window resize as fallback
+    window.addEventListener('resize', updateSize)
+    
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateSize)
+    }
+  }, [])
   
   return (
-    <div className="w-full h-full canvas-container">
+    <div 
+      ref={containerRef}
+      className="w-full h-full absolute inset-0"
+      style={{ minHeight: '100%', minWidth: '100%' }}
+    >
       <Canvas
         shadows
         gl={{ 
@@ -515,10 +549,12 @@ export function Viewport3D() {
           powerPreference: 'high-performance'
         }}
         camera={{ position: [100, 80, 100], fov: 45, near: 0.1, far: 5000 }}
+        style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => {
           gl.setClearColor('#1a1d21')
         }}
         onPointerMissed={() => clearSelection()}
+        resize={{ scroll: false, debounce: { scroll: 0, resize: 0 } }}
       >
         <Scene />
         <CanvasEventHandler />
