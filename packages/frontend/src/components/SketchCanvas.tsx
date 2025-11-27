@@ -1759,7 +1759,7 @@ export function SketchCanvas() {
             
             // Find intersections with other entities
             const intersections = findEntityIntersections(entity, entities, i)
-            const trimPortion = getLineTrimPortion(entity.data, worldPoint, intersections)
+            const trimPortion = getLineTrimPortion(entity.data as any, worldPoint, intersections)
             
             if (trimPortion) {
               if (intersections.length === 0) {
@@ -2688,7 +2688,8 @@ function drawConstraintIcons(
     if (firstEntity.type === 'line' && firstEntity.data.start && firstEntity.data.end) {
       const mid = {
         x: (firstEntity.data.start.x + firstEntity.data.end.x) / 2,
-        y: (firstEntity.data.start.y + firstEntity.data.end.y) / 2
+        y: (firstEntity.data.start.y + firstEntity.data.end.y) / 2,
+        z: 0
       }
       iconPos = worldToCanvas(mid, canvas, zoom, pan)
       iconPos.y -= 15 // Offset above the line
@@ -3819,7 +3820,7 @@ function drawDrawingPreview(
     
     // If entities are selected, draw offset preview
     if (drawing.selectedEntityIds.length > 0 && entities.length > 0) {
-      const entityIds = Array.from(entities.keys ? entities.keys() : Object.keys(entities))
+      const entityIds = entities.map((e: any) => e?.id).filter(Boolean) as string[]
       
       drawing.selectedEntityIds.forEach(id => {
         // Find entity by ID
@@ -3990,7 +3991,7 @@ function drawDrawingPreview(
     
     // Draw selected entities
     if (drawing.selectedEntityIds.length > 0 && entities.length > 0) {
-      const entityIds = Array.from(entities.keys ? entities.keys() : Object.keys(entities))
+      const entityIds = entities.map((e: any) => e?.id).filter(Boolean) as string[]
       
       drawing.selectedEntityIds.forEach(id => {
         let entity: any = null
@@ -4035,7 +4036,7 @@ function drawDrawingPreview(
     
     // Draw mirror line highlight
     if (drawing.mirrorLineId && entities.length > 0) {
-      const entityIds = Array.from(entities.keys ? entities.keys() : Object.keys(entities))
+      const entityIds = entities.map((e: any) => e?.id).filter(Boolean) as string[]
       let mirrorLineEntity: any = null
       
       for (let i = 0; i < entityIds.length; i++) {

@@ -72,11 +72,11 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
       }
     }
     
-    document?.addEventListener('click', handleClickOutside)
+    (document as any)?.addEventListener('click', handleClickOutside)
     window.addEventListener('keydown', handleEscape)
     
     return () => {
-      document?.removeEventListener('click', handleClickOutside)
+      (document as any)?.removeEventListener('click', handleClickOutside)
       window.removeEventListener('keydown', handleEscape)
     }
   }, [onClose])

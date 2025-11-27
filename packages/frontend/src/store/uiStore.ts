@@ -53,6 +53,7 @@ export type ConstraintType =
   | 'tangent' 
   | 'equal'
   | 'fixed'
+  | 'midpoint'
 
 export interface Selection {
   type: SelectionType
@@ -221,7 +222,7 @@ interface UIState {
   setDrawingConstraints: (constraints: ConstraintType[]) => void
   toggleArcMode: () => void
   setModifierKeys: (shift: boolean, ctrl: boolean, alt?: boolean) => void
-  showDimensionInput: (type: 'length' | 'radius' | 'diameter' | 'angle' | 'sides', position: Point2D, value?: number, entityId?: string) => void
+  showDimensionInput: (type: 'length' | 'radius' | 'diameter' | 'angle' | 'sides' | 'width' | 'height', position: Point2D, value?: number, entityId?: string) => void
   hideDimensionInput: () => void
   setDimensionValue: (value: number) => void
   setPolygonSides: (sides: number) => void
