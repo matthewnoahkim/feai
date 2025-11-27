@@ -249,6 +249,7 @@ interface UIState {
   
   openDialog: (dialogId: string, data?: any) => void
   closeDialog: () => void
+  setDialogData: (data: any) => void
   
   addNotification: (type: 'info' | 'success' | 'warning' | 'error', message: string) => void
   removeNotification: (id: string) => void
@@ -881,6 +882,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   openDialog: (dialogId, data) => set({ activeDialog: dialogId, dialogData: data }),
   
   closeDialog: () => set({ activeDialog: null, dialogData: null }),
+  
+  setDialogData: (data) => set((state) => ({ dialogData: { ...state.dialogData, ...data } })),
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(2, 9)

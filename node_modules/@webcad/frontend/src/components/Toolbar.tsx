@@ -17,6 +17,7 @@ import {
   Minus,
   Spline,
   RotateCcw,
+  RotateCw,
   Move,
   Layers,
   Grid3x3,
@@ -95,6 +96,30 @@ export function Toolbar() {
     openDialog('chamfer')
   }
   
+  const handleShell = () => {
+    openDialog('shell')
+  }
+  
+  const handleMirrorFeature = () => {
+    openDialog('mirror-feature')
+  }
+  
+  const handleLinearPattern = () => {
+    openDialog('linear-pattern')
+  }
+  
+  const handleCircularPattern = () => {
+    openDialog('circular-pattern')
+  }
+  
+  const handleSweep = () => {
+    openDialog('sweep')
+  }
+  
+  const handleLoft = () => {
+    openDialog('loft')
+  }
+  
   const handleSketch = () => {
     openDialog('sketch')
   }
@@ -132,19 +157,20 @@ export function Toolbar() {
   const modelTools = [
     { icon: <Box size={20} />, label: 'Extrude', action: handleExtrude },
     { icon: <RotateCcw size={20} />, label: 'Revolve', action: handleRevolve },
-    { icon: <Layers size={20} />, label: 'Loft', action: () => addNotification('info', 'Loft: Select multiple profiles') },
-    { icon: <CornerUpRight size={20} />, label: 'Sweep', action: () => addNotification('info', 'Sweep: Select profile and path') },
+    { icon: <Layers size={20} />, label: 'Loft', action: handleLoft },
+    { icon: <CornerUpRight size={20} />, label: 'Sweep', action: handleSweep },
   ]
   
   const modifyTools = [
     { icon: <Circle size={20} />, label: 'Fillet', action: handleFillet },
     { icon: <Scissors size={20} />, label: 'Chamfer', action: handleChamfer },
-    { icon: <Shell size={20} />, label: 'Shell', action: () => addNotification('info', 'Shell: Select faces to remove') },
+    { icon: <Shell size={20} />, label: 'Shell', action: handleShell },
   ]
   
   const patternTools = [
-    { icon: <Copy size={20} />, label: 'Pattern', action: () => addNotification('info', 'Pattern: Select features to pattern') },
-    { icon: <FlipHorizontal size={20} />, label: 'Mirror', action: () => addNotification('info', 'Mirror: Select features and mirror plane') },
+    { icon: <Grid3x3 size={20} />, label: 'Linear', action: handleLinearPattern },
+    { icon: <RotateCw size={20} />, label: 'Circular', action: handleCircularPattern },
+    { icon: <FlipHorizontal size={20} />, label: 'Mirror', action: handleMirrorFeature },
   ]
 
   return (

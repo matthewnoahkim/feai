@@ -199,6 +199,24 @@ export function StatusBar() {
         </div>
       )}
 
+      {/* View controls hint */}
+      {!sketchMode && (
+        <div className="flex items-center gap-3 mr-3 text-cad-text-dim text-[10px]">
+          <span className="flex items-center gap-1">
+            <MousePointer size={10} />
+            Left: Rotate
+          </span>
+          <span className="flex items-center gap-1">
+            <Move size={10} />
+            Middle: Pan
+          </span>
+          <span className="flex items-center gap-1">
+            <ZoomIn size={10} />
+            Scroll: Zoom
+          </span>
+        </div>
+      )}
+
       {/* System status */}
       <div className="flex items-center gap-1 text-cad-text-dim">
         <Cpu size={12} />
