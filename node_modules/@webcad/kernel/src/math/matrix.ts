@@ -6,9 +6,6 @@ import { Matrix4 as Matrix4Type, Vector3 } from '@webcad/shared';
 import { Vec3, Vec4 } from './vector';
 import { Quat } from './quaternion';
 
-// Re-export Matrix4 type from shared
-export type { Matrix4Type as Matrix4 };
-
 export class Mat4 {
   // Column-major storage for WebGL compatibility
   public elements: Float64Array;
@@ -433,4 +430,7 @@ export class Mat4 {
     return m;
   }
 }
+
+// Export Mat4 as Matrix4 for code that uses Matrix4 as a constructor
+export { Mat4 as Matrix4 };
 

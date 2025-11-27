@@ -3,14 +3,16 @@
  * Solves assembly constraints to position components
  */
 
-import { Vector3, Matrix4, Quaternion } from '../math/vector'
+import { Vector3, Vec3 } from '../math/vector'
+import { Mat4, Matrix4 } from '../math/matrix'
+import { Quat, Quaternion } from '../math/quaternion'
 import { MateType } from '@webcad/shared'
 
 export interface MateConnector {
   id: string
-  position: Vector3
-  normal: Vector3
-  xAxis: Vector3
+  position: { x: number; y: number; z: number }
+  normal: { x: number; y: number; z: number }
+  xAxis: { x: number; y: number; z: number }
 }
 
 export interface AssemblyMate {
@@ -31,110 +33,112 @@ export interface AssemblyMate {
 
 export interface ComponentTransform {
   componentId: string
-  position: Vector3
-  rotation: Quaternion
-  matrix: Matrix4
+  position: { x: number; y: number; z: number }
+  rotation: { x: number; y: number; z: number; w: number }
+  matrix: Mat4
 }
 
 /**
  * Calculates the transformation matrix for a mate connector
  */
-function mateConnectorMatrix(connector: MateConnector): Matrix4 {
-  const zAxis = connector.normal.normalize()
-  const xAxis = connector.xAxis.normalize()
+function mateConnectorMatrix(connector: MateConnector): Mat4 {
+  const zAxis = new Vec3(connector.normal.x, connector.normal.y, connector.normal.z).normalize()
+  const xAxis = new Vec3(connector.xAxis.x, connector.xAxis.y, connector.xAxis.z).normalize()
   const yAxis = zAxis.cross(xAxis).normalize()
   
-  return new Matrix4(
-    xAxis.x, yAxis.x, zAxis.x, connector.position.x,
-    xAxis.y, yAxis.y, zAxis.y, connector.position.y,
-    xAxis.z, yAxis.z, zAxis.z, connector.position.z,
-    0, 0, 0, 1
-  )
+  const m = new Mat4()
+  const e = m.elements
+  
+  e[0] = xAxis.x; e[4] = yAxis.x; e[8] = zAxis.x; e[12] = connector.position.x
+  e[1] = xAxis.y; e[5] = yAxis.y; e[9] = zAxis.y; e[13] = connector.position.y
+  e[2] = xAxis.z; e[6] = yAxis.z; e[10] = zAxis.z; e[14] = connector.position.z
+  e[3] = 0; e[7] = 0; e[11] = 0; e[15] = 1
+  
+  return m
 }
 
 /**
  * Solve a fastened mate (fully constrained - removes all DOF)
  */
-function solveFastenedMate(mate: AssemblyMate): Matrix4 {
+function solveFastenedMate(mate: AssemblyMate): Mat4 {
   const m1 = mateConnectorMatrix(mate.connector1)
   const m2 = mateConnectorMatrix(mate.connector2)
   
-  // Component 2 is positioned so connector2 aligns with connector1
   const m2Inv = m2.inverse()
+  if (!m2Inv) return Mat4.identity()
   return m1.multiply(m2Inv)
 }
 
 /**
  * Solve a revolute mate (allows rotation about one axis)
  */
-function solveRevoluteMate(mate: AssemblyMate): Matrix4 {
+function solveRevoluteMate(mate: AssemblyMate): Mat4 {
   const m1 = mateConnectorMatrix(mate.connector1)
   const m2 = mateConnectorMatrix(mate.connector2)
   
-  // Align z-axes (rotation axis), apply angle offset
   const angle = mate.angle || 0
-  const rotation = Matrix4.rotationZ(angle)
+  const rotation = Mat4.rotationZ(angle)
   
   const m2Inv = m2.inverse()
+  if (!m2Inv) return Mat4.identity()
   return m1.multiply(rotation).multiply(m2Inv)
 }
 
 /**
  * Solve a slider mate (allows translation along one axis)
  */
-function solveSliderMate(mate: AssemblyMate): Matrix4 {
+function solveSliderMate(mate: AssemblyMate): Mat4 {
   const m1 = mateConnectorMatrix(mate.connector1)
   const m2 = mateConnectorMatrix(mate.connector2)
   
-  // Align orientations, apply offset along z-axis
   const offset = mate.offset || 0
-  const translation = Matrix4.translation(0, 0, offset)
+  const translation = Mat4.translation(0, 0, offset)
   
   const m2Inv = m2.inverse()
+  if (!m2Inv) return Mat4.identity()
   return m1.multiply(translation).multiply(m2Inv)
 }
 
 /**
  * Solve a cylindrical mate (rotation + translation along one axis)
  */
-function solveCylindricalMate(mate: AssemblyMate): Matrix4 {
+function solveCylindricalMate(mate: AssemblyMate): Mat4 {
   const m1 = mateConnectorMatrix(mate.connector1)
   const m2 = mateConnectorMatrix(mate.connector2)
   
   const offset = mate.offset || 0
   const angle = mate.angle || 0
   
-  const translation = Matrix4.translation(0, 0, offset)
-  const rotation = Matrix4.rotationZ(angle)
+  const translation = Mat4.translation(0, 0, offset)
+  const rotation = Mat4.rotationZ(angle)
   
   const m2Inv = m2.inverse()
+  if (!m2Inv) return Mat4.identity()
   return m1.multiply(rotation).multiply(translation).multiply(m2Inv)
 }
 
 /**
  * Solve a planar mate (allows motion in a plane)
  */
-function solvePlanarMate(mate: AssemblyMate): Matrix4 {
+function solvePlanarMate(mate: AssemblyMate): Mat4 {
   const m1 = mateConnectorMatrix(mate.connector1)
   const m2 = mateConnectorMatrix(mate.connector2)
   
-  // Align z-axes (normals), allow x-y translation
-  const flip = mate.flip ? Matrix4.rotationX(Math.PI) : Matrix4.identity()
+  const flip = mate.flip ? Mat4.rotationX(Math.PI) : Mat4.identity()
   
   const m2Inv = m2.inverse()
+  if (!m2Inv) return Mat4.identity()
   return m1.multiply(flip).multiply(m2Inv)
 }
 
 /**
  * Solve a ball mate (spherical joint - rotation about a point)
  */
-function solveBallMate(mate: AssemblyMate): Matrix4 {
-  // Position constraint only - all rotations free
+function solveBallMate(mate: AssemblyMate): Mat4 {
   const pos1 = mate.connector1.position
   const pos2 = mate.connector2.position
   
-  // Translate so connector2 is at connector1 position
-  return Matrix4.translation(
+  return Mat4.translation(
     pos1.x - pos2.x,
     pos1.y - pos2.y,
     pos1.z - pos2.z
@@ -144,33 +148,31 @@ function solveBallMate(mate: AssemblyMate): Matrix4 {
 /**
  * Solve a parallel mate (parallel faces/axes)
  */
-function solveParallelMate(mate: AssemblyMate): Matrix4 {
-  const n1 = mate.connector1.normal.normalize()
-  const n2 = mate.connector2.normal.normalize()
+function solveParallelMate(mate: AssemblyMate): Mat4 {
+  const n1 = new Vec3(mate.connector1.normal.x, mate.connector1.normal.y, mate.connector1.normal.z).normalize()
+  const n2 = new Vec3(mate.connector2.normal.x, mate.connector2.normal.y, mate.connector2.normal.z).normalize()
   
-  // Calculate rotation to align normals
   const axis = n2.cross(n1)
   const angle = Math.acos(Math.min(1, Math.max(-1, n2.dot(n1))))
   
   if (axis.length() > 1e-10) {
-    return Matrix4.rotation(axis.normalize(), angle)
+    return Mat4.rotationAxis(axis.normalize(), angle)
   }
   
-  return Matrix4.identity()
+  return Mat4.identity()
 }
 
 /**
  * Solve a tangent mate (surfaces tangent to each other)
  */
-function solveTangentMate(mate: AssemblyMate): Matrix4 {
-  // Similar to planar but allows sliding along tangent surface
+function solveTangentMate(mate: AssemblyMate): Mat4 {
   return solvePlanarMate(mate)
 }
 
 /**
  * Main mate solver - solves individual mate constraint
  */
-export function solveMate(mate: AssemblyMate): Matrix4 {
+export function solveMate(mate: AssemblyMate): Mat4 {
   switch (mate.type) {
     case 'fastened':
       return solveFastenedMate(mate)
@@ -189,7 +191,7 @@ export function solveMate(mate: AssemblyMate): Matrix4 {
     case 'tangent':
       return solveTangentMate(mate)
     default:
-      return Matrix4.identity()
+      return Mat4.identity()
   }
 }
 
@@ -211,27 +213,23 @@ export class AssemblySolver {
     this.groundedComponentId = componentId
     this.components.set(componentId, {
       componentId,
-      position: new Vector3(0, 0, 0),
-      rotation: Quaternion.identity(),
-      matrix: Matrix4.identity()
+      position: { x: 0, y: 0, z: 0 },
+      rotation: Quat.identity(),
+      matrix: Mat4.identity()
     })
   }
   
   /**
    * Add a component to the assembly
    */
-  addComponent(componentId: string, initialTransform?: Matrix4): void {
-    const transform = initialTransform || Matrix4.identity()
-    const position = new Vector3(
-      transform.m03,
-      transform.m13,
-      transform.m23
-    )
+  addComponent(componentId: string, initialTransform?: Mat4): void {
+    const transform = initialTransform || Mat4.identity()
+    const e = transform.elements
     
     this.components.set(componentId, {
       componentId,
-      position,
-      rotation: Quaternion.identity(), // TODO: extract from matrix
+      position: { x: e[12], y: e[13], z: e[14] },
+      rotation: Quat.identity(),
       matrix: transform
     })
   }
@@ -254,7 +252,6 @@ export class AssemblySolver {
    * Solve all mates iteratively
    */
   solve(maxIterations: number = 100, tolerance: number = 1e-6): boolean {
-    // Build dependency graph
     const solved = new Set<string>()
     
     if (this.groundedComponentId) {
@@ -272,43 +269,45 @@ export class AssemblySolver {
         const comp1Solved = solved.has(mate.component1Id)
         const comp2Solved = solved.has(mate.component2Id)
         
-        // Can solve if exactly one component is already positioned
         if (comp1Solved && !comp2Solved) {
           const transform = solveMate(mate)
           const comp1Transform = this.components.get(mate.component1Id)
           
           if (comp1Transform) {
             const newMatrix = comp1Transform.matrix.multiply(transform)
+            const e = newMatrix.elements
             this.components.set(mate.component2Id, {
               componentId: mate.component2Id,
-              position: new Vector3(newMatrix.m03, newMatrix.m13, newMatrix.m23),
-              rotation: Quaternion.identity(),
+              position: { x: e[12], y: e[13], z: e[14] },
+              rotation: Quat.identity(),
               matrix: newMatrix
             })
             solved.add(mate.component2Id)
             changed = true
           }
         } else if (!comp1Solved && comp2Solved) {
-          // Reverse - solve for component 1
           const transform = solveMate(mate)
           const comp2Transform = this.components.get(mate.component2Id)
           
           if (comp2Transform) {
-            const newMatrix = comp2Transform.matrix.multiply(transform.inverse())
-            this.components.set(mate.component1Id, {
-              componentId: mate.component1Id,
-              position: new Vector3(newMatrix.m03, newMatrix.m13, newMatrix.m23),
-              rotation: Quaternion.identity(),
-              matrix: newMatrix
-            })
-            solved.add(mate.component1Id)
-            changed = true
+            const inv = transform.inverse()
+            if (inv) {
+              const newMatrix = comp2Transform.matrix.multiply(inv)
+              const e = newMatrix.elements
+              this.components.set(mate.component1Id, {
+                componentId: mate.component1Id,
+                position: { x: e[12], y: e[13], z: e[14] },
+                rotation: Quat.identity(),
+                matrix: newMatrix
+              })
+              solved.add(mate.component1Id)
+              changed = true
+            }
           }
         }
       }
     }
     
-    // Check if all components are solved
     for (const [id] of this.components) {
       if (!solved.has(id)) {
         console.warn(`Component ${id} could not be solved`)
@@ -339,26 +338,20 @@ export class AssemblySolver {
   calculateDOF(): { total: number; perComponent: Map<string, number> } {
     const dofMap = new Map<string, number>()
     
-    // Each component has 6 DOF (3 translation + 3 rotation)
     for (const [id] of this.components) {
       dofMap.set(id, 6)
     }
     
-    // Grounded component has 0 DOF
     if (this.groundedComponentId) {
       dofMap.set(this.groundedComponentId, 0)
     }
     
-    // Subtract DOF based on mate types
     for (const mate of this.mates) {
       const removedDOF = getMateRemovedDOF(mate.type)
-      
-      // Distribute DOF removal (simplified)
       const current = dofMap.get(mate.component2Id) || 6
       dofMap.set(mate.component2Id, Math.max(0, current - removedDOF))
     }
     
-    // Calculate total
     let total = 0
     for (const [, dof] of dofMap) {
       total += dof
@@ -406,7 +399,6 @@ export function solveRackAndPinion(
   pinionAngle: number,
   pitchRadius: number
 ): number {
-  // Linear displacement = angle * radius
   return pinionAngle * pitchRadius
 }
 
@@ -417,7 +409,5 @@ export function solveLeadScrew(
   screwAngle: number,
   lead: number
 ): number {
-  // Linear displacement = (angle / 2π) * lead
   return (screwAngle / (2 * Math.PI)) * lead
 }
-

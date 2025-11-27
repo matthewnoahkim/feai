@@ -9,8 +9,8 @@ import {
 import { Vec3 } from '../math/vector';
 import { PlaneUtils } from './surface';
 
-// Re-export types from shared for other kernel modules
-export type { Vector3, Vertex, Edge, Face, Loop, Shell, Solid, SolidData, Surface, PlaneSurface, CylinderSurface, BoundingBox3D };
+// Re-export types from shared for other kernel modules (excluding Vector3 which is exported from vector.ts)
+export type { Vertex, Edge, Face, Loop, Shell, Solid, SolidData, Surface, PlaneSurface, CylinderSurface, BoundingBox3D };
 
 // ============================================================================
 // ID Generation

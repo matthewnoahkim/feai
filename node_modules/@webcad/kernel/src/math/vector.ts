@@ -2,10 +2,10 @@
 // Vector Mathematics
 // ============================================================================
 
-import { Vector2 as IVector2, Vector3 as IVector3, Vector4 as IVector4, Matrix4 as Matrix4Type, Quaternion as QuaternionType } from '@webcad/shared';
+import { Vector2 as IVector2, Vector3 as IVector3, Vector4 as IVector4 } from '@webcad/shared';
 
 // Re-export interface types from shared
-export type { IVector2, IVector3, IVector4, Matrix4Type as Matrix4, QuaternionType as Quaternion };
+export type { IVector2, IVector3, IVector4 };
 
 export class Vec2 implements IVector2 {
   constructor(public x: number = 0, public y: number = 0) {}

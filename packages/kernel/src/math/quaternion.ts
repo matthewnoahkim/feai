@@ -2,14 +2,11 @@
 // Quaternion Mathematics
 // ============================================================================
 
-import { Quaternion, Vector3 } from '@webcad/shared';
+import { Quaternion as IQuaternion, Vector3 } from '@webcad/shared';
 import { Vec3 } from './vector';
 import { Mat4 } from './matrix';
 
-// Re-export Quaternion type
-export type { Quaternion };
-
-export class Quat implements Quaternion {
+export class Quat implements IQuaternion {
   constructor(
     public x: number = 0,
     public y: number = 0,
@@ -280,4 +277,7 @@ export class Quat implements Quaternion {
     );
   }
 }
+
+// Export Quat as Quaternion for code that uses Quaternion as a constructor
+export { Quat as Quaternion };
 

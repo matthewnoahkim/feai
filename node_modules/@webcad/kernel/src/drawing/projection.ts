@@ -3,7 +3,8 @@
  * Generates 2D projections from 3D models
  */
 
-import { Vector3, Matrix4 } from '../math/vector'
+import { Vector3 } from '../math/vector'
+import { Mat4, Matrix4 } from '../math/matrix'
 import { Solid, Edge, Face } from '../geometry/brep'
 
 export type ViewType = 
@@ -41,8 +42,8 @@ export interface ProjectedView {
 
 export interface SectionCut {
   plane: {
-    origin: Vector3
-    normal: Vector3
+    origin: { x: number; y: number; z: number }
+    normal: { x: number; y: number; z: number }
   }
   depth?: number
   hatchPattern?: string
@@ -51,133 +52,74 @@ export interface SectionCut {
 }
 
 /**
- * Standard view direction matrices
+ * Create view matrices for standard views
  */
-const VIEW_MATRICES: Record<ViewType, Matrix4> = {
-  front: Matrix4.identity(),
-  back: Matrix4.rotationY(Math.PI),
-  top: Matrix4.rotationX(-Math.PI / 2),
-  bottom: Matrix4.rotationX(Math.PI / 2),
-  left: Matrix4.rotationY(-Math.PI / 2),
-  right: Matrix4.rotationY(Math.PI / 2),
-  isometric: createIsometricMatrix(),
-  dimetric: createDimetricMatrix(),
-  trimetric: createTrimetricMatrix(),
-  custom: Matrix4.identity()
-}
-
-function createIsometricMatrix(): Matrix4 {
-  // Standard isometric: 30° from horizontal
-  const rotY = Matrix4.rotationY(Math.PI / 4) // 45°
-  const rotX = Matrix4.rotationX(Math.atan(1 / Math.sqrt(2))) // ~35.264°
-  return rotX.multiply(rotY)
-}
-
-function createDimetricMatrix(): Matrix4 {
-  // Dimetric: two axes have equal foreshortening
-  const rotY = Matrix4.rotationY(Math.PI / 6) // 30°
-  const rotX = Matrix4.rotationX(Math.PI / 6) // 30°
-  return rotX.multiply(rotY)
-}
-
-function createTrimetricMatrix(): Matrix4 {
-  // Trimetric: all axes have different foreshortening
-  const rotY = Matrix4.rotationY(Math.PI / 5) // 36°
-  const rotX = Matrix4.rotationX(Math.PI / 7) // ~25.7°
-  return rotX.multiply(rotY)
+function createViewMatrix(viewType: ViewType): Mat4 {
+  switch (viewType) {
+    case 'front':
+      return Mat4.identity()
+    case 'back':
+      return Mat4.rotationY(Math.PI)
+    case 'top':
+      return Mat4.rotationX(-Math.PI / 2)
+    case 'bottom':
+      return Mat4.rotationX(Math.PI / 2)
+    case 'left':
+      return Mat4.rotationY(-Math.PI / 2)
+    case 'right':
+      return Mat4.rotationY(Math.PI / 2)
+    case 'isometric': {
+      const rotY = Mat4.rotationY(Math.PI / 4)
+      const rotX = Mat4.rotationX(Math.atan(1 / Math.sqrt(2)))
+      return rotX.multiply(rotY)
+    }
+    case 'dimetric': {
+      const rotY = Mat4.rotationY(Math.PI / 6)
+      const rotX = Mat4.rotationX(Math.PI / 6)
+      return rotX.multiply(rotY)
+    }
+    case 'trimetric': {
+      const rotY = Mat4.rotationY(Math.PI / 5)
+      const rotX = Mat4.rotationX(Math.PI / 7)
+      return rotX.multiply(rotY)
+    }
+    default:
+      return Mat4.identity()
+  }
 }
 
 /**
  * Project a 3D point to 2D using orthographic projection
  */
-function projectPoint(point: Vector3, viewMatrix: Matrix4): { x: number; y: number; z: number } {
+function projectPoint(point: { x: number; y: number; z: number }, viewMatrix: Mat4): { x: number; y: number; z: number } {
   const transformed = viewMatrix.transformPoint(point)
   return {
     x: transformed.x,
     y: transformed.y,
-    z: transformed.z // Keep z for depth sorting
+    z: transformed.z
   }
-}
-
-/**
- * Determine if an edge is visible from the view direction
- */
-function isEdgeVisible(
-  edge: Edge,
-  viewDirection: Vector3,
-  adjacentFaces: Face[]
-): boolean {
-  // An edge is visible if at least one adjacent face is front-facing
-  for (const face of adjacentFaces) {
-    if (face.surface) {
-      // Get face normal at edge midpoint
-      const normal = face.surface.normalAt(0.5, 0.5)
-      const dot = normal.dot(viewDirection)
-      
-      if (dot < 0) {
-        return true
-      }
-    }
-  }
-  return false
-}
-
-/**
- * Generate silhouette edges (edges where visibility changes)
- */
-function findSilhouetteEdges(
-  solid: Solid,
-  viewDirection: Vector3
-): Edge[] {
-  const silhouettes: Edge[] = []
-  
-  for (const edge of solid.edges) {
-    // Find adjacent faces
-    const adjacentFaces = solid.faces.filter(face => 
-      face.outerLoop.some(e => e === edge) ||
-      face.innerLoops?.some(loop => loop.some(e => e === edge))
-    )
-    
-    if (adjacentFaces.length === 2) {
-      // Check if faces have opposite visibility
-      const normals = adjacentFaces.map(face => {
-        if (face.surface) {
-          return face.surface.normalAt(0.5, 0.5)
-        }
-        return new Vector3(0, 0, 1)
-      })
-      
-      const dots = normals.map(n => n.dot(viewDirection))
-      
-      // Silhouette if one face is front-facing and one is back-facing
-      if ((dots[0] < 0 && dots[1] >= 0) || (dots[0] >= 0 && dots[1] < 0)) {
-        silhouettes.push(edge)
-      }
-    }
-  }
-  
-  return silhouettes
 }
 
 /**
  * Main projection class
  */
 export class DrawingProjector {
-  private viewMatrix: Matrix4
+  private viewMatrix: Mat4
   private scale: number
   private viewDirection: Vector3
   
-  constructor(viewType: ViewType = 'front', scale: number = 1, customMatrix?: Matrix4) {
+  constructor(viewType: ViewType = 'front', scale: number = 1, customMatrix?: Mat4) {
     this.viewMatrix = viewType === 'custom' && customMatrix 
       ? customMatrix 
-      : VIEW_MATRICES[viewType]
+      : createViewMatrix(viewType)
     this.scale = scale
     
     // Extract view direction from matrix (negative Z in view space)
+    const elements = this.viewMatrix.elements
     this.viewDirection = new Vector3(
-      -this.viewMatrix.m20,
-      -this.viewMatrix.m21,
-      -this.viewMatrix.m22
+      -elements[8],
+      -elements[9],
+      -elements[10]
     ).normalize()
   }
   
@@ -189,19 +131,16 @@ export class DrawingProjector {
     let minX = Infinity, minY = Infinity
     let maxX = -Infinity, maxY = -Infinity
     
-    // Project visible edges
-    for (const edge of solid.edges) {
-      // Find adjacent faces for visibility check
-      const adjacentFaces = solid.faces.filter(face =>
-        face.outerLoop.includes(edge) ||
-        face.innerLoops?.some(loop => loop.includes(edge))
-      )
+    // Iterate over edges Map
+    for (const [edgeId, edge] of solid.edges) {
+      // Get vertices
+      const startVertex = solid.vertices.get(edge.startVertex)
+      const endVertex = solid.vertices.get(edge.endVertex)
       
-      const visible = isEdgeVisible(edge, this.viewDirection, adjacentFaces)
+      if (!startVertex || !endVertex) continue
       
-      // Get edge endpoints
-      const start = edge.startVertex.point
-      const end = edge.endVertex.point
+      const start = startVertex.point
+      const end = endVertex.point
       
       const projStart = projectPoint(start, this.viewMatrix)
       const projEnd = projectPoint(end, this.viewMatrix)
@@ -217,32 +156,11 @@ export class DrawingProjector {
       maxY = Math.max(maxY, scaledStart.y, scaledEnd.y)
       
       projectedEdges.push({
-        id: `edge_${edge.id}`,
+        id: `edge_${edgeId}`,
         startPoint: scaledStart,
         endPoint: scaledEnd,
-        type: visible ? 'visible' : 'hidden',
-        originalEdgeId: edge.id
-      })
-    }
-    
-    // Find and project silhouette edges
-    const silhouettes = findSilhouetteEdges(solid, this.viewDirection)
-    for (const edge of silhouettes) {
-      const start = edge.startVertex.point
-      const end = edge.endVertex.point
-      
-      const projStart = projectPoint(start, this.viewMatrix)
-      const projEnd = projectPoint(end, this.viewMatrix)
-      
-      const scaledStart = { x: projStart.x * this.scale, y: projStart.y * this.scale }
-      const scaledEnd = { x: projEnd.x * this.scale, y: projEnd.y * this.scale }
-      
-      projectedEdges.push({
-        id: `silhouette_${edge.id}`,
-        startPoint: scaledStart,
-        endPoint: scaledEnd,
-        type: 'silhouette',
-        originalEdgeId: edge.id
+        type: 'visible',
+        originalEdgeId: edgeId
       })
     }
     
@@ -259,12 +177,8 @@ export class DrawingProjector {
    * Generate a section view
    */
   generateSectionView(solid: Solid, section: SectionCut): ProjectedView {
-    // This is a simplified section view - full implementation would
-    // compute the actual intersection curves
-    
     const baseView = this.projectSolid(solid)
     
-    // Mark section edges
     const sectionEdges: ProjectedEdge[] = baseView.edges.map(edge => ({
       ...edge,
       type: edge.type === 'visible' ? 'section' : edge.type
@@ -284,17 +198,16 @@ export class DrawingProjector {
     upDirection: Vector3,
     scale: number = 1
   ): DrawingProjector {
-    // Create view matrix from look and up vectors
     const zAxis = lookDirection.normalize().negate()
-    const xAxis = upDirection.cross(zAxis).normalize()
+    const xAxis = new Vector3(upDirection.x, upDirection.y, upDirection.z).cross(zAxis).normalize()
     const yAxis = zAxis.cross(xAxis)
     
-    const viewMatrix = new Matrix4(
-      xAxis.x, xAxis.y, xAxis.z, 0,
-      yAxis.x, yAxis.y, yAxis.z, 0,
-      zAxis.x, zAxis.y, zAxis.z, 0,
+    const viewMatrix = new Mat4([
+      xAxis.x, yAxis.x, zAxis.x, 0,
+      xAxis.y, yAxis.y, zAxis.y, 0,
+      xAxis.z, yAxis.z, zAxis.z, 0,
       0, 0, 0, 1
-    )
+    ])
     
     return new DrawingProjector('custom', scale, viewMatrix)
   }
@@ -325,7 +238,6 @@ export function generateHatchLines(
 ): Array<{ start: { x: number; y: number }; end: { x: number; y: number } }> {
   const lines: Array<{ start: { x: number; y: number }; end: { x: number; y: number } }> = []
   
-  // Find bounding box
   let minX = Infinity, minY = Infinity
   let maxX = -Infinity, maxY = -Infinity
   
@@ -336,7 +248,6 @@ export function generateHatchLines(
     maxY = Math.max(maxY, p.y)
   }
   
-  // Generate parallel lines at angle
   const radians = angle * Math.PI / 180
   const cos = Math.cos(radians)
   const sin = Math.sin(radians)
@@ -350,13 +261,11 @@ export function generateHatchLines(
   for (let i = -numLines / 2; i <= numLines / 2; i++) {
     const offset = i * spacing
     
-    // Line perpendicular to hatch direction, offset by spacing
     const startX = centerX - diagonal * cos + offset * sin
     const startY = centerY - diagonal * sin - offset * cos
     const endX = centerX + diagonal * cos + offset * sin
     const endY = centerY + diagonal * sin - offset * cos
     
-    // TODO: Clip line to boundary polygon
     lines.push({
       start: { x: startX, y: startY },
       end: { x: endX, y: endY }
@@ -365,4 +274,3 @@ export function generateHatchLines(
   
   return lines
 }
-

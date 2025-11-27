@@ -3,13 +3,14 @@
  * Creates exploded views of assemblies for visualization
  */
 
-import { Vector3, Matrix4 } from '../math/vector'
+import { Vector3, Vec3 } from '../math/vector'
+import { Mat4 } from '../math/matrix'
 
 export interface ExplodedComponent {
   componentId: string
-  originalPosition: Vector3
-  explodedPosition: Vector3
-  explosionVector: Vector3
+  originalPosition: { x: number; y: number; z: number }
+  explodedPosition: { x: number; y: number; z: number }
+  explosionVector: { x: number; y: number; z: number }
   explosionDistance: number
   stepIndex: number
 }
@@ -17,15 +18,15 @@ export interface ExplodedComponent {
 export interface ExplosionStep {
   stepIndex: number
   componentIds: string[]
-  direction: Vector3
+  direction: { x: number; y: number; z: number }
   distance: number
 }
 
 export interface ExplodedViewConfig {
   method: 'radial' | 'linear' | 'hierarchical' | 'custom'
   scaleFactor: number
-  center: Vector3
-  primaryAxis?: Vector3
+  center: { x: number; y: number; z: number }
+  primaryAxis?: { x: number; y: number; z: number }
   steps?: ExplosionStep[]
 }
 
@@ -34,10 +35,10 @@ export interface ExplodedViewConfig {
  */
 interface ComponentBounds {
   componentId: string
-  center: Vector3
-  min: Vector3
-  max: Vector3
-  size: Vector3
+  center: Vec3
+  min: Vec3
+  max: Vec3
+  size: Vec3
 }
 
 /**
@@ -45,42 +46,40 @@ interface ComponentBounds {
  */
 function generateRadialExplosion(
   components: ComponentBounds[],
-  center: Vector3,
+  center: Vec3,
   scaleFactor: number
 ): ExplodedComponent[] {
   const results: ExplodedComponent[] = []
   
-  // Sort by distance from center
   const sorted = [...components].sort((a, b) => {
-    const distA = a.center.subtract(center).length()
-    const distB = b.center.subtract(center).length()
+    const distA = a.center.sub(center).length()
+    const distB = b.center.sub(center).length()
     return distA - distB
   })
   
   sorted.forEach((comp, index) => {
-    const direction = comp.center.subtract(center)
+    const direction = comp.center.sub(center)
     const distance = direction.length()
     
     if (distance < 1e-10) {
-      // Component at center - don't move
       results.push({
         componentId: comp.componentId,
-        originalPosition: comp.center,
-        explodedPosition: comp.center,
-        explosionVector: new Vector3(0, 0, 0),
+        originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explodedPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explosionVector: { x: 0, y: 0, z: 0 },
         explosionDistance: 0,
         stepIndex: 0
       })
     } else {
       const normalizedDir = direction.normalize()
       const explosionDistance = distance * scaleFactor + (index * comp.size.length() * 0.5)
-      const explodedPosition = center.add(normalizedDir.scale(distance + explosionDistance))
+      const explodedPos = center.add(normalizedDir.mul(distance + explosionDistance))
       
       results.push({
         componentId: comp.componentId,
-        originalPosition: comp.center,
-        explodedPosition,
-        explosionVector: normalizedDir,
+        originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explodedPosition: { x: explodedPos.x, y: explodedPos.y, z: explodedPos.z },
+        explosionVector: { x: normalizedDir.x, y: normalizedDir.y, z: normalizedDir.z },
         explosionDistance,
         stepIndex: index
       })
@@ -95,13 +94,12 @@ function generateRadialExplosion(
  */
 function generateLinearExplosion(
   components: ComponentBounds[],
-  axis: Vector3,
+  axis: Vec3,
   scaleFactor: number
 ): ExplodedComponent[] {
   const results: ExplodedComponent[] = []
   const normalizedAxis = axis.normalize()
   
-  // Sort by position along axis
   const sorted = [...components].sort((a, b) => {
     const projA = a.center.dot(normalizedAxis)
     const projB = b.center.dot(normalizedAxis)
@@ -114,13 +112,13 @@ function generateLinearExplosion(
     const gap = sizeAlongAxis * scaleFactor
     
     const explosionDistance = currentOffset
-    const explodedPosition = comp.center.add(normalizedAxis.scale(explosionDistance))
+    const explodedPos = comp.center.add(normalizedAxis.mul(explosionDistance))
     
     results.push({
       componentId: comp.componentId,
-      originalPosition: comp.center,
-      explodedPosition,
-      explosionVector: normalizedAxis,
+      originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+      explodedPosition: { x: explodedPos.x, y: explodedPos.y, z: explodedPos.z },
+      explosionVector: { x: normalizedAxis.x, y: normalizedAxis.y, z: normalizedAxis.z },
       explosionDistance,
       stepIndex: index
     })
@@ -136,13 +134,12 @@ function generateLinearExplosion(
  */
 function generateHierarchicalExplosion(
   components: ComponentBounds[],
-  center: Vector3,
+  center: Vec3,
   scaleFactor: number,
-  hierarchy: Map<string, string | null> // componentId -> parentId
+  hierarchy: Map<string, string | null>
 ): ExplodedComponent[] {
   const results: ExplodedComponent[] = []
   
-  // Build level map
   const levels = new Map<string, number>()
   
   for (const comp of components) {
@@ -157,31 +154,30 @@ function generateHierarchicalExplosion(
     levels.set(comp.componentId, level)
   }
   
-  // Generate explosions based on level
   for (const comp of components) {
     const level = levels.get(comp.componentId) || 0
-    const direction = comp.center.subtract(center)
+    const direction = comp.center.sub(center)
     const baseDistance = direction.length()
     
     if (baseDistance < 1e-10) {
       results.push({
         componentId: comp.componentId,
-        originalPosition: comp.center,
-        explodedPosition: comp.center,
-        explosionVector: new Vector3(0, 0, 0),
+        originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explodedPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explosionVector: { x: 0, y: 0, z: 0 },
         explosionDistance: 0,
         stepIndex: level
       })
     } else {
       const normalizedDir = direction.normalize()
       const explosionDistance = level * comp.size.length() * scaleFactor
-      const explodedPosition = comp.center.add(normalizedDir.scale(explosionDistance))
+      const explodedPos = comp.center.add(normalizedDir.mul(explosionDistance))
       
       results.push({
         componentId: comp.componentId,
-        originalPosition: comp.center,
-        explodedPosition,
-        explosionVector: normalizedDir,
+        originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explodedPosition: { x: explodedPos.x, y: explodedPos.y, z: explodedPos.z },
+        explosionVector: { x: normalizedDir.x, y: normalizedDir.y, z: normalizedDir.z },
         explosionDistance,
         stepIndex: level
       })
@@ -201,20 +197,19 @@ function generateCustomExplosion(
   const results: ExplodedComponent[] = []
   const processed = new Set<string>()
   
-  // Apply steps in order
   for (const step of steps) {
     for (const compId of step.componentIds) {
       const comp = components.find(c => c.componentId === compId)
       if (!comp) continue
       
-      const normalizedDir = step.direction.normalize()
-      const explodedPosition = comp.center.add(normalizedDir.scale(step.distance))
+      const normalizedDir = new Vec3(step.direction.x, step.direction.y, step.direction.z).normalize()
+      const explodedPos = comp.center.add(normalizedDir.mul(step.distance))
       
       results.push({
         componentId: comp.componentId,
-        originalPosition: comp.center,
-        explodedPosition,
-        explosionVector: normalizedDir,
+        originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explodedPosition: { x: explodedPos.x, y: explodedPos.y, z: explodedPos.z },
+        explosionVector: { x: normalizedDir.x, y: normalizedDir.y, z: normalizedDir.z },
         explosionDistance: step.distance,
         stepIndex: step.stepIndex
       })
@@ -223,14 +218,13 @@ function generateCustomExplosion(
     }
   }
   
-  // Add remaining components with no explosion
   for (const comp of components) {
     if (!processed.has(comp.componentId)) {
       results.push({
         componentId: comp.componentId,
-        originalPosition: comp.center,
-        explodedPosition: comp.center,
-        explosionVector: new Vector3(0, 0, 0),
+        originalPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explodedPosition: { x: comp.center.x, y: comp.center.y, z: comp.center.z },
+        explosionVector: { x: 0, y: 0, z: 0 },
         explosionDistance: 0,
         stepIndex: 0
       })
@@ -252,21 +246,22 @@ export class ExplodedViewGenerator {
     config: ExplodedViewConfig,
     hierarchy?: Map<string, string | null>
   ): ExplodedComponent[] {
+    const center = new Vec3(config.center.x, config.center.y, config.center.z)
+    
     switch (config.method) {
       case 'radial':
-        return generateRadialExplosion(components, config.center, config.scaleFactor)
+        return generateRadialExplosion(components, center, config.scaleFactor)
       
       case 'linear':
-        return generateLinearExplosion(
-          components,
-          config.primaryAxis || new Vector3(0, 0, 1),
-          config.scaleFactor
-        )
+        const axis = config.primaryAxis 
+          ? new Vec3(config.primaryAxis.x, config.primaryAxis.y, config.primaryAxis.z)
+          : new Vec3(0, 0, 1)
+        return generateLinearExplosion(components, axis, config.scaleFactor)
       
       case 'hierarchical':
         return generateHierarchicalExplosion(
           components,
-          config.center,
+          center,
           config.scaleFactor,
           hierarchy || new Map()
         )
@@ -275,7 +270,7 @@ export class ExplodedViewGenerator {
         return generateCustomExplosion(components, config.steps || [])
       
       default:
-        return generateRadialExplosion(components, config.center, config.scaleFactor)
+        return generateRadialExplosion(components, center, config.scaleFactor)
     }
   }
   
@@ -284,13 +279,15 @@ export class ExplodedViewGenerator {
    */
   static interpolate(
     exploded: ExplodedComponent[],
-    t: number // 0 = assembled, 1 = fully exploded
-  ): Map<string, Vector3> {
-    const positions = new Map<string, Vector3>()
+    t: number
+  ): Map<string, { x: number; y: number; z: number }> {
+    const positions = new Map<string, { x: number; y: number; z: number }>()
     
     for (const comp of exploded) {
-      const position = comp.originalPosition.lerp(comp.explodedPosition, t)
-      positions.set(comp.componentId, position)
+      const orig = new Vec3(comp.originalPosition.x, comp.originalPosition.y, comp.originalPosition.z)
+      const expl = new Vec3(comp.explodedPosition.x, comp.explodedPosition.y, comp.explodedPosition.z)
+      const pos = orig.lerp(expl, t)
+      positions.set(comp.componentId, { x: pos.x, y: pos.y, z: pos.z })
     }
     
     return positions
@@ -302,14 +299,16 @@ export class ExplodedViewGenerator {
   static getTransforms(
     exploded: ExplodedComponent[],
     t: number
-  ): Map<string, Matrix4> {
-    const transforms = new Map<string, Matrix4>()
+  ): Map<string, Mat4> {
+    const transforms = new Map<string, Mat4>()
     
     for (const comp of exploded) {
-      const position = comp.originalPosition.lerp(comp.explodedPosition, t)
-      const offset = position.subtract(comp.originalPosition)
+      const orig = new Vec3(comp.originalPosition.x, comp.originalPosition.y, comp.originalPosition.z)
+      const expl = new Vec3(comp.explodedPosition.x, comp.explodedPosition.y, comp.explodedPosition.z)
+      const pos = orig.lerp(expl, t)
+      const offset = pos.sub(orig)
       
-      transforms.set(comp.componentId, Matrix4.translation(offset.x, offset.y, offset.z))
+      transforms.set(comp.componentId, Mat4.translation(offset.x, offset.y, offset.z))
     }
     
     return transforms
@@ -322,13 +321,12 @@ export class ExplodedViewGenerator {
     exploded: ExplodedComponent[],
     frameCount: number = 60,
     easing: 'linear' | 'easeInOut' | 'easeOut' = 'easeInOut'
-  ): Array<Map<string, Vector3>> {
-    const keyframes: Array<Map<string, Vector3>> = []
+  ): Array<Map<string, { x: number; y: number; z: number }>> {
+    const keyframes: Array<Map<string, { x: number; y: number; z: number }>> = []
     
     for (let i = 0; i <= frameCount; i++) {
       let t = i / frameCount
       
-      // Apply easing
       switch (easing) {
         case 'easeInOut':
           t = t < 0.5
@@ -338,7 +336,6 @@ export class ExplodedViewGenerator {
         case 'easeOut':
           t = 1 - Math.pow(1 - t, 3)
           break
-        // linear is default (no change)
       }
       
       keyframes.push(this.interpolate(exploded, t))
@@ -347,4 +344,3 @@ export class ExplodedViewGenerator {
     return keyframes
   }
 }
-
