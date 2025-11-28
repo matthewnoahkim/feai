@@ -2,7 +2,7 @@
 // STEP File Import/Export
 // ============================================================================
 
-import { SolidData, Vector3, Face, Edge, Vertex } from '@webcad/shared';
+import { SolidData, Vector3, Face, Edge, Vertex } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepBuilder, generateId } from '../geometry/brep';
 
@@ -23,8 +23,8 @@ export class STEPHandler {
     // Header section
     lines.push('ISO-10303-21;');
     lines.push('HEADER;');
-    lines.push(`FILE_DESCRIPTION(('WebCAD Export'),'2;1');`);
-    lines.push(`FILE_NAME('export.step','${new Date().toISOString()}',(''),('WebCAD'),'WebCAD Kernel','WebCAD','');`);
+    lines.push(`FILE_DESCRIPTION(('feai Export'),'2;1');`);
+    lines.push(`FILE_NAME('export.step','${new Date().toISOString()}',(''),('feai'),'feai Kernel','feai','');`);
     lines.push(`FILE_SCHEMA(('AUTOMOTIVE_DESIGN'));`);
     lines.push('ENDSEC;');
     lines.push('');

@@ -2,7 +2,7 @@
 // Vector Mathematics
 // ============================================================================
 
-import { Vector2 as IVector2, Vector3 as IVector3, Vector4 as IVector4 } from '@webcad/shared';
+import { Vector2 as IVector2, Vector3 as IVector3, Vector4 as IVector4 } from '@feai/shared';
 
 // Re-export interface types from shared
 export type { IVector2, IVector3, IVector4 };

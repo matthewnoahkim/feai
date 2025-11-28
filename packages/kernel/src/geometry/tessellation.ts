@@ -2,7 +2,7 @@
 // Tessellation - Converting geometry to triangle meshes
 // ============================================================================
 
-import { SolidData, MeshData, Vector3, Face, PlaneSurface } from '@webcad/shared';
+import { SolidData, MeshData, Vector3, Face, PlaneSurface } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 
 // ============================================================================

@@ -2,7 +2,7 @@
 // Fillet and Chamfer Operations
 // ============================================================================
 
-import { SolidData, Vector3, Edge, Face, PlaneSurface } from '@webcad/shared';
+import { SolidData, Vector3, Edge, Face, PlaneSurface } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepBuilder, BRepOperations, generateId } from '../geometry/brep';
 

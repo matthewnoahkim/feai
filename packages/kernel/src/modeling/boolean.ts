@@ -2,7 +2,7 @@
 // Boolean Operations (Union, Subtract, Intersect)
 // ============================================================================
 
-import { SolidData, Vector3, BoundingBox3D } from '@webcad/shared';
+import { SolidData, Vector3, BoundingBox3D } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepOperations, generateId } from '../geometry/brep';
 import { MeshBuilder, BRepTessellator } from '../geometry/tessellation';

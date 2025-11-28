@@ -2,7 +2,7 @@
 // NURBS (Non-Uniform Rational B-Spline) Implementation
 // ============================================================================
 
-import { Vector3, Vector2, NurbsCurve, NurbsSurface } from '@webcad/shared';
+import { Vector3, Vector2, NurbsCurve, NurbsSurface } from '@feai/shared';
 import { Vec2, Vec3 } from './vector';
 
 // ============================================================================

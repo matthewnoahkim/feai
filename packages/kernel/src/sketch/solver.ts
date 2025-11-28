@@ -5,7 +5,7 @@
 import { 
   Vector2, Sketch, SketchEntity, Constraint, SolverResult, 
   SketchPoint, SketchLine, SketchCircle, SketchArc 
-} from '@webcad/shared';
+} from '@feai/shared';
 import { Vec2 } from '../math/vector';
 
 // ============================================================================

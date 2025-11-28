@@ -1,5 +1,5 @@
 /**
- * WebCAD REST API Server
+ * feai REST API Server
  * Express.js backend for web-based CAD operations
  */
 
@@ -49,7 +49,7 @@ app.get('/api', (req, res) => {
   res.json({
     success: true,
     data: {
-      name: 'WebCAD API',
+      name: 'feai API',
       version: '1.0.0',
       description: 'RESTful API for web-based CAD operations',
       endpoints: [
@@ -106,7 +106,7 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║                 WebCAD REST API Server v1.0.0                ║
+║                 feai REST API Server v1.0.0                  ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  REST API:     http://localhost:${PORT}/api                     ║
 ║  Health:       http://localhost:${PORT}/api/health              ║

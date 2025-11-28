@@ -1,7 +1,7 @@
 {
-  "name": "@webcad/kernel",
+  "name": "@feai/kernel",
   "version": "1.0.0",
-  "description": "Geometry kernel for WebCAD - B-rep modeling, NURBS, constraint solving",
+  "description": "Geometry kernel for feai - B-rep modeling, NURBS, constraint solving",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -10,7 +10,7 @@
     "test": "node ../../node_modules/jest/bin/jest.js"
   },
   "dependencies": {
-    "@webcad/shared": "^1.0.0"
+    "@feai/shared": "^1.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",

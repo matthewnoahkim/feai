@@ -282,7 +282,7 @@ export function exportOBJ(
   const lines: string[] = []
   
   // Header
-  lines.push('# OBJ file exported by WebCAD')
+  lines.push('# OBJ file exported by feai')
   lines.push(`# Vertices: ${vertices.length}`)
   lines.push(`# Faces: ${faces.length}`)
   lines.push('')
@@ -341,7 +341,7 @@ export function exportOBJ(
 export function exportMTL(materials: OBJMaterial[]): string {
   const lines: string[] = []
   
-  lines.push('# MTL file exported by WebCAD')
+  lines.push('# MTL file exported by feai')
   lines.push('')
   
   for (const mat of materials) {

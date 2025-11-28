@@ -2,7 +2,7 @@
 // Curve Geometry
 // ============================================================================
 
-import { Vector2, Vector3, Line2D, Arc2D, Circle2D, Curve2D } from '@webcad/shared';
+import { Vector2, Vector3, Line2D, Arc2D, Circle2D, Curve2D } from '@feai/shared';
 import { Vec2, Vec3 } from '../math/vector';
 import { NurbsCurveEvaluator } from '../math/nurbs';
 

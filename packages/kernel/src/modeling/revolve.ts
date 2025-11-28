@@ -2,7 +2,7 @@
 // Revolve Operation
 // ============================================================================
 
-import { Sketch, SketchRegion, SolidData, Vector3, Plane, PlaneSurface } from '@webcad/shared';
+import { Sketch, SketchRegion, SolidData, Vector3, Plane, PlaneSurface } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { Mat4 } from '../math/matrix';
 import { BRepBuilder, generateId } from '../geometry/brep';

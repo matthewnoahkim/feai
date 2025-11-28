@@ -2,7 +2,7 @@
 // Quaternion Mathematics
 // ============================================================================
 
-import { Quaternion as IQuaternion, Vector3 } from '@webcad/shared';
+import { Quaternion as IQuaternion, Vector3 } from '@feai/shared';
 import { Vec3 } from './vector';
 import { Mat4 } from './matrix';
 

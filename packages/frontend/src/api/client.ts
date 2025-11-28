@@ -1,5 +1,5 @@
 /**
- * API Client - Communicates with WebCAD backend
+ * API Client - Communicates with feai backend
  */
 
 const API_BASE = '/api'

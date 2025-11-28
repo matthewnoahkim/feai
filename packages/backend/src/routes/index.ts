@@ -42,7 +42,7 @@ router.get('/', (req, res) => {
   res.json({
     success: true,
     data: {
-      name: 'WebCAD API',
+      name: 'feai API',
       version: '1.0.0',
       description: 'RESTful API for web-based CAD operations',
       endpoints: {

@@ -2,7 +2,7 @@
 // Matrix Mathematics
 // ============================================================================
 
-import { Matrix4 as Matrix4Type, Vector3 } from '@webcad/shared';
+import { Matrix4 as Matrix4Type, Vector3 } from '@feai/shared';
 import { Vec3, Vec4 } from './vector';
 import { Quat } from './quaternion';
 

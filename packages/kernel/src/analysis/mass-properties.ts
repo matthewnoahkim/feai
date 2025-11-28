@@ -2,7 +2,7 @@
 // Mass Properties Calculation
 // ============================================================================
 
-import { SolidData, MassProperties, Vector3, Matrix4 as Matrix4Type, Material } from '@webcad/shared';
+import { SolidData, MassProperties, Vector3, Matrix4 as Matrix4Type, Material } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepTessellator } from '../geometry/tessellation';
 

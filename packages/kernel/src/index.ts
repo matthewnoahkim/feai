@@ -1,5 +1,5 @@
 /**
- * WebCAD Geometry Kernel
+ * feai Geometry Kernel
  * Core mathematics, geometry, and modeling operations
  */
 

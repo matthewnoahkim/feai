@@ -2,7 +2,7 @@
 // Direct Modeling Operations (Push-Pull, Move Face, etc.)
 // ============================================================================
 
-import { SolidData, Vector3, Face, Edge, Transform } from '@webcad/shared';
+import { SolidData, Vector3, Face, Edge, Transform } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { Mat4 } from '../math/matrix';
 import { Quat } from '../math/quaternion';

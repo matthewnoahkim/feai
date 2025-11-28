@@ -179,7 +179,7 @@ class Store {
     this.documents.set(docId, {
       id: docId,
       name: 'Sample Part',
-      description: 'A sample part demonstrating WebCAD features',
+      description: 'A sample part demonstrating feai features',
       created: new Date().toISOString(),
       modified: new Date().toISOString(),
       elements: {

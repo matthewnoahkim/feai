@@ -2,7 +2,7 @@
 // Sketch Region Detection
 // ============================================================================
 
-import { Sketch, SketchRegion, SketchLine, SketchArc, SketchCircle, Vector2 } from '@webcad/shared';
+import { Sketch, SketchRegion, SketchLine, SketchArc, SketchCircle, Vector2 } from '@feai/shared';
 import { Vec2 } from '../math/vector';
 import { generateId } from '../geometry/brep';
 

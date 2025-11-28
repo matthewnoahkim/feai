@@ -2,7 +2,7 @@
 // Surface Geometry
 // ============================================================================
 
-import { Vector3, Plane, Surface, PlaneSurface, CylinderSurface, SphereSurface } from '@webcad/shared';
+import { Vector3, Plane, Surface, PlaneSurface, CylinderSurface, SphereSurface } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { NurbsSurfaceEvaluator } from '../math/nurbs';
 

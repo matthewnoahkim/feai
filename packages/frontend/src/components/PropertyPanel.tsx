@@ -390,7 +390,7 @@ export function PropertyPanel() {
             
             <PropertySection title="Info" icon={<Info size={16} />} defaultOpen={false}>
               <div className="text-xs text-cad-text-dim space-y-1">
-                <p>WebCAD v1.0.0</p>
+                <p>feai v1.0.0</p>
                 <p>Select features or parts to view and edit their properties.</p>
                 <p className="mt-2">
                   <strong>Shortcuts:</strong><br />

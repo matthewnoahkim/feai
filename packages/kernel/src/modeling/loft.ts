@@ -2,7 +2,7 @@
 // Loft Operation
 // ============================================================================
 
-import { Sketch, SketchRegion, SolidData, Vector3, PlaneSurface } from '@webcad/shared';
+import { Sketch, SketchRegion, SolidData, Vector3, PlaneSurface } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepBuilder, generateId } from '../geometry/brep';
 import { PlaneUtils } from '../geometry/surface';

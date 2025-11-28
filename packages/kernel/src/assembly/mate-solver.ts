@@ -6,7 +6,7 @@
 import { Vector3, Vec3 } from '../math/vector'
 import { Mat4, Matrix4 } from '../math/matrix'
 import { Quat, Quaternion } from '../math/quaternion'
-import { MateType } from '@webcad/shared'
+import { MateType } from '@feai/shared'
 
 export interface MateConnector {
   id: string

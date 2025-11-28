@@ -1,5 +1,5 @@
 {
-  "name": "webcad",
+  "name": "feai",
   "version": "1.0.0",
   "private": true,
   "description": "Web-based CAD Software with REST API",
@@ -8,13 +8,13 @@
   ],
   "scripts": {
     "dev": "node ./node_modules/concurrently/dist/bin/concurrently.js \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:frontend": "npm run dev -w @webcad/frontend",
-    "dev:backend": "npm run dev -w @webcad/backend",
-    "build": "npm run build -w @webcad/shared && npm run build -w @webcad/kernel && npm run build -w @webcad/backend && npm run build -w @webcad/frontend",
-    "build:shared": "npm run build -w @webcad/shared",
-    "build:kernel": "npm run build -w @webcad/kernel",
-    "build:backend": "npm run build -w @webcad/backend",
-    "build:frontend": "npm run build -w @webcad/frontend",
+    "dev:frontend": "npm run dev -w @feai/frontend",
+    "dev:backend": "npm run dev -w @feai/backend",
+    "build": "npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/backend && npm run build -w @feai/frontend",
+    "build:shared": "npm run build -w @feai/shared",
+    "build:kernel": "npm run build -w @feai/kernel",
+    "build:backend": "npm run build -w @feai/backend",
+    "build:frontend": "npm run build -w @feai/frontend",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "clean": "node ./node_modules/rimraf/dist/esm/bin.mjs packages/*/dist packages/*/.turbo node_modules/.cache"
@@ -29,7 +29,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/webcad/webcad.git"
+    "url": "https://github.com/feai/feai.git"
   },
   "license": "MIT"
 }

@@ -406,9 +406,9 @@ export function Toolbar() {
       {/* Logo */}
       <div className="flex items-center gap-2 px-3 mr-4">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <span className="text-white font-bold text-sm">W</span>
+          <span className="text-white font-bold text-sm">F</span>
         </div>
-        <span className="font-semibold text-cad-text">WebCAD</span>
+        <span className="font-semibold text-cad-text">feai</span>
       </div>
 
       <ToolDivider />

@@ -1,4 +1,4 @@
-// WebCAD Shared Types and Interfaces
+// feai Shared Types and Interfaces
 // Core data structures for the CAD system
 
 export * from './geometry';

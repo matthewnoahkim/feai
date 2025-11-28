@@ -5,7 +5,7 @@
 import { 
   Vector3, Vertex, Edge, Face, Loop, Shell, Solid, SolidData,
   Surface, PlaneSurface, CylinderSurface, BoundingBox3D
-} from '@webcad/shared';
+} from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { PlaneUtils } from './surface';
 

@@ -72,6 +72,7 @@ export const SELECTION_PRIORITY: Record<SelectionType, number> = {
   'sketch-entity': 4,
   'body': 5,
   'feature': 6,
+  'document': 7,
   'none': 99,
 }
 

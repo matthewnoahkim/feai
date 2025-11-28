@@ -5,7 +5,7 @@
 import { 
   Sketch, SketchEntity, SketchPoint, SketchLine, SketchCircle, 
   SketchArc, SketchRectangle, SketchPolygon, Plane, Vector2 
-} from '@webcad/shared';
+} from '@feai/shared';
 import { Vec2 } from '../math/vector';
 import { generateId } from '../geometry/brep';
 

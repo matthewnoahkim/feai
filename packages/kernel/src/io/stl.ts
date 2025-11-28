@@ -2,7 +2,7 @@
 // STL File Import/Export
 // ============================================================================
 
-import { SolidData, MeshData, Vector3 } from '@webcad/shared';
+import { SolidData, MeshData, Vector3 } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepTessellator, BRepTessellator as Tessellator, MeshUtils } from '../geometry/tessellation';
 import { BRepBuilder, generateId } from '../geometry/brep';
@@ -92,7 +92,7 @@ export class STLHandler {
     const view = new DataView(buffer);
     
     // Header (80 bytes)
-    const header = `WebCAD STL Export - ${name}`;
+    const header = `feai STL Export - ${name}`;
     for (let i = 0; i < 80; i++) {
       view.setUint8(i, i < header.length ? header.charCodeAt(i) : 0);
     }

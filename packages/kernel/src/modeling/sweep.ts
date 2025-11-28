@@ -2,7 +2,7 @@
 // Sweep Operation
 // ============================================================================
 
-import { Sketch, SketchRegion, SolidData, Vector3, PlaneSurface } from '@webcad/shared';
+import { Sketch, SketchRegion, SolidData, Vector3, PlaneSurface } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { Mat4 } from '../math/matrix';
 import { Quat } from '../math/quaternion';

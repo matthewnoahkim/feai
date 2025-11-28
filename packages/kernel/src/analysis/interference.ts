@@ -2,7 +2,7 @@
 // Interference Detection
 // ============================================================================
 
-import { SolidData, Vector3, BoundingBox3D } from '@webcad/shared';
+import { SolidData, Vector3, BoundingBox3D } from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepOperations } from '../geometry/brep';
 import { BRepTessellator, MeshUtils } from '../geometry/tessellation';

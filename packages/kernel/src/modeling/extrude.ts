@@ -5,7 +5,7 @@
 import { 
   Sketch, SketchRegion, SolidData, Vector3, Plane, 
   PlaneSurface, BooleanOperation 
-} from '@webcad/shared';
+} from '@feai/shared';
 import { Vec3 } from '../math/vector';
 import { BRepBuilder, generateId, SolidPrimitives } from '../geometry/brep';
 import { PlaneUtils } from '../geometry/surface';
