@@ -35,24 +35,25 @@ import {
   FlipHorizontal
 } from 'lucide-react'
 
-// Helper to convert mesh to STL format
+// Helper to convert mesh to STL format (ASCII)
 function meshToSTL(parts: any[]): string {
   let stl = 'solid model\n'
   
   for (const part of parts) {
     if (!part.mesh) continue
-    const { vertices, normals, indices } = part.mesh
+    const { vertices, indices } = part.mesh
     
     for (let i = 0; i < indices.length; i += 3) {
       const i0 = indices[i] * 3
       const i1 = indices[i + 1] * 3
       const i2 = indices[i + 2] * 3
       
-      // Calculate face normal
+      // Get vertices
       const v0 = [vertices[i0], vertices[i0 + 1], vertices[i0 + 2]]
       const v1 = [vertices[i1], vertices[i1 + 1], vertices[i1 + 2]]
       const v2 = [vertices[i2], vertices[i2 + 1], vertices[i2 + 2]]
       
+      // Calculate face normal
       const e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]]
       const e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]]
       const n = [
@@ -79,60 +80,121 @@ function meshToSTL(parts: any[]): string {
   return stl
 }
 
-// Helper to convert mesh to OBJ format
-function meshToOBJ(parts: any[]): string {
-  let obj = '# WebCAD Export\n'
-  let vertexOffset = 0
+// Helper to parse STL file (ASCII or Binary) into mesh data
+function parseSTL(buffer: ArrayBuffer): { vertices: number[], normals: number[], indices: number[] } | null {
+  // Try to detect if it's ASCII or binary
+  const textDecoder = new TextDecoder('utf-8')
+  const header = textDecoder.decode(buffer.slice(0, 80))
   
-  for (const part of parts) {
-    if (!part.mesh) continue
-    const { vertices, indices } = part.mesh
-    
-    obj += `# ${part.name || 'Part'}\n`
-    obj += `o ${part.name || 'Part'}\n`
-    
-    // Vertices
-    for (let i = 0; i < vertices.length; i += 3) {
-      obj += `v ${vertices[i]} ${vertices[i + 1]} ${vertices[i + 2]}\n`
+  // ASCII STL starts with "solid"
+  if (header.trim().toLowerCase().startsWith('solid')) {
+    // Try ASCII parse first
+    const text = textDecoder.decode(buffer)
+    const asciiResult = parseASCIISTL(text)
+    if (asciiResult && asciiResult.vertices.length > 0) {
+      return asciiResult
     }
-    
-    // Faces (1-indexed in OBJ)
-    for (let i = 0; i < indices.length; i += 3) {
-      const f1 = indices[i] + 1 + vertexOffset
-      const f2 = indices[i + 1] + 1 + vertexOffset
-      const f3 = indices[i + 2] + 1 + vertexOffset
-      obj += `f ${f1} ${f2} ${f3}\n`
-    }
-    
-    vertexOffset += vertices.length / 3
   }
   
-  return obj
+  // Try binary parse
+  return parseBinarySTL(buffer)
 }
 
-// Helper to serialize document for JSON export
-function serializeDocument(document: any): any {
-  if (!document) return null
+// Parse ASCII STL format
+function parseASCIISTL(stlContent: string): { vertices: number[], normals: number[], indices: number[] } | null {
+  const vertices: number[] = []
+  const normals: number[] = []
+  const indices: number[] = []
   
-  return {
-    ...document,
-    partStudios: document.partStudios.map((ps: any) => ({
-      ...ps,
-      sketches: Array.from(ps.sketches.entries())
-    }))
+  // Match facet blocks - more flexible regex
+  const lines = stlContent.split('\n')
+  let currentNormal: number[] = [0, 0, 1]
+  let vertexIndex = 0
+  let faceVertices: number[][] = []
+  
+  for (const line of lines) {
+    const trimmed = line.trim().toLowerCase()
+    
+    if (trimmed.startsWith('facet normal')) {
+      const parts = trimmed.split(/\s+/)
+      if (parts.length >= 5) {
+        currentNormal = [parseFloat(parts[2]), parseFloat(parts[3]), parseFloat(parts[4])]
+      }
+      faceVertices = []
+    } else if (trimmed.startsWith('vertex')) {
+      const parts = trimmed.split(/\s+/)
+      if (parts.length >= 4) {
+        faceVertices.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])])
+      }
+    } else if (trimmed.startsWith('endfacet') && faceVertices.length === 3) {
+      // Add the triangle
+      for (const v of faceVertices) {
+        vertices.push(v[0], v[1], v[2])
+        normals.push(currentNormal[0], currentNormal[1], currentNormal[2])
+      }
+      indices.push(vertexIndex, vertexIndex + 1, vertexIndex + 2)
+      vertexIndex += 3
+    }
   }
+  
+  if (vertices.length === 0) {
+    return null
+  }
+  
+  return { vertices, normals, indices }
 }
 
-// Helper to deserialize document from JSON import
-function deserializeDocument(data: any): any {
-  if (!data) return null
+// Parse Binary STL format
+function parseBinarySTL(buffer: ArrayBuffer): { vertices: number[], normals: number[], indices: number[] } | null {
+  const vertices: number[] = []
+  const normals: number[] = []
+  const indices: number[] = []
   
-  return {
-    ...data,
-    partStudios: data.partStudios.map((ps: any) => ({
-      ...ps,
-      sketches: new Map(ps.sketches)
-    }))
+  try {
+    const dataView = new DataView(buffer)
+    
+    // Skip 80-byte header
+    // Read number of triangles (4 bytes, little-endian uint32)
+    const numTriangles = dataView.getUint32(80, true)
+    
+    if (numTriangles === 0 || numTriangles > 10000000) {
+      return null // Sanity check
+    }
+    
+    let offset = 84 // After header and triangle count
+    
+    for (let i = 0; i < numTriangles; i++) {
+      // Read normal (3 floats)
+      const nx = dataView.getFloat32(offset, true); offset += 4
+      const ny = dataView.getFloat32(offset, true); offset += 4
+      const nz = dataView.getFloat32(offset, true); offset += 4
+      
+      // Read 3 vertices (9 floats total)
+      for (let v = 0; v < 3; v++) {
+        const vx = dataView.getFloat32(offset, true); offset += 4
+        const vy = dataView.getFloat32(offset, true); offset += 4
+        const vz = dataView.getFloat32(offset, true); offset += 4
+        
+        vertices.push(vx, vy, vz)
+        normals.push(nx, ny, nz)
+      }
+      
+      // Skip attribute byte count (2 bytes)
+      offset += 2
+      
+      // Add indices
+      const baseIdx = i * 3
+      indices.push(baseIdx, baseIdx + 1, baseIdx + 2)
+    }
+    
+    if (vertices.length === 0) {
+      return null
+    }
+    
+    return { vertices, normals, indices }
+  } catch (e) {
+    console.error('Binary STL parse error:', e)
+    return null
   }
 }
 
@@ -178,7 +240,7 @@ export function Toolbar() {
     addNotification
   } = useUIStore()
   
-  const { document, createNewDocument, saveDocument, loadDocumentFromData } = useDocumentStore()
+  const { document, createNewDocument, saveDocument, importSTLPart } = useDocumentStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Model tools
@@ -247,50 +309,15 @@ export function Toolbar() {
     const parts = activePartStudio?.parts || []
     
     if (parts.length === 0) {
-      // No geometry - export document as JSON
-      const json = JSON.stringify(serializeDocument(document), null, 2)
-      const blob = new Blob([json], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = window.document.createElement('a')
-      a.href = url
-      a.download = `${document.name || 'document'}.json`
-      a.click()
-      URL.revokeObjectURL(url)
-      addNotification('success', 'Exported document as JSON')
+      addNotification('error', 'No geometry to export. Create some 3D features first.')
       return
     }
     
-    // Show export format options
-    const format = window.prompt('Export format (stl, obj, json):', 'stl')?.toLowerCase()
+    // Export as STL
+    const content = meshToSTL(parts)
+    const filename = `${document.name || 'model'}.stl`
     
-    if (!format) return
-    
-    let content: string
-    let filename: string
-    let mimeType: string
-    
-    switch (format) {
-      case 'stl':
-        content = meshToSTL(parts)
-        filename = `${document.name || 'model'}.stl`
-        mimeType = 'application/octet-stream'
-        break
-      case 'obj':
-        content = meshToOBJ(parts)
-        filename = `${document.name || 'model'}.obj`
-        mimeType = 'text/plain'
-        break
-      case 'json':
-        content = JSON.stringify(serializeDocument(document), null, 2)
-        filename = `${document.name || 'document'}.json`
-        mimeType = 'application/json'
-        break
-      default:
-        addNotification('error', `Unsupported format: ${format}`)
-        return
-    }
-    
-    const blob = new Blob([content], { type: mimeType })
+    const blob = new Blob([content], { type: 'application/octet-stream' })
     const url = URL.createObjectURL(blob)
     const a = window.document.createElement('a')
     a.href = url
@@ -309,23 +336,43 @@ export function Toolbar() {
     if (!file) return
     
     try {
-      const text = await file.text()
+      // Read file as ArrayBuffer to support both ASCII and binary STL
+      const buffer = await file.arrayBuffer()
       
-      if (file.name.endsWith('.json')) {
-        const data = JSON.parse(text)
-        const doc = deserializeDocument(data)
-        if (doc && loadDocumentFromData) {
-          loadDocumentFromData(doc)
-          addNotification('success', `Imported ${file.name}`)
-        } else {
-          addNotification('error', 'Invalid document format')
-        }
+      // Parse STL file
+      const mesh = parseSTL(buffer)
+      
+      if (!mesh || mesh.vertices.length === 0) {
+        addNotification('error', 'Failed to parse STL file. Make sure it is a valid STL file.')
+        return
+      }
+      
+      const triangleCount = mesh.indices.length / 3
+      console.log('Parsed STL:', mesh.vertices.length / 3, 'vertices,', triangleCount, 'triangles')
+      
+      // Create a new document
+      const docName = file.name.replace(/\.stl$/i, '')
+      await createNewDocument(docName)
+      
+      // Wait for state to update
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Get the new document
+      const newDoc = useDocumentStore.getState().document
+      
+      if (newDoc && newDoc.partStudios.length > 0) {
+        const partStudioId = newDoc.partStudios[0].id
+        
+        // Use the store method to import the part
+        importSTLPart(partStudioId, docName, mesh)
+        
+        addNotification('success', `Imported ${file.name} (${triangleCount} triangles)`)
       } else {
-        addNotification('error', 'Only JSON files can be imported. Export as JSON first.')
+        addNotification('error', 'Failed to create document for import')
       }
     } catch (error) {
       console.error('Import error:', error)
-      addNotification('error', 'Failed to import file')
+      addNotification('error', 'Failed to import STL file: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
     
     // Reset input
@@ -367,7 +414,7 @@ export function Toolbar() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json"
+        accept=".stl"
         onChange={handleFileSelect}
         className="hidden"
       />

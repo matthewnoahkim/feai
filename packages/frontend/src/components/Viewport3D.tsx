@@ -101,13 +101,44 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
   const geometry = useMemo(() => {
     if (!part.mesh) return null
     
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(part.mesh.vertices, 3))
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(part.mesh.normals, 3))
-    geo.setIndex(part.mesh.indices)
-    geo.computeBoundingBox()
-    
-    return geo
+    try {
+      const { vertices, normals, indices } = part.mesh
+      
+      if (!vertices || vertices.length === 0) return null
+      
+      const geo = new THREE.BufferGeometry()
+      
+      // Set positions
+      const positionArray = new Float32Array(vertices)
+      geo.setAttribute('position', new THREE.BufferAttribute(positionArray, 3))
+      
+      // Set indices
+      if (indices && indices.length > 0) {
+        geo.setIndex(Array.from(indices))
+      }
+      
+      // Set or compute normals
+      if (normals && normals.length === vertices.length) {
+        // Check if normals are valid (not all zeros)
+        const hasValidNormals = normals.some((n: number) => n !== 0)
+        if (hasValidNormals) {
+          const normalArray = new Float32Array(normals)
+          geo.setAttribute('normal', new THREE.BufferAttribute(normalArray, 3))
+        } else {
+          geo.computeVertexNormals()
+        }
+      } else {
+        geo.computeVertexNormals()
+      }
+      
+      geo.computeBoundingBox()
+      geo.computeBoundingSphere()
+      
+      return geo
+    } catch (error) {
+      console.error('Error creating geometry:', error)
+      return null
+    }
   }, [part.mesh])
   
   // Handle click

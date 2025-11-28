@@ -142,6 +142,9 @@ interface DocumentState {
   updatePartMaterial: (partId: string, material: string) => void
   updatePartColor: (partId: string, color: string) => void
   regenerateModel: (partStudioId: string) => Promise<void>
+  
+  // Import operations
+  importSTLPart: (partStudioId: string, name: string, mesh: { vertices: number[], normals: number[], indices: number[] }) => void
 }
 
 // Generate unique ID
@@ -2917,6 +2920,41 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       
       return {
         document: { ...state.document, partStudios }
+      }
+    })
+  },
+  
+  importSTLPart: (partStudioId, name, mesh) => {
+    const partId = generateId()
+    const featureId = generateId()
+    
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        if (ps.id !== partStudioId) return ps
+        
+        return {
+          ...ps,
+          features: [...ps.features, {
+            id: featureId,
+            type: 'import',
+            name: `Imported: ${name}`,
+            suppressed: false,
+            parameters: { filename: name }
+          }],
+          parts: [...ps.parts, {
+            id: partId,
+            name: name,
+            color: '#6b7280',
+            mesh: mesh
+          }]
+        }
+      })
+      
+      return {
+        document: { ...state.document, partStudios },
+        isDirty: true
       }
     })
   }
