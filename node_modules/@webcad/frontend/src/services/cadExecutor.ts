@@ -1,11 +1,9 @@
 /**
- * CAD Executor - Executes AI-generated CAD commands via the REST API
+ * CAD Executor - Executes AI-generated CAD commands using the document store
  */
 
 import { CadAction } from '../store/chatStore'
-import { api } from '../api/client'
-
-const API_BASE = '/api'
+import { useDocumentStore } from '../store/documentStore'
 
 export interface ExecutionResult {
   success: boolean
@@ -13,212 +11,6 @@ export interface ExecutionResult {
   result?: any
   error?: string
   createdId?: string
-}
-
-/**
- * Execute a single CAD action via the REST API
- */
-async function executeAction(
-  action: CadAction,
-  documentId: string,
-  partStudioId: string,
-  previousResults: Map<string, any>
-): Promise<ExecutionResult> {
-  try {
-    // Replace placeholder references with actual IDs from previous results
-    const body = replacePlaceholders(action.body, previousResults)
-    
-    // Build the full endpoint URL with document/part studio context
-    const endpoint = buildEndpoint(action.endpoint, documentId, partStudioId)
-    
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      method: action.method,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: action.method !== 'GET' ? JSON.stringify(body) : undefined
-    })
-    
-    const data = await response.json()
-    
-    if (!response.ok || !data.success) {
-      return {
-        success: false,
-        action: { ...action, status: 'error' },
-        error: data.error?.message || `Request failed with status ${response.status}`
-      }
-    }
-    
-    return {
-      success: true,
-      action: { ...action, status: 'success' },
-      result: data.data,
-      createdId: data.data?.id || data.data?.feature?.id || data.data?.sketch?.id
-    }
-  } catch (error) {
-    return {
-      success: false,
-      action: { ...action, status: 'error' },
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    }
-  }
-}
-
-/**
- * Replace placeholder references in the body with actual IDs
- * E.g., "<sketch_1>" becomes the actual sketch ID from previous results
- */
-function replacePlaceholders(
-  body: Record<string, any> | undefined,
-  previousResults: Map<string, any>
-): Record<string, any> | undefined {
-  if (!body) return undefined
-  
-  const replaced = JSON.stringify(body)
-  
-  // Replace placeholders like <action_0>, <sketch_1>, etc.
-  const result = replaced.replace(/<(\w+_\d+)>/g, (match, key) => {
-    const value = previousResults.get(key)
-    return value ? JSON.stringify(value).slice(1, -1) : match
-  })
-  
-  return JSON.parse(result)
-}
-
-/**
- * Build the full endpoint URL with document/part studio IDs
- */
-function buildEndpoint(
-  endpoint: string,
-  documentId: string,
-  partStudioId: string
-): string {
-  // Handle different endpoint patterns
-  if (endpoint.startsWith('/api/')) {
-    endpoint = endpoint.slice(4) // Remove /api/ prefix
-  }
-  
-  // Map generic endpoints to document-specific endpoints
-  if (endpoint.startsWith('/primitives/')) {
-    // Primitives are created in the active part studio
-    return `/documents/${documentId}/partstudios/${partStudioId}/features`
-  }
-  
-  if (endpoint.startsWith('/features')) {
-    return `/documents/${documentId}/partstudios/${partStudioId}${endpoint}`
-  }
-  
-  if (endpoint.startsWith('/sketches')) {
-    return `/documents/${documentId}/partstudios/${partStudioId}${endpoint}`
-  }
-  
-  if (endpoint === '/undo') {
-    return `/documents/${documentId}/partstudios/${partStudioId}/undo`
-  }
-  
-  return endpoint
-}
-
-/**
- * Transform primitive commands into feature commands
- */
-function transformPrimitiveToFeature(action: CadAction): CadAction {
-  const body = action.body || {}
-  
-  // Handle box primitive
-  if (action.endpoint.includes('/box')) {
-    return {
-      ...action,
-      type: 'extrude',
-      endpoint: '/features',
-      body: {
-        feature: {
-          type: 'extrude',
-          name: `Box ${body.width}x${body.height}x${body.depth}`,
-          parameters: {
-            // Create a rectangle sketch and extrude it
-            createSketch: true,
-            sketchShape: 'rectangle',
-            sketchWidth: body.width || 50,
-            sketchHeight: body.depth || 50,
-            depth: body.height || 50,
-            direction: 'one',
-            operation: 'new'
-          }
-        }
-      }
-    }
-  }
-  
-  // Handle cylinder primitive
-  if (action.endpoint.includes('/cylinder')) {
-    return {
-      ...action,
-      type: 'extrude',
-      endpoint: '/features',
-      body: {
-        feature: {
-          type: 'extrude',
-          name: `Cylinder R${body.radius} H${body.height}`,
-          parameters: {
-            createSketch: true,
-            sketchShape: 'circle',
-            sketchRadius: body.radius || 25,
-            depth: body.height || 50,
-            direction: 'one',
-            operation: 'new'
-          }
-        }
-      }
-    }
-  }
-  
-  // Handle sphere primitive
-  if (action.endpoint.includes('/sphere')) {
-    return {
-      ...action,
-      type: 'revolve',
-      endpoint: '/features',
-      body: {
-        feature: {
-          type: 'revolve',
-          name: `Sphere R${body.radius}`,
-          parameters: {
-            createSketch: true,
-            sketchShape: 'semicircle',
-            sketchRadius: body.radius || 25,
-            axis: 'y',
-            angle: 360,
-            operation: 'new'
-          }
-        }
-      }
-    }
-  }
-  
-  // Handle cone primitive
-  if (action.endpoint.includes('/cone')) {
-    return {
-      ...action,
-      type: 'loft',
-      endpoint: '/features',
-      body: {
-        feature: {
-          type: 'loft',
-          name: `Cone R${body.baseRadius} H${body.height}`,
-          parameters: {
-            createSketch: true,
-            baseRadius: body.baseRadius || 25,
-            topRadius: body.topRadius || 0,
-            height: body.height || 50,
-            operation: 'new'
-          }
-        }
-      }
-    }
-  }
-  
-  return action
 }
 
 export interface ExecutionSummary {
@@ -229,7 +21,7 @@ export interface ExecutionSummary {
 }
 
 /**
- * Execute a sequence of CAD actions
+ * Execute a sequence of CAD actions using the document store
  */
 export async function executeActions(
   actions: CadAction[],
@@ -238,36 +30,39 @@ export async function executeActions(
   onProgress?: (action: CadAction, index: number) => void
 ): Promise<ExecutionSummary> {
   const results: ExecutionResult[] = []
-  const previousResults = new Map<string, any>()
   const createdFeatureIds: string[] = []
   let allSuccess = true
   
+  const store = useDocumentStore.getState()
+  
   for (let i = 0; i < actions.length; i++) {
-    let action = actions[i]
-    
-    // Transform primitive commands
-    if (action.endpoint.includes('/primitives/')) {
-      action = transformPrimitiveToFeature(action)
-    }
+    const action = actions[i]
     
     // Notify progress
     if (onProgress) {
       onProgress({ ...action, status: 'executing' }, i)
     }
     
-    const result = await executeAction(action, documentId, partStudioId, previousResults)
-    results.push(result)
-    
-    if (!result.success) {
+    try {
+      const result = await executeAction(action, partStudioId, store)
+      results.push(result)
+      
+      if (!result.success) {
+        allSuccess = false
+        break
+      }
+      
+      if (result.createdId) {
+        createdFeatureIds.push(result.createdId)
+      }
+    } catch (error) {
+      results.push({
+        success: false,
+        action: { ...action, status: 'error' },
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
       allSuccess = false
-      break // Stop on first failure
-    }
-    
-    // Store result for potential use in later actions
-    if (result.createdId) {
-      previousResults.set(`action_${i}`, result.createdId)
-      previousResults.set(`${action.type}_${i}`, result.createdId)
-      createdFeatureIds.push(result.createdId)
+      break
     }
   }
   
@@ -279,11 +74,6 @@ export async function executeActions(
     const failedIndex = results.findIndex(r => !r.success)
     const failedAction = results[failedIndex]
     message = `❌ Action ${failedIndex + 1} failed: ${failedAction.error}`
-    
-    // If some actions succeeded before the failure, offer to undo
-    if (failedIndex > 0) {
-      message += `\n⚠️ ${failedIndex} action${failedIndex > 1 ? 's were' : ' was'} completed before the failure.`
-    }
   }
   
   return {
@@ -295,16 +85,314 @@ export async function executeActions(
 }
 
 /**
- * Undo the last action by deleting created features
+ * Execute a single CAD action
+ */
+async function executeAction(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  try {
+    // Handle primitive shapes (box, cylinder, etc.)
+    if (action.type === 'primitive' || action.endpoint?.includes('/primitives/')) {
+      return await executePrimitive(action, partStudioId, store)
+    }
+    
+    // Handle extrude
+    if (action.type === 'extrude') {
+      return await executeExtrude(action, partStudioId, store)
+    }
+    
+    // Handle fillet
+    if (action.type === 'fillet') {
+      return await executeFillet(action, partStudioId, store)
+    }
+    
+    // Handle chamfer
+    if (action.type === 'chamfer') {
+      return await executeChamfer(action, partStudioId, store)
+    }
+    
+    // Handle other feature types
+    if (action.type === 'sketch') {
+      return await executeSketch(action, partStudioId, store)
+    }
+    
+    // Default: try to add as a generic feature
+    const feature = await store.addFeature(partStudioId, {
+      type: action.type,
+      name: body.name || `${action.type} feature`,
+      suppressed: false,
+      parameters: body
+    })
+    
+    if (feature) {
+      return {
+        success: true,
+        action: { ...action, status: 'success' },
+        createdId: feature.id
+      }
+    }
+    
+    return {
+      success: false,
+      action: { ...action, status: 'error' },
+      error: 'Failed to create feature'
+    }
+  } catch (error) {
+    return {
+      success: false,
+      action: { ...action, status: 'error' },
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Execute primitive shape creation (box, cylinder, sphere, cone)
+ */
+async function executePrimitive(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  const endpoint = action.endpoint || ''
+  
+  // Determine primitive type from endpoint or body
+  let featureType = 'extrude'
+  let featureParams: any = {}
+  let featureName = ''
+  
+  if (endpoint.includes('/box') || body.width !== undefined) {
+    // Box primitive - uses extrude with width/height/depth fallback
+    const width = body.width || 50
+    const height = body.height || 50
+    const depth = body.depth || 50
+    featureName = `Box ${width}×${height}×${depth}`
+    featureParams = {
+      width,
+      height,
+      depth: depth,
+      depth1: depth,
+      operation: 'new'
+    }
+  } else if (endpoint.includes('/cylinder') || body.radius !== undefined) {
+    // Cylinder primitive - uses revolve with radius/height fallback
+    const radius = body.radius || (body.diameter ? body.diameter / 2 : 25)
+    const height = body.height || 50
+    featureName = `Cylinder R${radius} H${height}`
+    featureType = 'revolve'
+    featureParams = {
+      radius,
+      height,
+      operation: 'new'
+    }
+  } else if (endpoint.includes('/sphere')) {
+    // Sphere primitive
+    const radius = body.radius || 25
+    featureName = `Sphere R${radius}`
+    featureType = 'revolve'
+    featureParams = {
+      radius,
+      height: radius * 2,
+      operation: 'new'
+    }
+  } else if (endpoint.includes('/cone')) {
+    // Cone primitive
+    const baseRadius = body.baseRadius || 25
+    const topRadius = body.topRadius || 0
+    const height = body.height || 50
+    featureName = `Cone R${baseRadius} H${height}`
+    featureType = 'revolve'
+    featureParams = {
+      radius: baseRadius,
+      height,
+      operation: 'new'
+    }
+  } else {
+    return {
+      success: false,
+      action: { ...action, status: 'error' },
+      error: 'Unknown primitive type'
+    }
+  }
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: featureType,
+    name: featureName,
+    suppressed: false,
+    parameters: featureParams
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create primitive'
+  }
+}
+
+/**
+ * Execute extrude feature
+ */
+async function executeExtrude(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body?.feature?.parameters || action.body || {}
+  const depth = body.depth || body.depth1 || 25
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'extrude',
+    name: action.body?.feature?.name || `Extrude ${depth}mm`,
+    suppressed: false,
+    parameters: {
+      depth1: depth,
+      depth: depth,
+      width: body.width || 30,
+      height: body.height || 30,
+      direction: body.direction || 'one',
+      operation: body.operation || 'new',
+      ...body
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create extrude'
+  }
+}
+
+/**
+ * Execute fillet feature
+ */
+async function executeFillet(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'fillet',
+    name: `Fillet R${body.radius || 5}`,
+    suppressed: false,
+    parameters: {
+      radius: body.radius || 5,
+      edges: body.edges || []
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create fillet'
+  }
+}
+
+/**
+ * Execute chamfer feature
+ */
+async function executeChamfer(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'chamfer',
+    name: `Chamfer ${body.distance || 3}mm`,
+    suppressed: false,
+    parameters: {
+      distance: body.distance || 3,
+      edges: body.edges || []
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create chamfer'
+  }
+}
+
+/**
+ * Execute sketch creation
+ */
+async function executeSketch(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const sketch = await store.createSketch(partStudioId, body.plane || 'top')
+  
+  if (sketch) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: sketch.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create sketch'
+  }
+}
+
+/**
+ * Undo actions by deleting created features
  */
 export async function undoActions(
   featureIds: string[],
   documentId: string,
   partStudioId: string
 ): Promise<{ success: boolean; message: string }> {
+  const store = useDocumentStore.getState()
+  
   try {
     for (const featureId of featureIds.reverse()) {
-      await api.deleteFeature(documentId, partStudioId, featureId)
+      await store.deleteFeature(partStudioId, featureId)
     }
     
     return {
@@ -318,4 +406,3 @@ export async function undoActions(
     }
   }
 }
-
