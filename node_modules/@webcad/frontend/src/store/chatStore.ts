@@ -16,7 +16,7 @@ export interface ChatMessage {
 
 export interface CadAction {
   id: string
-  type: 'sketch' | 'extrude' | 'revolve' | 'fillet' | 'chamfer' | 'shell' | 'pattern' | 'mirror' | 'delete' | 'undo'
+  type: 'sketch' | 'extrude' | 'revolve' | 'fillet' | 'chamfer' | 'shell' | 'pattern' | 'mirror' | 'delete' | 'undo' | 'loft' | 'sweep' | 'primitive'
   endpoint: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: Record<string, any>
