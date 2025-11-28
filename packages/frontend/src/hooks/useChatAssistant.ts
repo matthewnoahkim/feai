@@ -15,7 +15,6 @@ export function useChatAssistant() {
     isOpen,
     isTyping,
     isExecuting,
-    context,
     apiKey,
     model,
     lastActionIds,
@@ -150,7 +149,10 @@ export function useChatAssistant() {
     messageId: string,
     actions: CadAction[]
   ) => {
-    if (!context.documentId || !context.partStudioId) {
+    // Get fresh context from store (not stale closure)
+    const currentContext = useChatStore.getState().context
+    
+    if (!currentContext.documentId || !currentContext.partStudioId) {
       updateMessage(messageId, {
         content: '❌ No active document. Please create or open a document first.',
         status: 'error'
@@ -163,8 +165,8 @@ export function useChatAssistant() {
     try {
       const summary = await executeActions(
         actions,
-        context.documentId,
-        context.partStudioId,
+        currentContext.documentId,
+        currentContext.partStudioId,
         (action, index) => {
           // Update action status in the message
           const currentMessage = useChatStore.getState().messages.find(m => m.id === messageId)
@@ -186,8 +188,8 @@ export function useChatAssistant() {
       summary.createdFeatureIds.forEach(id => addToUndoStack(id))
       
       // Regenerate the 3D model to show changes
-      if (summary.success && context.partStudioId) {
-        await regenerateModel(context.partStudioId)
+      if (summary.success && currentContext.partStudioId) {
+        await regenerateModel(currentContext.partStudioId)
         addNotification('success', 'Model updated')
       }
       
@@ -201,7 +203,7 @@ export function useChatAssistant() {
     } finally {
       setIsExecuting(false)
     }
-  }, [context, updateMessage, setIsExecuting, addToUndoStack, regenerateModel, addNotification])
+  }, [updateMessage, setIsExecuting, addToUndoStack, regenerateModel, addNotification])
   
   /**
    * Undo the last action
@@ -213,7 +215,10 @@ export function useChatAssistant() {
       return
     }
     
-    if (!context.documentId || !context.partStudioId) {
+    // Get fresh context from store
+    const currentContext = useChatStore.getState().context
+    
+    if (!currentContext.documentId || !currentContext.partStudioId) {
       addNotification('error', 'No active document')
       return
     }
@@ -223,8 +228,8 @@ export function useChatAssistant() {
     try {
       const result = await undoActions(
         [featureId],
-        context.documentId,
-        context.partStudioId
+        currentContext.documentId,
+        currentContext.partStudioId
       )
       
       addMessage({
@@ -234,7 +239,7 @@ export function useChatAssistant() {
       })
       
       if (result.success) {
-        await regenerateModel(context.partStudioId)
+        await regenerateModel(currentContext.partStudioId)
         addNotification('success', 'Undone')
       }
       
@@ -243,7 +248,7 @@ export function useChatAssistant() {
     } finally {
       setIsExecuting(false)
     }
-  }, [context, popUndoStack, setIsExecuting, addMessage, regenerateModel, addNotification])
+  }, [popUndoStack, setIsExecuting, addMessage, regenerateModel, addNotification])
   
   return {
     // State

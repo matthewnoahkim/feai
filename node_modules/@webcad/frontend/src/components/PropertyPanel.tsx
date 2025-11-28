@@ -6,7 +6,6 @@ import React, { useState } from 'react'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import {
-  Settings,
   Box,
   Palette,
   Ruler,
@@ -154,9 +153,6 @@ export function PropertyPanel() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border">
         <span className="font-semibold text-sm">Properties</span>
-        <button className="p-1 hover:bg-cad-panel rounded" title="Settings">
-          <Settings size={16} />
-        </button>
       </div>
 
       {/* Content */}
