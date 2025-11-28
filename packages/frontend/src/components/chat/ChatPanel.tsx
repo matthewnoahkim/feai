@@ -8,119 +8,14 @@ import {
   Send,
   X,
   Trash2,
-  Settings,
   Undo2,
   Loader2,
   Sparkles,
-  ChevronDown,
-  Key,
-  CheckCircle,
   MessageSquare
 } from 'lucide-react'
 import { useChatAssistant } from '../../hooks/useChatAssistant'
 import { ChatMessage } from './ChatMessage'
 import { useChatStore } from '../../store/chatStore'
-
-interface SettingsPanelProps {
-  isOpen: boolean
-  onClose: () => void
-}
-
-function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
-  const { apiKey, model, setApiKey, setModel } = useChatStore()
-  const [tempKey, setTempKey] = useState(apiKey || '')
-  const [showKey, setShowKey] = useState(false)
-  
-  const handleSave = () => {
-    setApiKey(tempKey)
-    onClose()
-  }
-  
-  if (!isOpen) return null
-  
-  return (
-    <div className="absolute inset-0 bg-cad-dark/95 backdrop-blur-sm z-20 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border">
-        <span className="font-semibold text-sm">Settings</span>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-cad-panel rounded transition-colors"
-        >
-          <X size={16} />
-        </button>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* API Key */}
-        <div>
-          <label className="block text-xs font-medium text-cad-text-dim mb-2">
-            <Key size={12} className="inline mr-1" />
-            OpenAI API Key
-          </label>
-          <div className="relative">
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={tempKey}
-              onChange={(e) => setTempKey(e.target.value)}
-              placeholder="sk-..."
-              className="w-full px-3 py-2 text-sm bg-cad-darker border border-cad-border rounded-lg focus:border-cad-accent focus:ring-1 focus:ring-cad-accent/50 font-mono"
-            />
-            <button
-              onClick={() => setShowKey(!showKey)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-cad-text-dim hover:text-cad-text"
-            >
-              {showKey ? 'Hide' : 'Show'}
-            </button>
-          </div>
-          <p className="mt-1 text-[10px] text-cad-text-dim">
-            Get your API key from{' '}
-            <a
-              href="https://platform.openai.com/api-keys"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-cad-accent hover:underline"
-            >
-              OpenAI Platform
-            </a>
-          </p>
-        </div>
-        
-        {/* Model Selection */}
-        <div>
-          <label className="block text-xs font-medium text-cad-text-dim mb-2">
-            Model
-          </label>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value as any)}
-            className="w-full px-3 py-2 text-sm bg-cad-darker border border-cad-border rounded-lg focus:border-cad-accent"
-          >
-            <option value="gpt-4">GPT-4 (Most Capable)</option>
-            <option value="gpt-4-turbo">GPT-4 Turbo (Faster)</option>
-            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheapest)</option>
-          </select>
-        </div>
-        
-        {/* Status */}
-        {apiKey && (
-          <div className="flex items-center gap-2 text-xs text-green-400">
-            <CheckCircle size={14} />
-            <span>API key configured</span>
-          </div>
-        )}
-      </div>
-      
-      <div className="p-4 border-t border-cad-border">
-        <button
-          onClick={handleSave}
-          className="w-full py-2 bg-cad-accent hover:bg-cad-accent-hover text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          Save Settings
-        </button>
-      </div>
-    </div>
-  )
-}
 
 interface QuickActionsProps {
   onSelect: (text: string) => void
@@ -166,7 +61,6 @@ export function ChatPanel() {
   } = useChatAssistant()
   
   const [input, setInput] = useState('')
-  const [showSettings, setShowSettings] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   
@@ -245,13 +139,6 @@ export function ChatPanel() {
             <Trash2 size={14} />
           </button>
           <button
-            onClick={() => setShowSettings(true)}
-            className={`p-1.5 hover:bg-cad-panel rounded transition-colors ${!hasApiKey ? 'text-amber-400' : ''}`}
-            title="Settings"
-          >
-            <Settings size={14} />
-          </button>
-          <button
             onClick={toggleOpen}
             className="p-1.5 hover:bg-cad-panel rounded transition-colors"
             title="Close"
@@ -317,7 +204,7 @@ export function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={hasApiKey ? "Describe what you want to create..." : "Set API key in settings to start"}
+          placeholder="Describe what you want to create..."
           disabled={!hasApiKey || isTyping || isExecuting}
           rows={1}
           className="chat-input"
@@ -334,9 +221,6 @@ export function ChatPanel() {
           )}
         </button>
       </form>
-      
-      {/* Settings Panel */}
-      <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   )
 }
@@ -366,4 +250,3 @@ export function ChatToggleButton() {
     </button>
   )
 }
-

@@ -71,6 +71,9 @@ interface ChatState {
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
 
+// OpenAI API Key - configured directly for this deployment
+const OPENAI_API_KEY = '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'
+
 const DEFAULT_CONTEXT: ChatContext = {
   documentId: null,
   partStudioId: null,
@@ -108,7 +111,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isTyping: false,
   isExecuting: false,
   context: DEFAULT_CONTEXT,
-  apiKey: null,
+  apiKey: OPENAI_API_KEY,
   model: 'gpt-4',
   lastActionIds: [],
   

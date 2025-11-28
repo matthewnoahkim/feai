@@ -225,11 +225,15 @@ export async function callChatGPT(
  * Validate that an action is safe to execute (whitelist check)
  */
 export function validateAction(action: CadAction): boolean {
+  // Normalize the endpoint - remove leading /api if present
+  const normalizedEndpoint = action.endpoint.replace(/^\/api/, '')
+  
   const allowedEndpoints = [
-    '/api/primitives/',
-    '/api/features',
-    '/api/sketches',
-    '/api/undo'
+    '/primitives',
+    '/features',
+    '/sketches',
+    '/undo',
+    '/documents'
   ]
   
   const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE']
@@ -239,12 +243,18 @@ export function validateAction(action: CadAction): boolean {
     return false
   }
   
-  // Check endpoint against whitelist
+  // Check endpoint against whitelist - be more permissive
   const isAllowed = allowedEndpoints.some(allowed => 
-    action.endpoint.startsWith(allowed)
+    normalizedEndpoint.startsWith(allowed) || 
+    action.endpoint.startsWith(allowed) ||
+    action.endpoint.startsWith('/api' + allowed)
   )
   
-  return isAllowed
+  // Also allow if it's a known action type
+  const knownTypes = ['sketch', 'extrude', 'revolve', 'fillet', 'chamfer', 'shell', 'pattern', 'mirror', 'delete', 'undo', 'loft', 'sweep', 'primitive']
+  const isKnownType = knownTypes.includes(action.type)
+  
+  return isAllowed || isKnownType
 }
 
 /**

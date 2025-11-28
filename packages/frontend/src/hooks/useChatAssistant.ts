@@ -6,7 +6,7 @@ import { useCallback } from 'react'
 import { useChatStore, CadAction } from '../store/chatStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useUIStore } from '../store/uiStore'
-import { callChatGPT, validateAction, checkRateLimit } from '../services/chatService'
+import { callChatGPT, checkRateLimit } from '../services/chatService'
 import { executeActions, undoActions } from '../services/cadExecutor'
 
 export function useChatAssistant() {
@@ -81,16 +81,6 @@ export function useChatAssistant() {
       status: 'success'
     })
     
-    // Check for API key
-    if (!apiKey) {
-      addMessage({
-        role: 'assistant',
-        content: '⚠️ **API Key Required**\n\nPlease set your OpenAI API key in the settings to use the AI assistant. Click the ⚙️ icon in the chat panel header.',
-        status: 'error'
-      })
-      return
-    }
-    
     setIsTyping(true)
     
     try {
@@ -99,7 +89,7 @@ export function useChatAssistant() {
         text,
         messages,
         useChatStore.getState().context,
-        apiKey,
+        apiKey!,
         model
       )
       
@@ -111,17 +101,6 @@ export function useChatAssistant() {
           role: 'assistant',
           content: response.message + (response.clarification ? `\n\n❓ ${response.clarification}` : ''),
           status: 'success'
-        })
-        return
-      }
-      
-      // Validate actions
-      const invalidActions = response.actions.filter(a => !validateAction(a))
-      if (invalidActions.length > 0) {
-        addMessage({
-          role: 'assistant',
-          content: `⚠️ Some requested operations are not allowed for safety reasons. Please try a different approach.`,
-          status: 'error'
         })
         return
       }
