@@ -53,7 +53,7 @@ interface SelectionContextMenuProps {
 
 export function SelectionContextMenu({ position, onClose }: SelectionContextMenuProps) {
   const { selection, clearSelection, openDialog } = useUIStore()
-  const { document } = useDocumentStore()
+  const { document: cadDocument } = useDocumentStore()
   
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
   
@@ -72,11 +72,12 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
       }
     }
     
-    (document as any)?.addEventListener('click', handleClickOutside)
+    // Use window.document to avoid shadowing with cadDocument
+    window.document.addEventListener('click', handleClickOutside)
     window.addEventListener('keydown', handleEscape)
     
     return () => {
-      (document as any)?.removeEventListener('click', handleClickOutside)
+      window.document.removeEventListener('click', handleClickOutside)
       window.removeEventListener('keydown', handleEscape)
     }
   }, [onClose])

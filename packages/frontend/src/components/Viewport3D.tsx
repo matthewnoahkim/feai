@@ -294,319 +294,304 @@ function SketchVisualization() {
   )
 }
 
+// Helper function to create extrude preview geometry (no hooks - pure function)
+function createExtrudePreviewGeometry(
+  entity: any,
+  zBottom: number,
+  zTop: number,
+  useDraft: boolean,
+  draftAngle: number,
+  draftOutward: boolean
+): THREE.BufferGeometry | null {
+  if (!entity) return null
+  
+  try {
+    const geo = new THREE.BufferGeometry()
+    
+    if (entity.type === 'rectangle') {
+      const data = entity.data
+      let cx = 0, cy = 0, hw = 15, hh = 15
+      
+      if (data.start && data.end) {
+        const x1 = data.start.x, y1 = data.start.y
+        const x2 = data.end.x, y2 = data.end.y
+        hw = Math.abs(x2 - x1) / 2
+        hh = Math.abs(y2 - y1) / 2
+        cx = (x1 + x2) / 2
+        cy = (y1 + y2) / 2
+      } else if (data.corner1 && data.corner2) {
+        const c1 = data.corner1, c2 = data.corner2
+        hw = Math.abs(c2.x - c1.x) / 2
+        hh = Math.abs(c2.y - c1.y) / 2
+        cx = (c1.x + c2.x) / 2
+        cy = (c1.y + c2.y) / 2
+      }
+      
+      if (hw <= 0 || hh <= 0) return null
+      
+      let topHW = hw, topHH = hh
+      if (useDraft && draftAngle > 0) {
+        const draftRad = (draftAngle * Math.PI) / 180
+        const totalDepth = Math.abs(zTop - zBottom)
+        const taper = Math.tan(draftRad) * totalDepth
+        topHW = draftOutward ? hw + taper / 2 : Math.max(0.1, hw - taper / 2)
+        topHH = draftOutward ? hh + taper / 2 : Math.max(0.1, hh - taper / 2)
+      }
+      
+      const vertices = new Float32Array([
+        cx - hw, cy - hh, zBottom,  cx + hw, cy - hh, zBottom,  cx + topHW, cy - topHH, zTop,  cx - topHW, cy - topHH, zTop,
+        cx + hw, cy + hh, zBottom,  cx - hw, cy + hh, zBottom,  cx - topHW, cy + topHH, zTop,  cx + topHW, cy + topHH, zTop,
+        cx - topHW, cy - topHH, zTop,  cx + topHW, cy - topHH, zTop,  cx + topHW, cy + topHH, zTop,  cx - topHW, cy + topHH, zTop,
+        cx - hw, cy + hh, zBottom,  cx + hw, cy + hh, zBottom,  cx + hw, cy - hh, zBottom,  cx - hw, cy - hh, zBottom,
+        cx + hw, cy - hh, zBottom,  cx + hw, cy + hh, zBottom,  cx + topHW, cy + topHH, zTop,  cx + topHW, cy - topHH, zTop,
+        cx - hw, cy + hh, zBottom,  cx - hw, cy - hh, zBottom,  cx - topHW, cy - topHH, zTop,  cx - topHW, cy + topHH, zTop,
+      ])
+      
+      const normals = new Float32Array([
+        0, -1, 0,  0, -1, 0,  0, -1, 0,  0, -1, 0,
+        0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
+        0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
+        0, 0, -1,  0, 0, -1,  0, 0, -1,  0, 0, -1,
+        1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
+        -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0,
+      ])
+      
+      geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+      geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+      geo.setIndex([0,1,2,0,2,3, 4,5,6,4,6,7, 8,9,10,8,10,11, 12,13,14,12,14,15, 16,17,18,16,18,19, 20,21,22,20,22,23])
+      
+    } else if (entity.type === 'circle') {
+      const cx = entity.data.center?.x || 0
+      const cy = entity.data.center?.y || 0
+      const radius = entity.data.radius || 15
+      if (radius <= 0) return null
+      
+      const segments = 32
+      let topRadius = radius
+      if (useDraft && draftAngle > 0) {
+        const draftRad = (draftAngle * Math.PI) / 180
+        const taper = Math.tan(draftRad) * Math.abs(zTop - zBottom)
+        topRadius = draftOutward ? radius + taper : Math.max(0.1, radius - taper)
+      }
+      
+      const vertices: number[] = []
+      const normals: number[] = []
+      const indices: number[] = []
+      
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2
+        const cosT = Math.cos(theta), sinT = Math.sin(theta)
+        vertices.push(cx + cosT * radius, cy + sinT * radius, zBottom)
+        normals.push(cosT, sinT, 0)
+        vertices.push(cx + cosT * topRadius, cy + sinT * topRadius, zTop)
+        normals.push(cosT, sinT, 0)
+      }
+      
+      for (let i = 0; i < segments; i++) {
+        const i0 = i * 2, i1 = i * 2 + 1, i2 = (i + 1) * 2, i3 = (i + 1) * 2 + 1
+        indices.push(i0, i2, i1, i1, i2, i3)
+      }
+      
+      // Top cap
+      const topCenterIdx = vertices.length / 3
+      vertices.push(cx, cy, zTop)
+      normals.push(0, 0, 1)
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2
+        vertices.push(cx + Math.cos(theta) * topRadius, cy + Math.sin(theta) * topRadius, zTop)
+        normals.push(0, 0, 1)
+      }
+      for (let i = 0; i < segments; i++) {
+        indices.push(topCenterIdx, topCenterIdx + 1 + i, topCenterIdx + 2 + i)
+      }
+      
+      // Bottom cap
+      const bottomCenterIdx = vertices.length / 3
+      vertices.push(cx, cy, zBottom)
+      normals.push(0, 0, -1)
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2
+        vertices.push(cx + Math.cos(theta) * radius, cy + Math.sin(theta) * radius, zBottom)
+        normals.push(0, 0, -1)
+      }
+      for (let i = 0; i < segments; i++) {
+        indices.push(bottomCenterIdx, bottomCenterIdx + 2 + i, bottomCenterIdx + 1 + i)
+      }
+      
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+      geo.setIndex(indices)
+      
+    } else if (entity.type === 'polygon') {
+      const cx = entity.data.center?.x || 0
+      const cy = entity.data.center?.y || 0
+      const radius = entity.data.radius || 15
+      const sides = entity.data.sides || 6
+      if (radius <= 0 || sides < 3) return null
+      
+      let topRadius = radius
+      if (useDraft && draftAngle > 0) {
+        const draftRad = (draftAngle * Math.PI) / 180
+        const taper = Math.tan(draftRad) * Math.abs(zTop - zBottom)
+        topRadius = draftOutward ? radius + taper : Math.max(0.1, radius - taper)
+      }
+      
+      const vertices: number[] = []
+      const normals: number[] = []
+      const indices: number[] = []
+      
+      const bottomVerts: [number, number][] = []
+      const topVerts: [number, number][] = []
+      
+      for (let i = 0; i < sides; i++) {
+        const theta = (i / sides) * Math.PI * 2 - Math.PI / 2
+        bottomVerts.push([cx + Math.cos(theta) * radius, cy + Math.sin(theta) * radius])
+        topVerts.push([cx + Math.cos(theta) * topRadius, cy + Math.sin(theta) * topRadius])
+      }
+      
+      for (let i = 0; i < sides; i++) {
+        const nextI = (i + 1) % sides
+        const baseIdx = vertices.length / 3
+        const dx = bottomVerts[nextI][0] - bottomVerts[i][0]
+        const dy = bottomVerts[nextI][1] - bottomVerts[i][1]
+        const len = Math.sqrt(dx * dx + dy * dy) || 1
+        const nx = dy / len, ny = -dx / len
+        
+        vertices.push(bottomVerts[i][0], bottomVerts[i][1], zBottom)
+        vertices.push(bottomVerts[nextI][0], bottomVerts[nextI][1], zBottom)
+        vertices.push(topVerts[nextI][0], topVerts[nextI][1], zTop)
+        vertices.push(topVerts[i][0], topVerts[i][1], zTop)
+        for (let j = 0; j < 4; j++) normals.push(nx, ny, 0)
+        indices.push(baseIdx, baseIdx + 1, baseIdx + 2, baseIdx, baseIdx + 2, baseIdx + 3)
+      }
+      
+      // Top cap
+      const topCenterIdx = vertices.length / 3
+      vertices.push(cx, cy, zTop)
+      normals.push(0, 0, 1)
+      for (let i = 0; i < sides; i++) {
+        vertices.push(topVerts[i][0], topVerts[i][1], zTop)
+        normals.push(0, 0, 1)
+      }
+      for (let i = 0; i < sides; i++) {
+        indices.push(topCenterIdx, topCenterIdx + 1 + i, topCenterIdx + 1 + ((i + 1) % sides))
+      }
+      
+      // Bottom cap
+      const bottomCenterIdx = vertices.length / 3
+      vertices.push(cx, cy, zBottom)
+      normals.push(0, 0, -1)
+      for (let i = 0; i < sides; i++) {
+        vertices.push(bottomVerts[i][0], bottomVerts[i][1], zBottom)
+        normals.push(0, 0, -1)
+      }
+      for (let i = 0; i < sides; i++) {
+        indices.push(bottomCenterIdx, bottomCenterIdx + 1 + ((i + 1) % sides), bottomCenterIdx + 1 + i)
+      }
+      
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
+      geo.setIndex(indices)
+    } else {
+      return null
+    }
+    
+    return geo
+  } catch (error) {
+    console.error('Error creating extrude preview geometry:', error)
+    return null
+  }
+}
+
 // Extrude preview component - shows preview while dialog is open
 function ExtrudePreview() {
   const { activeDialog, dialogData } = useUIStore()
   const { document } = useDocumentStore()
   
-  if (activeDialog !== 'extrude' || !dialogData) return null
-  
-  const activePartStudio = document?.partStudios.find(ps => ps.id === document?.activeElementId)
-  if (!activePartStudio) return null
-  
-  const profileIds = dialogData.profileIds || []
-  if (profileIds.length === 0) return null
-  
-  const depth1 = dialogData.depth1 || 25
-  const flipDirection = dialogData.flipDirection1 || false
-  const endCondition = dialogData.endCondition1 || 'blind'
-  const useSecondDirection = dialogData.useSecondDirection || false
-  const depth2 = dialogData.depth2 || 0
-  const useDraft = dialogData.useDraft || false
-  const draftAngle = dialogData.draftAngle || 0
-  const draftOutward = dialogData.draftOutward || false
-  const operation = dialogData.operation || 'new'
-  
-  // Calculate z positions
-  let zBottom = 0, zTop = depth1
-  
-  if (endCondition === 'symmetric') {
-    zBottom = -depth1 / 2
-    zTop = depth1 / 2
-  } else if (flipDirection) {
-    zBottom = -depth1
-    zTop = 0
-  }
-  
-  if (useSecondDirection && endCondition !== 'symmetric') {
-    if (flipDirection) {
-      zTop = depth2
-    } else {
-      zBottom = -depth2
-    }
-  }
-  
-  // Get preview color based on operation
-  const getPreviewColor = () => {
-    switch (operation) {
-      case 'add': return '#22c55e' // Green for add
-      case 'remove': return '#ef4444' // Red for remove
-      case 'intersect': return '#a855f7' // Purple for intersect
-      default: return '#3b82f6' // Blue for new
-    }
-  }
-  
-  // Create preview meshes for selected profiles
-  const previewMeshes = profileIds.map((profileId: string) => {
-    // Find the entity in sketches
-    let entity: any = null
-    activePartStudio.sketches.forEach((sketch) => {
-      const found = sketch.entities.find(e => e.id === profileId)
-      if (found) entity = found
-    })
+  // Calculate all preview data using useMemo at the top level (proper hooks usage)
+  const previewData = useMemo(() => {
+    if (activeDialog !== 'extrude' || !dialogData) return null
     
-    if (!entity) return null
+    const activePartStudio = document?.partStudios.find(ps => ps.id === document?.activeElementId)
+    if (!activePartStudio) return null
     
-    const geometry = useMemo(() => {
-      const geo = new THREE.BufferGeometry()
-      
-      // Create extrusion based on entity type
-      if (entity.type === 'rectangle') {
-        const data = entity.data
-        let cx = 0, cy = 0, hw = 15, hh = 15
-        
-        if (data.start && data.end) {
-          const x1 = data.start.x, y1 = data.start.y
-          const x2 = data.end.x, y2 = data.end.y
-          const width = Math.abs(x2 - x1)
-          const height = Math.abs(y2 - y1)
-          cx = (x1 + x2) / 2
-          cy = (y1 + y2) / 2
-          hw = width / 2
-          hh = height / 2
-        } else if (data.corner1 && data.corner2) {
-          const c1 = data.corner1, c2 = data.corner2
-          const width = Math.abs(c2.x - c1.x)
-          const height = Math.abs(c2.y - c1.y)
-          cx = (c1.x + c2.x) / 2
-          cy = (c1.y + c2.y) / 2
-          hw = width / 2
-          hh = height / 2
-        }
-        
-        // Apply draft angle
-        let topHW = hw, topHH = hh
-        if (useDraft && draftAngle > 0) {
-          const draftRad = (draftAngle * Math.PI) / 180
-          const totalDepth = Math.abs(zTop - zBottom)
-          const taper = Math.tan(draftRad) * totalDepth
-          if (draftOutward) {
-            topHW = hw + taper / 2
-            topHH = hh + taper / 2
-          } else {
-            topHW = Math.max(0.1, hw - taper / 2)
-            topHH = Math.max(0.1, hh - taper / 2)
-          }
-        }
-        
-        const vertices = new Float32Array([
-          // Front face
-          cx - hw, cy - hh, zBottom,  cx + hw, cy - hh, zBottom,  cx + topHW, cy - topHH, zTop,  cx - topHW, cy - topHH, zTop,
-          // Back face
-          cx + hw, cy + hh, zBottom,  cx - hw, cy + hh, zBottom,  cx - topHW, cy + topHH, zTop,  cx + topHW, cy + topHH, zTop,
-          // Top face
-          cx - topHW, cy - topHH, zTop,  cx + topHW, cy - topHH, zTop,  cx + topHW, cy + topHH, zTop,  cx - topHW, cy + topHH, zTop,
-          // Bottom face
-          cx - hw, cy + hh, zBottom,  cx + hw, cy + hh, zBottom,  cx + hw, cy - hh, zBottom,  cx - hw, cy - hh, zBottom,
-          // Right face
-          cx + hw, cy - hh, zBottom,  cx + hw, cy + hh, zBottom,  cx + topHW, cy + topHH, zTop,  cx + topHW, cy - topHH, zTop,
-          // Left face
-          cx - hw, cy + hh, zBottom,  cx - hw, cy - hh, zBottom,  cx - topHW, cy - topHH, zTop,  cx - topHW, cy + topHH, zTop,
-        ])
-        
-        const normals = new Float32Array([
-          0, -1, 0,  0, -1, 0,  0, -1, 0,  0, -1, 0,
-          0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0,
-          0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1,
-          0, 0, -1,  0, 0, -1,  0, 0, -1,  0, 0, -1,
-          1, 0, 0,  1, 0, 0,  1, 0, 0,  1, 0, 0,
-          -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0,
-        ])
-        
-        const indices = [
-          0, 1, 2, 0, 2, 3,
-          4, 5, 6, 4, 6, 7,
-          8, 9, 10, 8, 10, 11,
-          12, 13, 14, 12, 14, 15,
-          16, 17, 18, 16, 18, 19,
-          20, 21, 22, 20, 22, 23,
-        ]
-        
-        geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-        geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
-        geo.setIndex(indices)
-        
-      } else if (entity.type === 'circle') {
-        const cx = entity.data.center?.x || 0
-        const cy = entity.data.center?.y || 0
-        const radius = entity.data.radius || 15
-        const segments = 32
-        
-        let topRadius = radius
-        if (useDraft && draftAngle > 0) {
-          const draftRad = (draftAngle * Math.PI) / 180
-          const totalDepth = Math.abs(zTop - zBottom)
-          const taper = Math.tan(draftRad) * totalDepth
-          topRadius = draftOutward ? radius + taper : Math.max(0.1, radius - taper)
-        }
-        
-        const vertices: number[] = []
-        const normals: number[] = []
-        const indices: number[] = []
-        
-        // Side vertices
-        for (let i = 0; i <= segments; i++) {
-          const theta = (i / segments) * Math.PI * 2
-          const cosT = Math.cos(theta), sinT = Math.sin(theta)
-          
-          vertices.push(cx + cosT * radius, cy + sinT * radius, zBottom)
-          normals.push(cosT, sinT, 0)
-          
-          vertices.push(cx + cosT * topRadius, cy + sinT * topRadius, zTop)
-          normals.push(cosT, sinT, 0)
-        }
-        
-        for (let i = 0; i < segments; i++) {
-          const i0 = i * 2, i1 = i * 2 + 1, i2 = (i + 1) * 2, i3 = (i + 1) * 2 + 1
-          indices.push(i0, i2, i1, i1, i2, i3)
-        }
-        
-        // Top cap
-        const topCenterIdx = vertices.length / 3
-        vertices.push(cx, cy, zTop)
-        normals.push(0, 0, 1)
-        
-        for (let i = 0; i <= segments; i++) {
-          const theta = (i / segments) * Math.PI * 2
-          vertices.push(cx + Math.cos(theta) * topRadius, cy + Math.sin(theta) * topRadius, zTop)
-          normals.push(0, 0, 1)
-        }
-        
-        for (let i = 0; i < segments; i++) {
-          indices.push(topCenterIdx, topCenterIdx + 1 + i, topCenterIdx + 2 + i)
-        }
-        
-        // Bottom cap
-        const bottomCenterIdx = vertices.length / 3
-        vertices.push(cx, cy, zBottom)
-        normals.push(0, 0, -1)
-        
-        for (let i = 0; i <= segments; i++) {
-          const theta = (i / segments) * Math.PI * 2
-          vertices.push(cx + Math.cos(theta) * radius, cy + Math.sin(theta) * radius, zBottom)
-          normals.push(0, 0, -1)
-        }
-        
-        for (let i = 0; i < segments; i++) {
-          indices.push(bottomCenterIdx, bottomCenterIdx + 2 + i, bottomCenterIdx + 1 + i)
-        }
-        
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-        geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-        geo.setIndex(indices)
-        
-      } else if (entity.type === 'polygon') {
-        const cx = entity.data.center?.x || 0
-        const cy = entity.data.center?.y || 0
-        const radius = entity.data.radius || 15
-        const sides = entity.data.sides || 6
-        
-        let topRadius = radius
-        if (useDraft && draftAngle > 0) {
-          const draftRad = (draftAngle * Math.PI) / 180
-          const totalDepth = Math.abs(zTop - zBottom)
-          const taper = Math.tan(draftRad) * totalDepth
-          topRadius = draftOutward ? radius + taper : Math.max(0.1, radius - taper)
-        }
-        
-        const vertices: number[] = []
-        const normals: number[] = []
-        const indices: number[] = []
-        
-        const bottomVerts: [number, number][] = []
-        const topVerts: [number, number][] = []
-        
-        for (let i = 0; i < sides; i++) {
-          const theta = (i / sides) * Math.PI * 2 - Math.PI / 2
-          bottomVerts.push([cx + Math.cos(theta) * radius, cy + Math.sin(theta) * radius])
-          topVerts.push([cx + Math.cos(theta) * topRadius, cy + Math.sin(theta) * topRadius])
-        }
-        
-        // Side faces
-        for (let i = 0; i < sides; i++) {
-          const nextI = (i + 1) % sides
-          const baseIdx = vertices.length / 3
-          
-          const dx = bottomVerts[nextI][0] - bottomVerts[i][0]
-          const dy = bottomVerts[nextI][1] - bottomVerts[i][1]
-          const len = Math.sqrt(dx * dx + dy * dy)
-          const nx = dy / len, ny = -dx / len
-          
-          vertices.push(bottomVerts[i][0], bottomVerts[i][1], zBottom)
-          vertices.push(bottomVerts[nextI][0], bottomVerts[nextI][1], zBottom)
-          vertices.push(topVerts[nextI][0], topVerts[nextI][1], zTop)
-          vertices.push(topVerts[i][0], topVerts[i][1], zTop)
-          
-          for (let j = 0; j < 4; j++) normals.push(nx, ny, 0)
-          
-          indices.push(baseIdx, baseIdx + 1, baseIdx + 2, baseIdx, baseIdx + 2, baseIdx + 3)
-        }
-        
-        // Top cap
-        const topCenterIdx = vertices.length / 3
-        vertices.push(cx, cy, zTop)
-        normals.push(0, 0, 1)
-        
-        for (let i = 0; i < sides; i++) {
-          vertices.push(topVerts[i][0], topVerts[i][1], zTop)
-          normals.push(0, 0, 1)
-        }
-        
-        for (let i = 0; i < sides; i++) {
-          const nextI = (i + 1) % sides
-          indices.push(topCenterIdx, topCenterIdx + 1 + i, topCenterIdx + 1 + nextI)
-        }
-        
-        // Bottom cap
-        const bottomCenterIdx = vertices.length / 3
-        vertices.push(cx, cy, zBottom)
-        normals.push(0, 0, -1)
-        
-        for (let i = 0; i < sides; i++) {
-          vertices.push(bottomVerts[i][0], bottomVerts[i][1], zBottom)
-          normals.push(0, 0, -1)
-        }
-        
-        for (let i = 0; i < sides; i++) {
-          const nextI = (i + 1) % sides
-          indices.push(bottomCenterIdx, bottomCenterIdx + 1 + nextI, bottomCenterIdx + 1 + i)
-        }
-        
-        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-        geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-        geo.setIndex(indices)
+    const profileIds = dialogData.profileIds || []
+    if (profileIds.length === 0) return null
+    
+    const depth1 = dialogData.depth1 || 25
+    const flipDirection = dialogData.flipDirection1 || false
+    const endCondition = dialogData.endCondition1 || 'blind'
+    const useSecondDirection = dialogData.useSecondDirection || false
+    const depth2 = dialogData.depth2 || 0
+    const useDraft = dialogData.useDraft || false
+    const draftAngle = dialogData.draftAngle || 0
+    const draftOutward = dialogData.draftOutward || false
+    const operation = dialogData.operation || 'new'
+    
+    // Calculate z positions
+    let zBottom = 0, zTop = depth1
+    
+    if (endCondition === 'symmetric') {
+      zBottom = -depth1 / 2
+      zTop = depth1 / 2
+    } else if (flipDirection) {
+      zBottom = -depth1
+      zTop = 0
+    }
+    
+    if (useSecondDirection && endCondition !== 'symmetric') {
+      if (flipDirection) {
+        zTop = depth2
+      } else {
+        zBottom = -depth2
       }
+    }
+    
+    // Get color based on operation
+    let color = '#3b82f6'
+    if (operation === 'add') color = '#22c55e'
+    else if (operation === 'remove') color = '#ef4444'
+    else if (operation === 'intersect') color = '#a855f7'
+    
+    // Find entities and create geometries
+    const meshes: { id: string; geometry: THREE.BufferGeometry }[] = []
+    
+    for (const profileId of profileIds) {
+      let entity: any = null
+      activePartStudio.sketches.forEach((sketch) => {
+        const found = sketch.entities.find(e => e.id === profileId)
+        if (found) entity = found
+      })
       
-      return geo
-    }, [entity, zBottom, zTop, useDraft, draftAngle, draftOutward])
+      if (entity) {
+        const geo = createExtrudePreviewGeometry(entity, zBottom, zTop, useDraft, draftAngle, draftOutward)
+        if (geo) {
+          meshes.push({ id: profileId, geometry: geo })
+        }
+      }
+    }
     
-    if (!geometry || geometry.attributes.position?.count === 0) return null
-    
-    return (
-      <mesh key={profileId} geometry={geometry}>
-        <meshStandardMaterial 
-          color={getPreviewColor()}
-          transparent
-          opacity={0.6}
-          metalness={0.2}
-          roughness={0.8}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-    )
-  })
+    return { meshes, color }
+  }, [activeDialog, dialogData, document])
   
-  return <group>{previewMeshes}</group>
+  if (!previewData || previewData.meshes.length === 0) return null
+  
+  return (
+    <group>
+      {previewData.meshes.map(({ id, geometry }) => (
+        <mesh key={id} geometry={geometry}>
+          <meshStandardMaterial 
+            color={previewData.color}
+            transparent
+            opacity={0.6}
+            metalness={0.2}
+            roughness={0.8}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
 }
 
 // Revolve preview component - shows preview while dialog is open

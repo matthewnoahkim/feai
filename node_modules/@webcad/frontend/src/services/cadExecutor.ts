@@ -115,9 +115,34 @@ async function executeAction(
       return await executeChamfer(action, partStudioId, store)
     }
     
-    // Handle other feature types
+    // Handle sketch
     if (action.type === 'sketch') {
       return await executeSketch(action, partStudioId, store)
+    }
+    
+    // Handle revolve
+    if (action.type === 'revolve') {
+      return await executeRevolve(action, partStudioId, store)
+    }
+    
+    // Handle shell
+    if (action.type === 'shell') {
+      return await executeShell(action, partStudioId, store)
+    }
+    
+    // Handle linear pattern
+    if (action.type === 'linear-pattern' || action.type === 'linearPattern') {
+      return await executeLinearPattern(action, partStudioId, store)
+    }
+    
+    // Handle circular pattern
+    if (action.type === 'circular-pattern' || action.type === 'circularPattern') {
+      return await executeCircularPattern(action, partStudioId, store)
+    }
+    
+    // Handle mirror
+    if (action.type === 'mirror' || action.type === 'mirror-feature') {
+      return await executeMirror(action, partStudioId, store)
     }
     
     // Default: try to add as a generic feature
@@ -377,6 +402,191 @@ async function executeSketch(
     success: false,
     action: { ...action, status: 'error' },
     error: 'Failed to create sketch'
+  }
+}
+
+/**
+ * Execute revolve feature
+ */
+async function executeRevolve(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'revolve',
+    name: body.name || `Revolve ${body.angle || 360}°`,
+    suppressed: false,
+    parameters: {
+      angle: body.angle || 360,
+      axisId: body.axis || 'y-axis',
+      operation: body.operation || 'new',
+      ...body
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create revolve'
+  }
+}
+
+/**
+ * Execute shell feature
+ */
+async function executeShell(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'shell',
+    name: body.name || `Shell ${body.thickness || 2}mm`,
+    suppressed: false,
+    parameters: {
+      thickness: body.thickness || 2,
+      faces: body.faces || [],
+      ...body
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create shell'
+  }
+}
+
+/**
+ * Execute linear pattern feature
+ */
+async function executeLinearPattern(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'linear-pattern',
+    name: body.name || `Linear Pattern`,
+    suppressed: false,
+    parameters: {
+      count1: body.count || body.count1 || 3,
+      spacing1: body.spacing || body.spacing1 || 20,
+      direction1: body.direction || 'x',
+      count2: body.count2 || 1,
+      spacing2: body.spacing2 || 20,
+      direction2: body.direction2 || 'y',
+      ...body
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create linear pattern'
+  }
+}
+
+/**
+ * Execute circular pattern feature
+ */
+async function executeCircularPattern(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'circular-pattern',
+    name: body.name || `Circular Pattern`,
+    suppressed: false,
+    parameters: {
+      count: body.count || 6,
+      angle: body.angle || 360,
+      axis: body.axis || 'z',
+      ...body
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create circular pattern'
+  }
+}
+
+/**
+ * Execute mirror feature
+ */
+async function executeMirror(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  
+  const feature = await store.addFeature(partStudioId, {
+    type: 'mirror-feature',
+    name: body.name || `Mirror`,
+    suppressed: false,
+    parameters: {
+      plane: body.plane || 'right',
+      ...body
+    }
+  })
+  
+  if (feature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: feature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to create mirror'
   }
 }
 
