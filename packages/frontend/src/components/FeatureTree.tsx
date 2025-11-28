@@ -640,6 +640,8 @@ export function FeatureTree() {
           hasChildren
           expanded={expandedItems.has('root')}
           onToggle={() => toggleExpand('root')}
+          onClick={() => setSelection({ type: 'document', ids: ['document'] })}
+          selected={selection.type === 'document'}
         />
 
         {expandedItems.has('root') && (

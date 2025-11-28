@@ -134,7 +134,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange?: (color: st
 
 export function PropertyPanel() {
   const { selection, viewSettings, setDisplayMode, toggleViewSetting } = useUIStore()
-  const { document, updatePartColor, updatePartMaterial, updateFeature } = useDocumentStore()
+  const { document, updatePartColor, updatePartMaterial, updateFeature, updateDocumentName, updateDocumentUnits, renameFeature } = useDocumentStore()
   
   const activePartStudio = document?.partStudios.find(ps => ps.id === document.activeElementId)
   
@@ -165,7 +165,9 @@ export function PropertyPanel() {
                 <PropertyInput 
                   value={selectedFeature.name} 
                   onChange={(val) => {
-                    // Would update feature name
+                    if (activePartStudio && val.trim()) {
+                      renameFeature(activePartStudio.id, selectedFeature.id, val.trim())
+                    }
                   }}
                 />
               </PropertyRow>
@@ -313,21 +315,31 @@ export function PropertyPanel() {
           </>
         )}
         
-        {/* No selection - show general properties */}
-        {selection.ids.length === 0 && (
+        {/* No selection or document selected - show general properties */}
+        {(selection.ids.length === 0 || selection.type === 'document') && (
           <>
             <PropertySection title="Document" icon={<Layers size={16} />}>
               <PropertyRow label="Name">
-                <PropertyInput value={document?.name || 'New Part'} />
+                <PropertyInput 
+                  value={document?.name || 'New Part'} 
+                  onChange={(val) => {
+                    if (val.trim()) {
+                      updateDocumentName(val.trim())
+                    }
+                  }}
+                />
               </PropertyRow>
               <PropertyRow label="Units">
                 <PropertySelect
-                  value="mm"
+                  value={document?.units || 'mm'}
                   options={[
                     { value: 'mm', label: 'mm' },
                     { value: 'inch', label: 'inch' },
                     { value: 'm', label: 'm' }
                   ]}
+                  onChange={(val) => {
+                    updateDocumentUnits(val as 'mm' | 'inch' | 'm')
+                  }}
                 />
               </PropertyRow>
             </PropertySection>

@@ -227,7 +227,7 @@ export function StatusBar() {
 
       {/* Units */}
       <div className="px-2 py-0.5 bg-cad-panel rounded text-cad-text-dim font-medium">
-        mm
+        {document?.units || 'mm'}
       </div>
 
       {/* Coordinate display when in sketch mode */}

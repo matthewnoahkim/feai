@@ -101,6 +101,7 @@ export interface Document {
   id: string
   name: string
   description?: string
+  units: 'mm' | 'inch' | 'm'
   partStudios: PartStudio[]
   assemblies: Assembly[]
   activeElementId: string | null
@@ -145,6 +146,10 @@ interface DocumentState {
   
   // Import operations
   importSTLPart: (partStudioId: string, name: string, mesh: { vertices: number[], normals: number[], indices: number[] }) => void
+  
+  // Document operations
+  updateDocumentName: (name: string) => void
+  updateDocumentUnits: (units: 'mm' | 'inch' | 'm') => void
 }
 
 // Generate unique ID
@@ -1817,6 +1822,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       const newDoc: Document = {
         id: generateId(),
         name,
+        units: 'mm',
         partStudios: [{
           id: psId,
           name: 'Part Studio 1',
@@ -2954,6 +2960,26 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       
       return {
         document: { ...state.document, partStudios },
+        isDirty: true
+      }
+    })
+  },
+  
+  updateDocumentName: (name: string) => {
+    set(state => {
+      if (!state.document) return state
+      return {
+        document: { ...state.document, name },
+        isDirty: true
+      }
+    })
+  },
+  
+  updateDocumentUnits: (units: 'mm' | 'inch' | 'm') => {
+    set(state => {
+      if (!state.document) return state
+      return {
+        document: { ...state.document, units },
         isDirty: true
       }
     })

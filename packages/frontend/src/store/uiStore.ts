@@ -5,7 +5,7 @@
 import { create } from 'zustand'
 
 export type ActiveMode = 'model' | 'sketch' | 'assembly' | 'drawing'
-export type SelectionType = 'none' | 'face' | 'edge' | 'vertex' | 'body' | 'feature' | 'sketch-entity'
+export type SelectionType = 'none' | 'face' | 'edge' | 'vertex' | 'body' | 'feature' | 'sketch-entity' | 'document'
 export type DisplayMode = 'shaded' | 'shadedEdges' | 'wireframe' | 'hidden'
 
 // Sketch tool types with variants

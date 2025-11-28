@@ -6,8 +6,6 @@ import React, { useRef } from 'react'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import {
-  FileIcon,
-  Save,
   Undo,
   Redo,
   MousePointer,
@@ -24,14 +22,10 @@ import {
   Eye,
   Download,
   Upload,
-  Settings,
-  HelpCircle,
   Pencil,
-  Plus,
   Scissors,
   CornerUpRight,
   Shell,
-  Copy,
   FlipHorizontal
 } from 'lucide-react'
 
@@ -240,7 +234,7 @@ export function Toolbar() {
     addNotification
   } = useUIStore()
   
-  const { document, createNewDocument, saveDocument, importSTLPart } = useDocumentStore()
+  const { document, createNewDocument, importSTLPart } = useDocumentStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Model tools
@@ -286,16 +280,6 @@ export function Toolbar() {
   
   const handleSketch = () => {
     openDialog('sketch')
-  }
-  
-  const handleNewDocument = async () => {
-    await createNewDocument('New Part')
-    addNotification('success', 'Created new document')
-  }
-  
-  const handleSave = async () => {
-    await saveDocument()
-    addNotification('success', 'Document saved')
   }
   
   const handleExport = () => {
@@ -431,8 +415,6 @@ export function Toolbar() {
 
       {/* File operations */}
       <div className="flex items-center gap-1">
-        <ToolButton icon={<FileIcon size={18} />} label="New" onClick={handleNewDocument} />
-        <ToolButton icon={<Save size={18} />} label="Save" onClick={handleSave} />
         <ToolButton icon={<Upload size={18} />} label="Import" onClick={handleImport} />
         <ToolButton icon={<Download size={18} />} label="Export" onClick={handleExport} />
       </div>
@@ -558,14 +540,6 @@ export function Toolbar() {
             viewSettings.displayMode === 'shadedEdges' ? 'wireframe' : 'shadedEdges'
           )}
         />
-      </div>
-
-      <ToolDivider />
-
-      {/* Settings and Help */}
-      <div className="flex items-center gap-1">
-        <ToolButton icon={<Settings size={18} />} label="Settings" onClick={() => addNotification('info', 'Settings')} />
-        <ToolButton icon={<HelpCircle size={18} />} label="Help" onClick={() => addNotification('info', 'Press ESC to cancel, Delete to remove selection')} />
       </div>
     </div>
   )
