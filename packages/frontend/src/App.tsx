@@ -24,6 +24,7 @@ import { CircularPatternDialog } from './components/dialogs/CircularPatternDialo
 import { SketchDialog } from './components/dialogs/SketchDialog'
 import { Notifications } from './components/Notifications'
 import { ChatPanel, ChatToggleButton } from './components/chat'
+import { SimulationPanel } from './components/fea'
 import { useDocumentStore } from './store/documentStore'
 import { useUIStore } from './store/uiStore'
 import { useChatStore } from './store/chatStore'
@@ -231,6 +232,9 @@ function App() {
       
       {/* Notifications */}
       <Notifications />
+      
+      {/* FEA Simulation Panel */}
+      <SimulationPanel />
       
       {/* AI Chat Assistant */}
       <ChatPanel />

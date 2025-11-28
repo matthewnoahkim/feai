@@ -49,3 +49,6 @@ export * from './io/step'
 export * from './io/stl'
 export * from './io/obj'
 export * from './io/dxf'
+
+// Finite Element Analysis
+export * from './fea'

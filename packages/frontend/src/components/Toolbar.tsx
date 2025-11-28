@@ -5,6 +5,7 @@
 import React, { useRef } from 'react'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
+import { useFEAStore } from '../store/feaStore'
 import {
   Undo,
   Redo,
@@ -26,7 +27,8 @@ import {
   Scissors,
   CornerUpRight,
   Shell,
-  FlipHorizontal
+  FlipHorizontal,
+  Activity
 } from 'lucide-react'
 
 // Helper to convert mesh to STL format (ASCII)
@@ -235,7 +237,17 @@ export function Toolbar() {
   } = useUIStore()
   
   const { document, createNewDocument, importSTLPart } = useDocumentStore()
+  const { isSimulationMode, enterSimulationMode, exitSimulationMode } = useFEAStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // FEA/Simulation handler
+  const handleSimulation = () => {
+    if (isSimulationMode) {
+      exitSimulationMode()
+    } else {
+      enterSimulationMode()
+    }
+  }
 
   // Model tools
   const handleExtrude = () => {
@@ -521,6 +533,16 @@ export function Toolbar() {
           active={activeTool === 'move'}
         />
       </div>
+
+      <ToolDivider />
+
+      {/* Simulation / FEA */}
+      <ToolButton 
+        icon={<Activity size={18} />} 
+        label="Simulate" 
+        active={isSimulationMode}
+        onClick={handleSimulation}
+      />
 
       {/* Spacer */}
       <div className="flex-1" />

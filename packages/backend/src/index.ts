@@ -13,6 +13,7 @@ import { drawingsRouter } from './routes/drawings';
 import { exportRouter } from './routes/export';
 import { importRouter } from './routes/import';
 import { analysisRouter } from './routes/analysis';
+import { feaRouter } from './routes/fea';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -74,6 +75,7 @@ app.use('/api/drawings', drawingsRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/import', importRouter);
 app.use('/api/analysis', analysisRouter);
+app.use('/api/fea', feaRouter);
 
 // Error handling
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -8,4 +8,5 @@ export * from './assembly';
 export * from './drawing';
 export * from './document';
 export * from './api';
+export * from './fea';
 

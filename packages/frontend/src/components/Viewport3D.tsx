@@ -14,6 +14,8 @@ import {
 import * as THREE from 'three'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
+import { useFEAStore } from '../store/feaStore'
+import { FEAResultsViewer, FEAMeshPreview, FEABCIcons } from './fea'
 
 // Grid component
 function CADGrid() {
@@ -2159,6 +2161,7 @@ function CompletedSketchesVisualization() {
 function Scene() {
   const { viewSettings, selection, sketchMode } = useUIStore()
   const { document } = useDocumentStore()
+  const { isSimulationMode, results } = useFEAStore()
   
   // Get parts from active part studio
   const activePartStudio = document?.partStudios.find(ps => ps.id === document.activeElementId)
@@ -2226,6 +2229,11 @@ function Scene() {
       
       {/* Circular pattern preview */}
       <CircularPatternPreview />
+
+      {/* FEA Visualizations */}
+      {isSimulationMode && !results && <FEAMeshPreview />}
+      {isSimulationMode && results && <FEAResultsViewer />}
+      {isSimulationMode && <FEABCIcons />}
 
       {/* Camera controls */}
       <OrbitControls
