@@ -27,8 +27,20 @@ export function FEAMeshPreview() {
 
   // Create wireframe geometry from mesh
   const edgeGeometry = useMemo(() => {
+    if (!mesh || mesh.nodeCount > 3000) {
+      // Skip wireframe for large meshes to prevent crash
+      console.warn('[FEA] Mesh too large for wireframe preview, skipping...');
+      return new THREE.BufferGeometry();
+    }
+
     const positions: number[] = [];
     const edgeSet = new Set<string>();
+
+    // CRITICAL FIX: Create node lookup map to avoid O(n²) complexity
+    const nodeMap = new Map<number, { x: number; y: number; z: number }>();
+    for (const node of mesh.nodes) {
+      nodeMap.set(node.id, { x: node.x, y: node.y, z: node.z });
+    }
 
     // Extract edges from elements
     for (const element of mesh.elements) {
@@ -50,8 +62,8 @@ export function FEAMeshPreview() {
         if (!edgeSet.has(edgeKey)) {
           edgeSet.add(edgeKey);
           
-          const node1 = mesh.nodes.find(n => n.id === n1);
-          const node2 = mesh.nodes.find(n => n.id === n2);
+          const node1 = nodeMap.get(n1);
+          const node2 = nodeMap.get(n2);
           
           if (node1 && node2) {
             positions.push(node1.x, node1.y, node1.z);
@@ -68,6 +80,11 @@ export function FEAMeshPreview() {
 
   // Create surface geometry for semi-transparent fill
   const surfaceGeometry = useMemo(() => {
+    if (!mesh || mesh.nodeCount > 3000) {
+      // Skip surface for large meshes to prevent crash
+      return new THREE.BufferGeometry();
+    }
+
     const positions: number[] = [];
     const indices: number[] = [];
     
@@ -80,6 +97,12 @@ export function FEAMeshPreview() {
 
     let vertexIndex = 0;
 
+    // CRITICAL FIX: Create node lookup map
+    const nodeMap = new Map<number, { x: number; y: number; z: number }>();
+    for (const node of mesh.nodes) {
+      nodeMap.set(node.id, { x: node.x, y: node.y, z: node.z });
+    }
+
     for (const element of mesh.elements) {
       if (element.type !== 'C3D4' && element.type !== 'C3D10') continue;
 
@@ -88,7 +111,7 @@ export function FEAMeshPreview() {
       for (const face of tetFaces) {
         for (const localIdx of face) {
           const nodeId = nodeIds[localIdx];
-          const node = mesh.nodes.find(n => n.id === nodeId);
+          const node = nodeMap.get(nodeId);
           
           if (node) {
             positions.push(node.x, node.y, node.z);

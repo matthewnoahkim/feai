@@ -7,7 +7,7 @@ import { execFile, spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { store } from '../store';
+import { store, StoredPartStudio } from '../store';
 
 // Import FEA types (would use proper imports in production)
 interface SimulationJob {
@@ -35,6 +35,8 @@ feaRouter.post('/mesh', async (req, res) => {
   try {
     const { partStudioId, settings } = req.body;
 
+    console.log('[FEA] Mesh request received:', { partStudioId, settings: { ...settings, parts: settings?.parts ? `${settings.parts.length} parts` : 'none' } });
+
     if (!partStudioId) {
       return res.status(400).json({
         success: false,
@@ -42,20 +44,50 @@ feaRouter.post('/mesh', async (req, res) => {
       });
     }
 
-    const partStudio = store.getPartStudio(partStudioId);
-    if (!partStudio) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Part studio not found' }
-      });
-    }
+    // Check if parts data was sent directly (preferred method)
+    let parts = settings?.parts || [];
+    
+    // If no parts were sent, try to get from backend store
+    if (parts.length === 0) {
+      // Try to get the part studio
+      let partStudio = store.getPartStudio(partStudioId);
+      
+      if (!partStudio) {
+        console.log('[FEA] Part studio not found, checking if we need to create a default one');
+        
+        // Get all part studios to see what we have
+        const allPartStudios = Array.from((store as any).partStudios?.values() || []) as StoredPartStudio[];
+        console.log('[FEA] Available part studios:', allPartStudios.map((ps) => ({ id: ps.id, name: ps.name })));
+        
+        // If there are no part studios at all, return a helpful error
+        if (allPartStudios.length === 0) {
+          return res.status(404).json({
+            success: false,
+            error: { 
+              code: 'NO_PART_STUDIO', 
+              message: 'No part studio found. Please create geometry before running FEA.' 
+            }
+          });
+        }
+        
+        // Use the first available part studio if the requested one doesn't exist
+        partStudio = allPartStudios[0];
+        console.log('[FEA] Using first available part studio:', partStudio.id);
+      }
 
-    // Get geometry from part studio
-    const parts = partStudio.parts || [];
+      // Get geometry from part studio
+      parts = partStudio.parts || [];
+    }
+    
+    console.log('[FEA] Found parts:', parts.length);
+    
     if (parts.length === 0) {
       return res.status(400).json({
         success: false,
-        error: { code: 'NO_GEOMETRY', message: 'No parts to mesh' }
+        error: { 
+          code: 'NO_GEOMETRY', 
+          message: 'No parts to mesh. Please create geometry before running FEA.' 
+        }
       });
     }
 
@@ -65,24 +97,44 @@ feaRouter.post('/mesh', async (req, res) => {
     let indexOffset = 0;
 
     for (const part of parts) {
-      if (part.mesh) {
+      // Check both 'meshData' (backend format) and 'mesh' (frontend format)
+      const partMesh = (part as any).meshData || (part as any).mesh;
+      
+      if (partMesh && partMesh.vertices && partMesh.vertices.length > 0) {
         // Add vertices
-        for (let i = 0; i < part.mesh.vertices.length; i++) {
-          vertices.push(part.mesh.vertices[i]);
+        for (let i = 0; i < partMesh.vertices.length; i++) {
+          vertices.push(partMesh.vertices[i]);
         }
 
         // Add indices with offset
-        if (part.mesh.indices) {
-          for (const idx of part.mesh.indices) {
+        if (partMesh.indices && partMesh.indices.length > 0) {
+          for (const idx of partMesh.indices) {
             indices.push(idx + indexOffset);
           }
         }
-        indexOffset += part.mesh.vertices.length / 3;
+        indexOffset += partMesh.vertices.length / 3;
       }
     }
 
+    console.log('[FEA] Extracted geometry:', { 
+      vertices: vertices.length, 
+      indices: indices.length,
+      partsWithMesh: parts.filter((p: any) => (p.meshData || p.mesh)).length,
+      totalParts: parts.length
+    });
+
+    if (vertices.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { 
+          code: 'NO_MESH_DATA', 
+          message: 'No mesh data available. Please ensure the geometry has been generated.' 
+        }
+      });
+    }
+
     // Use mesh generator (simplified version for backend)
-    const globalSize = settings?.globalSize || 5;
+    const globalSize = Math.max(settings?.globalSize || 5, 2); // Minimum 2mm to prevent explosion
     const elementType = settings?.elementType || 'C3D4';
 
     // Calculate bounding box
@@ -98,19 +150,51 @@ feaRouter.post('/mesh', async (req, res) => {
       maxZ = Math.max(maxZ, vertices[i + 2]);
     }
 
+    const sizeX = maxX - minX;
+    const sizeY = maxY - minY;
+    const sizeZ = maxZ - minZ;
+    
+    console.log('[FEA] Bounding box:', { 
+      min: { x: minX, y: minY, z: minZ }, 
+      max: { x: maxX, y: maxY, z: maxZ },
+      size: { x: sizeX, y: sizeY, z: sizeZ }
+    });
+
+    // Calculate grid dimensions with safety limits
+    let nx = Math.max(2, Math.ceil(sizeX / globalSize) + 1);
+    let ny = Math.max(2, Math.ceil(sizeY / globalSize) + 1);
+    let nz = Math.max(2, Math.ceil(sizeZ / globalSize) + 1);
+
+    // SAFETY: Limit maximum nodes to prevent crash
+    const MAX_NODES = 5000; // Reduced from 10k for better safety (~25k elements max)
+    const totalNodes = nx * ny * nz;
+    
+    console.log(`[FEA] Calculated mesh: ${nx}x${ny}x${nz} = ${totalNodes} nodes`);
+    
+    if (totalNodes > MAX_NODES) {
+      const recommendedSize = Math.ceil(Math.max(sizeX, sizeY, sizeZ) / 15);
+      console.warn(`[FEA] Mesh too large! Would create ${totalNodes} nodes. Aborting.`);
+      
+      return res.status(400).json({
+        success: false,
+        error: { 
+          code: 'MESH_TOO_LARGE', 
+          message: `Mesh would be too large (${totalNodes.toLocaleString()} nodes, ${(totalNodes * 6).toLocaleString()} elements). ` +
+                   `Please increase element size to at least ${recommendedSize}mm. ` +
+                   `Current size: ${globalSize}mm, Part dimensions: ${sizeX.toFixed(0)}×${sizeY.toFixed(0)}×${sizeZ.toFixed(0)}mm`
+        }
+      });
+    }
+
     // Generate simple box mesh for demo
     const nodes: any[] = [];
     const elements: any[] = [];
     let nodeId = 1;
     let elementId = 1;
 
-    const nx = Math.max(2, Math.ceil((maxX - minX) / globalSize) + 1);
-    const ny = Math.max(2, Math.ceil((maxY - minY) / globalSize) + 1);
-    const nz = Math.max(2, Math.ceil((maxZ - minZ) / globalSize) + 1);
-
-    const dx = (maxX - minX) / (nx - 1);
-    const dy = (maxY - minY) / (ny - 1);
-    const dz = (maxZ - minZ) / (nz - 1);
+    const dx = sizeX / (nx - 1);
+    const dy = sizeY / (ny - 1);
+    const dz = sizeZ / (nz - 1);
 
     // Create node grid
     const nodeGrid: number[][][] = [];

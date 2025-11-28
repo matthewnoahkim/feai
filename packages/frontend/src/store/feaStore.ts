@@ -6,8 +6,8 @@ import { create } from 'zustand';
 import {
   SimulationSetup,
   FEAMesh,
-  Material,
-  MaterialAssignment,
+  FEAMaterial,
+  FEAMaterialAssignment,
   BoundaryCondition,
   MeshSettings,
   SimulationResults,
@@ -15,7 +15,6 @@ import {
   ResultsViewSettings,
   ResultField,
   ColormapType,
-  MATERIAL_LIBRARY,
 } from '@feai/shared';
 import { apiClient } from '../api/client';
 
@@ -33,8 +32,8 @@ interface FEAState {
   meshError: string | null;
   
   // Materials
-  availableMaterials: Material[];
-  materialAssignments: MaterialAssignment[];
+  availableMaterials: FEAMaterial[];
+  materialAssignments: FEAMaterialAssignment[];
   
   // Boundary conditions
   boundaryConditions: BoundaryCondition[];
@@ -60,6 +59,7 @@ interface FEAState {
   // Actions
   enterSimulationMode: () => void;
   exitSimulationMode: () => void;
+  loadMaterials: () => Promise<void>;
   setActiveFEAPanel: (panel: 'mesh' | 'material' | 'bc' | 'results' | null) => void;
   
   // Mesh actions
@@ -68,7 +68,7 @@ interface FEAState {
   clearMesh: () => void;
   
   // Material actions
-  addMaterial: (material: Material) => void;
+  addMaterial: (material: FEAMaterial) => void;
   removeMaterial: (materialId: string) => void;
   assignMaterial: (partId: string, partName: string, materialId: string) => void;
   unassignMaterial: (partId: string) => void;
@@ -102,9 +102,9 @@ interface FEAState {
 }
 
 const DEFAULT_MESH_SETTINGS: MeshSettings = {
-  globalSize: 5,
-  minSize: 1,
-  maxSize: 20,
+  globalSize: 10, // Increased from 5 to 10 for safety
+  minSize: 2,     // Increased from 1 to 2
+  maxSize: 50,    // Increased from 20 to 50
   elementType: 'C3D4',
   refinementRegions: [],
   curvatureSensitivity: 0.5,
@@ -137,7 +137,7 @@ export const useFEAStore = create<FEAState>((set, get) => ({
   isMeshing: false,
   meshError: null,
   
-  availableMaterials: [...MATERIAL_LIBRARY],
+  availableMaterials: [], // Will be loaded from API
   materialAssignments: [],
   
   boundaryConditions: [],
@@ -152,17 +152,23 @@ export const useFEAStore = create<FEAState>((set, get) => ({
   resultsViewSettings: DEFAULT_RESULTS_VIEW,
   
   activeFEAPanel: null,
-  showMeshPreview: true,
+  showMeshPreview: false, // Changed from true - mesh preview causes crashes with large meshes
   showBCIcons: true,
   probeLocation: null,
   probeValue: null,
 
   // Mode actions
   enterSimulationMode: () => {
+    const store = get();
     set({
       isSimulationMode: true,
       activeFEAPanel: 'mesh',
     });
+    
+    // Load materials if not already loaded
+    if (store.availableMaterials.length === 0) {
+      store.loadMaterials();
+    }
   },
 
   exitSimulationMode: () => {
@@ -170,6 +176,16 @@ export const useFEAStore = create<FEAState>((set, get) => ({
       isSimulationMode: false,
       activeFEAPanel: null,
     });
+  },
+
+  // Load materials from API
+  loadMaterials: async () => {
+    try {
+      const response = await apiClient.getMaterials();
+      set({ availableMaterials: response.materials });
+    } catch (error) {
+      console.error('Failed to load materials:', error);
+    }
   },
 
   setActiveFEAPanel: (panel) => {
@@ -188,20 +204,81 @@ export const useFEAStore = create<FEAState>((set, get) => ({
     set({ isMeshing: true, meshError: null });
 
     try {
-      const response = await apiClient.post('/fea/mesh', {
-        partStudioId,
-        settings: state.meshSettings,
+      // Get the current document to access part geometry
+      const documentStore = (window as any).__documentStore;
+      const document = documentStore?.getState?.()?.document;
+      
+      if (!document) {
+        throw new Error('No active document found');
+      }
+
+      // Find the active part studio
+      const partStudio = document.partStudios.find((ps: any) => ps.id === partStudioId);
+      
+      if (!partStudio) {
+        throw new Error('Part studio not found');
+      }
+
+      if (!partStudio.parts || partStudio.parts.length === 0) {
+        throw new Error('No parts found in part studio. Please create geometry first.');
+      }
+
+      // Validate mesh settings
+      if (state.meshSettings.globalSize < 2) {
+        throw new Error('Element size too small! Minimum is 2mm.');
+      }
+
+      // Check mesh data size BEFORE sending to prevent crash
+      let totalVertices = 0;
+      for (const part of partStudio.parts) {
+        if (part.mesh?.vertices) {
+          totalVertices += part.mesh.vertices.length;
+        }
+      }
+      
+      console.log('[FEA] Total vertices in parts:', totalVertices);
+      
+      // CRITICAL: Don't send huge mesh data that will crash browser
+      if (totalVertices > 30000) {
+        throw new Error(
+          `Geometry too complex (${(totalVertices/3).toLocaleString()} vertices)! ` +
+          `Simplify the model or the mesh generation will crash your browser.`
+        );
+      }
+
+      // Send mesh data along with the request
+      const partsWithMesh = partStudio.parts.map((part: any) => ({
+        id: part.id,
+        name: part.name,
+        meshData: part.mesh // Frontend stores as 'mesh', backend expects 'meshData'
+      }));
+
+      console.log('[FEA] Generating mesh with settings:', state.meshSettings);
+      console.log('[FEA] Parts:', partsWithMesh.length);
+
+      // Add timeout to prevent infinite wait
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Mesh generation timeout - took too long')), 30000)
+      );
+
+      const meshPromise = apiClient.generateMesh(partStudioId, {
+        ...state.meshSettings,
+        parts: partsWithMesh
       });
 
-      if (response.data.success) {
-        set({
-          mesh: response.data.data.mesh,
-          isMeshing: false,
-        });
-      } else {
-        throw new Error(response.data.error?.message || 'Mesh generation failed');
-      }
+      const response = await Promise.race([meshPromise, timeoutPromise]) as any;
+
+      set({
+        mesh: response.mesh,
+        isMeshing: false,
+      });
+      
+      console.log('[FEA] Mesh generated successfully:', {
+        nodes: response.mesh.nodeCount,
+        elements: response.mesh.elementCount
+      });
     } catch (error: any) {
+      console.error('[FEA] Mesh generation failed:', error);
       set({
         isMeshing: false,
         meshError: error.message || 'Mesh generation failed',
@@ -233,7 +310,7 @@ export const useFEAStore = create<FEAState>((set, get) => ({
 
     set((state) => {
       const existing = state.materialAssignments.findIndex((a) => a.partId === partId);
-      const newAssignment: MaterialAssignment = {
+      const newAssignment: FEAMaterialAssignment = {
         partId,
         partName,
         materialId,
@@ -270,7 +347,7 @@ export const useFEAStore = create<FEAState>((set, get) => ({
   updateBoundaryCondition: (id, updates) => {
     set((state) => ({
       boundaryConditions: state.boundaryConditions.map((bc) =>
-        bc.id === id ? { ...bc, ...updates } : bc
+        bc.id === id ? ({ ...bc, ...updates } as BoundaryCondition) : bc
       ),
     }));
   },
@@ -325,23 +402,16 @@ export const useFEAStore = create<FEAState>((set, get) => ({
       };
 
       // Submit job
-      const response = await apiClient.post('/fea/run', {
-        setup,
-        partStudioId,
+      const response = await apiClient.runSimulation(setup, partStudioId);
+
+      set({
+        jobId: response.jobId,
+        solverStatus: 'solving',
+        solverMessage: 'Running solver...',
       });
 
-      if (response.data.success) {
-        set({
-          jobId: response.data.data.jobId,
-          solverStatus: 'solving',
-          solverMessage: 'Running solver...',
-        });
-
-        // Start polling
-        get().pollJobStatus();
-      } else {
-        throw new Error(response.data.error?.message || 'Failed to start simulation');
-      }
+      // Start polling
+      get().pollJobStatus();
     } catch (error: any) {
       set({
         solverStatus: 'error',
@@ -355,7 +425,7 @@ export const useFEAStore = create<FEAState>((set, get) => ({
     if (!jobId) return;
 
     try {
-      await apiClient.post(`/fea/cancel/${jobId}`);
+      await apiClient.cancelSimulation(jobId);
       set({
         solverStatus: 'cancelled',
         solverMessage: 'Simulation cancelled',
@@ -375,32 +445,28 @@ export const useFEAStore = create<FEAState>((set, get) => ({
       if (!currentJobId) return;
 
       try {
-        const response = await apiClient.get(`/fea/status/${currentJobId}`);
+        const response = await apiClient.getSimulationStatus(currentJobId);
         
-        if (response.data.success) {
-          const data = response.data.data;
-          
-          set({
-            solverStatus: data.status,
-            solverProgress: data.progress || 0,
-            solverMessage: data.message,
-          });
+        set({
+          solverStatus: response.status,
+          solverProgress: response.progress || 0,
+          solverMessage: response.message,
+        });
 
-          if (data.status === 'completed' && data.results) {
-            set({
-              results: data.results,
-              activeFEAPanel: 'results',
-              jobId: null,
-            });
-          } else if (data.status === 'error') {
-            set({
-              solverMessage: data.error || 'Simulation failed',
-              jobId: null,
-            });
-          } else if (data.status !== 'cancelled') {
-            // Continue polling
-            setTimeout(poll, 500);
-          }
+        if (response.status === 'completed' && response.results) {
+          set({
+            results: response.results,
+            activeFEAPanel: 'results',
+            jobId: null,
+          });
+        } else if (response.status === 'error') {
+          set({
+            solverMessage: response.error || 'Simulation failed',
+            jobId: null,
+          });
+        } else if (response.status !== 'cancelled') {
+          // Continue polling
+          setTimeout(poll, 500);
         }
       } catch (error) {
         console.error('Poll error:', error);

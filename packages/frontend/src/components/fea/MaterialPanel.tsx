@@ -5,9 +5,9 @@
 import React, { useState } from 'react';
 import { useFEAStore } from '../../store/feaStore';
 import { useDocumentStore } from '../../store/documentStore';
-import { Material, MATERIAL_LIBRARY, MaterialCategory } from '@feai/shared';
+import { FEAMaterial, FEAMaterialCategory } from '@feai/shared';
 
-const CategoryColors: Record<MaterialCategory, string> = {
+const CategoryColors: Record<FEAMaterialCategory, string> = {
   metal: 'bg-slate-500',
   plastic: 'bg-purple-500',
   composite: 'bg-green-500',
@@ -51,7 +51,7 @@ export function MaterialPanel() {
 
   const handleAddCustomMaterial = () => {
     const id = `custom-${Date.now()}`;
-    const newMaterial: Material = {
+    const newMaterial: FEAMaterial = {
       id,
       name: customMaterial.name || 'Custom Material',
       category: 'custom',
@@ -303,13 +303,13 @@ export function MaterialPanel() {
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        Material Library ({MATERIAL_LIBRARY.length} presets)
+        Material Library ({availableMaterials.filter(m => m.isPreset).length} presets)
       </button>
 
       {/* Material Library List */}
       {showLibrary && (
         <div className="max-h-48 overflow-y-auto space-y-1 pl-4 border-l-2 border-cad-border">
-          {MATERIAL_LIBRARY.map((mat) => (
+          {availableMaterials.filter(m => m.isPreset).map((mat) => (
             <button
               key={mat.id}
               onClick={() => setSelectedMaterialId(mat.id)}

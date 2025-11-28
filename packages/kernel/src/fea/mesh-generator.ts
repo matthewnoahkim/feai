@@ -12,7 +12,7 @@ import {
   FEASurface,
   MeshSettings,
   MeshQuality,
-  ElementType,
+  FEAElementType,
 } from '@feai/shared';
 import { Vector3 } from '../math/vector';
 
@@ -59,16 +59,16 @@ export class MeshGenerator {
 
     // Expand bbox slightly for margin
     const margin = settings.globalSize * 0.5;
-    bbox.min = {
-      x: bbox.min.x - margin,
-      y: bbox.min.y - margin,
-      z: bbox.min.z - margin,
-    };
-    bbox.max = {
-      x: bbox.max.x + margin,
-      y: bbox.max.y + margin,
-      z: bbox.max.z + margin,
-    };
+    bbox.min = new Vector3(
+      bbox.min.x - margin,
+      bbox.min.y - margin,
+      bbox.min.z - margin
+    );
+    bbox.max = new Vector3(
+      bbox.max.x + margin,
+      bbox.max.y + margin,
+      bbox.max.z + margin
+    );
 
     // Generate regular grid of nodes
     const size = settings.globalSize;
@@ -93,7 +93,7 @@ export class MeshGenerator {
 
           // Check if node is inside the geometry
           const inside = this.isInsideMesh(
-            { x, y, z },
+            new Vector3(x, y, z),
             vertices,
             indices
           );
@@ -276,7 +276,7 @@ export class MeshGenerator {
     return id;
   }
 
-  private addTetrahedron(type: ElementType, n1: number, n2: number, n3: number, n4: number): void {
+  private addTetrahedron(type: FEAElementType, n1: number, n2: number, n3: number, n4: number): void {
     // For C3D4 elements, we just need 4 nodes
     // For C3D10 elements, we would need to add midside nodes
     if (type === 'C3D4') {
@@ -350,8 +350,8 @@ export class MeshGenerator {
     }
 
     return {
-      min: { x: minX, y: minY, z: minZ },
-      max: { x: maxX, y: maxY, z: maxZ },
+      min: new Vector3(minX, minY, minZ),
+      max: new Vector3(maxX, maxY, maxZ),
     };
   }
 
@@ -365,16 +365,16 @@ export class MeshGenerator {
   ): boolean {
     // Cast ray in +X direction and count intersections
     let intersections = 0;
-    const rayDir = { x: 1, y: 0, z: 0 };
+    const rayDir = new Vector3(1, 0, 0);
 
     for (let i = 0; i < indices.length; i += 3) {
       const i0 = indices[i] * 3;
       const i1 = indices[i + 1] * 3;
       const i2 = indices[i + 2] * 3;
 
-      const v0 = { x: vertices[i0], y: vertices[i0 + 1], z: vertices[i0 + 2] };
-      const v1 = { x: vertices[i1], y: vertices[i1 + 1], z: vertices[i1 + 2] };
-      const v2 = { x: vertices[i2], y: vertices[i2 + 1], z: vertices[i2 + 2] };
+      const v0 = new Vector3(vertices[i0], vertices[i0 + 1], vertices[i0 + 2]);
+      const v1 = new Vector3(vertices[i1], vertices[i1 + 1], vertices[i1 + 2]);
+      const v2 = new Vector3(vertices[i2], vertices[i2 + 1], vertices[i2 + 2]);
 
       if (this.rayIntersectsTriangle(point, rayDir, v0, v1, v2)) {
         intersections++;

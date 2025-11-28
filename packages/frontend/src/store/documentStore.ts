@@ -2986,3 +2986,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   }
 }))
 
+// Expose document store globally for FEA module
+if (typeof window !== 'undefined') {
+  (window as any).__documentStore = useDocumentStore;
+}
+

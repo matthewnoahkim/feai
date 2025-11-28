@@ -25,7 +25,7 @@ export type AnalysisStatus =
 
 // === Element Types ===
 
-export type ElementType = 
+export type FEAElementType = 
   | 'C3D4'    // 4-node linear tetrahedron
   | 'C3D10'   // 10-node quadratic tetrahedron
   | 'C3D8'    // 8-node linear hexahedron
@@ -33,15 +33,15 @@ export type ElementType =
   | 'C3D6'    // 6-node linear pentahedron (wedge)
   | 'C3D15';  // 15-node quadratic pentahedron
 
-export interface ElementTypeInfo {
-  type: ElementType;
+export interface FEAElementTypeInfo {
+  type: FEAElementType;
   name: string;
   nodes: number;
   description: string;
   isQuadratic: boolean;
 }
 
-export const ELEMENT_TYPES: Record<ElementType, ElementTypeInfo> = {
+export const FEA_ELEMENT_TYPES: Record<FEAElementType, FEAElementTypeInfo> = {
   'C3D4': { type: 'C3D4', name: 'Linear Tetrahedron', nodes: 4, description: '4-node tet', isQuadratic: false },
   'C3D10': { type: 'C3D10', name: 'Quadratic Tetrahedron', nodes: 10, description: '10-node tet', isQuadratic: true },
   'C3D8': { type: 'C3D8', name: 'Linear Hexahedron', nodes: 8, description: '8-node hex/brick', isQuadratic: false },
@@ -61,7 +61,7 @@ export interface FEANode {
 
 export interface FEAElement {
   id: number;
-  type: ElementType;
+  type: FEAElementType;
   nodeIds: number[];
 }
 
@@ -90,7 +90,7 @@ export interface FEAMesh {
   // Statistics
   nodeCount: number;
   elementCount: number;
-  elementType: ElementType;
+  elementType: FEAElementType;
   
   // Bounding box
   boundingBox: {
@@ -115,7 +115,7 @@ export interface MeshSettings {
   globalSize: number;           // Target element edge length (mm)
   minSize?: number;             // Minimum element size (mm)
   maxSize?: number;             // Maximum element size (mm)
-  elementType: ElementType;     // Element type to use
+  elementType: FEAElementType;  // Element type to use
   refinementRegions: MeshRefinementRegion[];
   curvatureSensitivity?: number; // 0-1, how much to refine near curves
   proximityDetection?: boolean;  // Refine near thin features
@@ -129,18 +129,27 @@ export interface MeshRefinementRegion {
   size: number;               // Target size in this region (mm)
 }
 
+// Export aliases for backward compatibility
+export type FENode = FEANode;
+export type FEElement = FEAElement;
+export type NodeSet = FEANodeSet;
+export type ElementSet = FEAElementSet;
+export type Surface = FEASurface;
+export type FEMesh = FEAMesh;
+export type RefinementRegion = MeshRefinementRegion;
+
 // === Material Types ===
 
-export interface Material {
+export interface FEAMaterial {
   id: string;
   name: string;
-  category: MaterialCategory;
-  properties: MaterialProperties;
+  category: FEAMaterialCategory;
+  properties: FEAMaterialProperties;
   isPreset: boolean;
   color?: string;
 }
 
-export type MaterialCategory = 
+export type FEAMaterialCategory = 
   | 'metal'
   | 'plastic'
   | 'composite'
@@ -148,7 +157,10 @@ export type MaterialCategory =
   | 'rubber'
   | 'custom';
 
-export interface MaterialProperties {
+// Export alias for backward compatibility
+export type MaterialCategory = FEAMaterialCategory;
+
+export interface FEAMaterialProperties {
   // Elastic properties (required for structural)
   youngsModulus: number;      // Pa (N/m²) - E
   poissonsRatio: number;      // dimensionless - ν
@@ -166,8 +178,11 @@ export interface MaterialProperties {
   ultimateStrength?: number;  // Pa
 }
 
+// Export alias for backward compatibility
+export type FEAMaterialProperty = FEAMaterialProperties;
+
 // Predefined material library
-export const MATERIAL_LIBRARY: Material[] = [
+export const FEA_MATERIAL_LIBRARY: FEAMaterial[] = [
   {
     id: 'steel-1018',
     name: 'Steel 1018 (Mild Steel)',
@@ -306,7 +321,7 @@ export const MATERIAL_LIBRARY: Material[] = [
 
 // === Material Assignment ===
 
-export interface MaterialAssignment {
+export interface FEAMaterialAssignment {
   partId: string;
   partName: string;
   materialId: string;
@@ -423,8 +438,8 @@ export interface SimulationSetup {
   mesh?: FEAMesh;
   
   // Materials
-  materials: Material[];
-  materialAssignments: MaterialAssignment[];
+  materials: FEAMaterial[];
+  materialAssignments: FEAMaterialAssignment[];
   
   // Boundary conditions
   boundaryConditions: BoundaryCondition[];
@@ -668,11 +683,32 @@ export interface GenerateMeshResponse {
   statistics: {
     nodeCount: number;
     elementCount: number;
-    elementType: ElementType;
+    elementType: FEAElementType;
     quality: MeshQuality;
     generationTime: number;
   };
 }
+
+// === Additional type aliases for consistency ===
+
+export type ConstraintType = 'fixed' | 'displacement';
+export type LoadType = 'force' | 'pressure' | 'gravity' | 'temperature';
+export type Simulation = SimulationSetup;
+export type SimulationSettings = StaticAnalysisSettings | ModalAnalysisSettings;
+export type FEAResults = SimulationResults;
+export type NodeResult = NodalField;
+export type ElementResult = ElementField;
+export type StressTensor = { sxx: number; syy: number; szz: number; sxy: number; syz: number; sxz: number };
+export type Vector3D = { x: number; y: number; z: number };
+export type ColorMap = ColormapStop[];
+export type DisplacementResult = NodalField;
+export type StressResult = ElementField;
+export type CalculiXInput = string;  // .inp file content
+export type CalculiXOutput = string;  // .frd or .dat file content
+export type CalculiXLog = string;  // .dat log file content
+export type DeformationVisualization = ResultsViewSettings;
+export type NodeValue = { nodeId: number; values: number[] };
+export type ResultSummary = ResultsSummary;
 
 // === Utility functions ===
 
@@ -703,8 +739,8 @@ export function interpolateColor(colormap: ColormapStop[], value: number): [numb
   ];
 }
 
-export function getMaterialById(id: string): Material | undefined {
-  return MATERIAL_LIBRARY.find(m => m.id === id);
+export function getFEAMaterialById(id: string): FEAMaterial | undefined {
+  return FEA_MATERIAL_LIBRARY.find(m => m.id === id);
 }
 
 export function formatStress(value: number): string {

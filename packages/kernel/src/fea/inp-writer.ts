@@ -5,8 +5,8 @@
 
 import {
   FEAMesh,
-  Material,
-  MaterialAssignment,
+  FEAMaterial,
+  FEAMaterialAssignment,
   BoundaryCondition,
   FixedConstraint,
   DisplacementConstraint,
@@ -135,7 +135,7 @@ export class InpWriter {
     }
   }
 
-  private writeMaterials(materials: Material[]): void {
+  private writeMaterials(materials: FEAMaterial[]): void {
     this.lines.push('**');
     this.lines.push('** MATERIALS');
     this.lines.push('**');
@@ -176,7 +176,7 @@ export class InpWriter {
   }
 
   private writeSolidSections(
-    assignments: MaterialAssignment[],
+    assignments: FEAMaterialAssignment[],
     mesh: FEAMesh | undefined
   ): void {
     this.lines.push('**');

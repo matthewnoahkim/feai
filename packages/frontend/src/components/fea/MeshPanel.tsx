@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { useFEAStore } from '../../store/feaStore';
 import { useDocumentStore } from '../../store/documentStore';
-import { ELEMENT_TYPES, ElementType } from '@feai/shared';
+import { FEA_ELEMENT_TYPES, FEAElementType } from '@feai/shared';
 
 export function MeshPanel() {
   const { document } = useDocumentStore();
@@ -21,15 +21,25 @@ export function MeshPanel() {
   } = useFEAStore();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  // Get the active part studio ID
   const partStudioId = document?.activeElementId || '';
+  const hasDocument = !!document;
+  const hasActiveElement = !!partStudioId && document?.activeElementType === 'partStudio';
 
   const handleGenerateMesh = () => {
-    if (partStudioId) {
-      generateMesh(partStudioId);
+    if (!hasDocument) {
+      alert('Please create or open a document first');
+      return;
     }
+    if (!hasActiveElement) {
+      alert('Please create a part studio with geometry first');
+      return;
+    }
+    generateMesh(partStudioId);
   };
 
-  const elementTypeOptions: { value: ElementType; label: string }[] = [
+  const elementTypeOptions: { value: FEAElementType; label: string }[] = [
     { value: 'C3D4', label: 'Linear Tet (C3D4) - Fast' },
     { value: 'C3D10', label: 'Quadratic Tet (C3D10) - Accurate' },
     { value: 'C3D8', label: 'Linear Hex (C3D8)' },
@@ -46,7 +56,7 @@ export function MeshPanel() {
         <div className="flex items-center gap-2">
           <input
             type="range"
-            min="1"
+            min="2"
             max="50"
             step="0.5"
             value={meshSettings.globalSize}
@@ -55,14 +65,25 @@ export function MeshPanel() {
           />
           <input
             type="number"
+            min="2"
             value={meshSettings.globalSize}
-            onChange={(e) => setMeshSettings({ globalSize: parseFloat(e.target.value) || 5 })}
+            onChange={(e) => setMeshSettings({ globalSize: Math.max(2, parseFloat(e.target.value) || 5) })}
             className="w-16 px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text text-center"
           />
         </div>
-        <p className="text-xs text-cad-text-dim">
-          Smaller = more elements, higher accuracy
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs text-cad-text-dim">
+            Smaller = more elements, higher accuracy
+          </p>
+          {meshSettings.globalSize < 3 && (
+            <p className="text-xs text-yellow-400 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Warning: Small element size may create millions of elements and freeze your browser!
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Element Type */}
@@ -72,7 +93,7 @@ export function MeshPanel() {
         </label>
         <select
           value={meshSettings.elementType}
-          onChange={(e) => setMeshSettings({ elementType: e.target.value as ElementType })}
+          onChange={(e) => setMeshSettings({ elementType: e.target.value as FEAElementType })}
           className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded-lg text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
         >
           {elementTypeOptions.map((opt) => (
@@ -157,13 +178,24 @@ export function MeshPanel() {
       )}
 
       {/* Generate Button */}
+      {!hasDocument || !hasActiveElement ? (
+        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs text-yellow-400">
+          {!hasDocument 
+            ? 'Please create or open a document first'
+            : 'Please create a part studio with geometry first'
+          }
+        </div>
+      ) : null}
+
       <button
         onClick={handleGenerateMesh}
-        disabled={isMeshing || !partStudioId}
+        disabled={isMeshing || !hasActiveElement}
         className={`
           w-full py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-all
           ${isMeshing
             ? 'bg-blue-500/20 text-blue-400'
+            : !hasActiveElement
+            ? 'bg-cad-border/50 text-cad-text-dim cursor-not-allowed'
             : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30'
           }
         `}

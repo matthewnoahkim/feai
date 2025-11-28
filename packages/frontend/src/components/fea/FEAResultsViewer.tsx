@@ -6,7 +6,7 @@
 import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFEAStore } from '../../store/feaStore';
-import { COLORMAPS, interpolateColor } from '@feai/shared';
+import { COLORMAPS, interpolateColor } from '../../utils/fea-utils';
 
 export function FEAResultsViewer() {
   const {

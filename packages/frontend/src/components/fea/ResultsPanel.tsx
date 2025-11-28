@@ -7,11 +7,8 @@ import { useFEAStore } from '../../store/feaStore';
 import { 
   ResultField, 
   ColormapType, 
-  COLORMAPS,
-  interpolateColor,
-  formatStress,
-  formatDisplacement,
 } from '@feai/shared';
+import { COLORMAPS, interpolateColor, formatStress, formatDisplacement } from '../../utils/fea-utils';
 
 const FieldOptions: { value: ResultField; label: string; unit: string }[] = [
   { value: 'vonMises', label: 'Von Mises Stress', unit: 'Pa' },

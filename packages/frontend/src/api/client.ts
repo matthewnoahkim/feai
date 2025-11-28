@@ -150,6 +150,38 @@ export const api = {
   
   async checkInterference(documentId: string, elementId: string) {
     return request<any>(`/analysis/${documentId}/${elementId}/interference`)
+  },
+
+  // FEA
+  async generateMesh(partStudioId: string, settings: any) {
+    return request<any>('/fea/mesh', {
+      method: 'POST',
+      body: JSON.stringify({ partStudioId, settings })
+    })
+  },
+
+  async runSimulation(setup: any, partStudioId: string) {
+    return request<any>('/fea/run', {
+      method: 'POST',
+      body: JSON.stringify({ setup, partStudioId })
+    })
+  },
+
+  async getSimulationStatus(jobId: string) {
+    return request<any>(`/fea/status/${jobId}`)
+  },
+
+  async cancelSimulation(jobId: string) {
+    return request<any>(`/fea/cancel/${jobId}`, {
+      method: 'POST'
+    })
+  },
+
+  async getMaterials() {
+    return request<any>('/fea/materials')
   }
 }
+
+// Export alias for backward compatibility
+export const apiClient = api;
 
