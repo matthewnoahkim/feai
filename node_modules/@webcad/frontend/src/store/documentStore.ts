@@ -116,6 +116,7 @@ interface DocumentState {
   // Actions
   createNewDocument: (name: string) => Promise<void>
   loadDocument: (id: string) => Promise<void>
+  loadDocumentFromData: (data: Document) => void
   saveDocument: () => Promise<void>
   
   // Part Studio operations
@@ -283,8 +284,16 @@ function createExtrudedRectangleMesh(
   const data = entity.data
   let width: number, height: number, cx: number, cy: number
   
-  if (data.start && data.end) {
-    // Corner-to-corner rectangle
+  if (data.corner1 && data.corner2) {
+    // Standard corner-to-corner rectangle (from SketchCanvas)
+    const x1 = data.corner1.x, y1 = data.corner1.y
+    const x2 = data.corner2.x, y2 = data.corner2.y
+    width = Math.abs(x2 - x1)
+    height = Math.abs(y2 - y1)
+    cx = (x1 + x2) / 2
+    cy = (y1 + y2) / 2
+  } else if (data.start && data.end) {
+    // Alternative corner-to-corner rectangle format
     const x1 = data.start.x, y1 = data.start.y
     const x2 = data.end.x, y2 = data.end.y
     width = Math.abs(x2 - x1)
@@ -617,23 +626,73 @@ function createExtrudedPolygonMesh(
   return { vertices, normals, indices }
 }
 
+// Validate mesh data to prevent WebGL crashes
+function validateMesh(mesh: { vertices: number[], normals: number[], indices: number[] } | null): { vertices: number[], normals: number[], indices: number[] } | null {
+  if (!mesh) return null
+  
+  // Check for NaN or Infinity values in vertices
+  for (let i = 0; i < mesh.vertices.length; i++) {
+    if (!Number.isFinite(mesh.vertices[i])) {
+      console.error('Invalid vertex value at index', i, ':', mesh.vertices[i])
+      return null
+    }
+  }
+  
+  // Check for NaN or Infinity values in normals
+  for (let i = 0; i < mesh.normals.length; i++) {
+    if (!Number.isFinite(mesh.normals[i])) {
+      console.error('Invalid normal value at index', i, ':', mesh.normals[i])
+      return null
+    }
+  }
+  
+  // Check that indices are valid
+  const maxIndex = mesh.vertices.length / 3 - 1
+  for (let i = 0; i < mesh.indices.length; i++) {
+    if (mesh.indices[i] < 0 || mesh.indices[i] > maxIndex || !Number.isInteger(mesh.indices[i])) {
+      console.error('Invalid index at', i, ':', mesh.indices[i], 'max:', maxIndex)
+      return null
+    }
+  }
+  
+  // Check minimum requirements
+  if (mesh.vertices.length < 9 || mesh.indices.length < 3) {
+    console.error('Mesh too small:', mesh.vertices.length, 'vertices,', mesh.indices.length, 'indices')
+    return null
+  }
+  
+  return mesh
+}
+
 // Create mesh from sketch entity for extrusion
 function createMeshFromSketchEntity(
   entity: SketchEntity,
   params: ExtrudeParams
 ): { vertices: number[], normals: number[], indices: number[] } | null {
-  switch (entity.type) {
-    case 'rectangle':
-      return createExtrudedRectangleMesh(entity, params)
-    case 'circle':
-      return createExtrudedCircleMesh(entity, params)
-    case 'polygon':
-      return createExtrudedPolygonMesh(entity, params)
-    case 'line':
-      // Lines can't be extruded as solid - would need to detect closed profiles
-      return null
-    default:
-      return null
+  try {
+    let mesh: { vertices: number[], normals: number[], indices: number[] } | null = null
+    
+    switch (entity.type) {
+      case 'rectangle':
+        mesh = createExtrudedRectangleMesh(entity, params)
+        break
+      case 'circle':
+        mesh = createExtrudedCircleMesh(entity, params)
+        break
+      case 'polygon':
+        mesh = createExtrudedPolygonMesh(entity, params)
+        break
+      case 'line':
+        // Lines can't be extruded as solid - would need to detect closed profiles
+        return null
+      default:
+        return null
+    }
+    
+    return validateMesh(mesh)
+  } catch (error) {
+    console.error('Error creating mesh from sketch entity:', error)
+    return null
   }
 }
 
@@ -1796,6 +1855,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false })
     }
+  },
+  
+  loadDocumentFromData: (data: Document) => {
+    set({ document: data, isDirty: false, isLoading: false, error: null })
+    
+    // Regenerate model for each part studio
+    const { regenerateModel } = get()
+    data.partStudios.forEach(ps => {
+      regenerateModel(ps.id)
+    })
   },
   
   setActiveElement: (id, type) => {

@@ -2,7 +2,7 @@
  * Toolbar - Main application toolbar with functional tools
  */
 
-import React from 'react'
+import React, { useRef } from 'react'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import {
@@ -34,6 +34,107 @@ import {
   Copy,
   FlipHorizontal
 } from 'lucide-react'
+
+// Helper to convert mesh to STL format
+function meshToSTL(parts: any[]): string {
+  let stl = 'solid model\n'
+  
+  for (const part of parts) {
+    if (!part.mesh) continue
+    const { vertices, normals, indices } = part.mesh
+    
+    for (let i = 0; i < indices.length; i += 3) {
+      const i0 = indices[i] * 3
+      const i1 = indices[i + 1] * 3
+      const i2 = indices[i + 2] * 3
+      
+      // Calculate face normal
+      const v0 = [vertices[i0], vertices[i0 + 1], vertices[i0 + 2]]
+      const v1 = [vertices[i1], vertices[i1 + 1], vertices[i1 + 2]]
+      const v2 = [vertices[i2], vertices[i2 + 1], vertices[i2 + 2]]
+      
+      const e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]]
+      const e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]]
+      const n = [
+        e1[1] * e2[2] - e1[2] * e2[1],
+        e1[2] * e2[0] - e1[0] * e2[2],
+        e1[0] * e2[1] - e1[1] * e2[0]
+      ]
+      const len = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2])
+      if (len > 0) {
+        n[0] /= len; n[1] /= len; n[2] /= len
+      }
+      
+      stl += `  facet normal ${n[0]} ${n[1]} ${n[2]}\n`
+      stl += `    outer loop\n`
+      stl += `      vertex ${v0[0]} ${v0[1]} ${v0[2]}\n`
+      stl += `      vertex ${v1[0]} ${v1[1]} ${v1[2]}\n`
+      stl += `      vertex ${v2[0]} ${v2[1]} ${v2[2]}\n`
+      stl += `    endloop\n`
+      stl += `  endfacet\n`
+    }
+  }
+  
+  stl += 'endsolid model\n'
+  return stl
+}
+
+// Helper to convert mesh to OBJ format
+function meshToOBJ(parts: any[]): string {
+  let obj = '# WebCAD Export\n'
+  let vertexOffset = 0
+  
+  for (const part of parts) {
+    if (!part.mesh) continue
+    const { vertices, indices } = part.mesh
+    
+    obj += `# ${part.name || 'Part'}\n`
+    obj += `o ${part.name || 'Part'}\n`
+    
+    // Vertices
+    for (let i = 0; i < vertices.length; i += 3) {
+      obj += `v ${vertices[i]} ${vertices[i + 1]} ${vertices[i + 2]}\n`
+    }
+    
+    // Faces (1-indexed in OBJ)
+    for (let i = 0; i < indices.length; i += 3) {
+      const f1 = indices[i] + 1 + vertexOffset
+      const f2 = indices[i + 1] + 1 + vertexOffset
+      const f3 = indices[i + 2] + 1 + vertexOffset
+      obj += `f ${f1} ${f2} ${f3}\n`
+    }
+    
+    vertexOffset += vertices.length / 3
+  }
+  
+  return obj
+}
+
+// Helper to serialize document for JSON export
+function serializeDocument(document: any): any {
+  if (!document) return null
+  
+  return {
+    ...document,
+    partStudios: document.partStudios.map((ps: any) => ({
+      ...ps,
+      sketches: Array.from(ps.sketches.entries())
+    }))
+  }
+}
+
+// Helper to deserialize document from JSON import
+function deserializeDocument(data: any): any {
+  if (!data) return null
+  
+  return {
+    ...data,
+    partStudios: data.partStudios.map((ps: any) => ({
+      ...ps,
+      sketches: new Map(ps.sketches)
+    }))
+  }
+}
 
 interface ToolButtonProps {
   icon: React.ReactNode
@@ -77,7 +178,8 @@ export function Toolbar() {
     addNotification
   } = useUIStore()
   
-  const { document, createNewDocument, saveDocument } = useDocumentStore()
+  const { document, createNewDocument, saveDocument, loadDocumentFromData } = useDocumentStore()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Model tools
   const handleExtrude = () => {
@@ -135,13 +237,99 @@ export function Toolbar() {
   }
   
   const handleExport = () => {
-    addNotification('info', 'Export feature - select format in dialog')
-    // Could open export dialog here
+    if (!document) {
+      addNotification('error', 'No document to export')
+      return
+    }
+    
+    // Get active part studio parts
+    const activePartStudio = document.partStudios.find(ps => ps.id === document.activeElementId)
+    const parts = activePartStudio?.parts || []
+    
+    if (parts.length === 0) {
+      // No geometry - export document as JSON
+      const json = JSON.stringify(serializeDocument(document), null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = window.document.createElement('a')
+      a.href = url
+      a.download = `${document.name || 'document'}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      addNotification('success', 'Exported document as JSON')
+      return
+    }
+    
+    // Show export format options
+    const format = window.prompt('Export format (stl, obj, json):', 'stl')?.toLowerCase()
+    
+    if (!format) return
+    
+    let content: string
+    let filename: string
+    let mimeType: string
+    
+    switch (format) {
+      case 'stl':
+        content = meshToSTL(parts)
+        filename = `${document.name || 'model'}.stl`
+        mimeType = 'application/octet-stream'
+        break
+      case 'obj':
+        content = meshToOBJ(parts)
+        filename = `${document.name || 'model'}.obj`
+        mimeType = 'text/plain'
+        break
+      case 'json':
+        content = JSON.stringify(serializeDocument(document), null, 2)
+        filename = `${document.name || 'document'}.json`
+        mimeType = 'application/json'
+        break
+      default:
+        addNotification('error', `Unsupported format: ${format}`)
+        return
+    }
+    
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = window.document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+    addNotification('success', `Exported as ${filename}`)
   }
   
   const handleImport = () => {
-    addNotification('info', 'Import feature - drag & drop or select file')
-    // Could open import dialog here
+    fileInputRef.current?.click()
+  }
+  
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    try {
+      const text = await file.text()
+      
+      if (file.name.endsWith('.json')) {
+        const data = JSON.parse(text)
+        const doc = deserializeDocument(data)
+        if (doc && loadDocumentFromData) {
+          loadDocumentFromData(doc)
+          addNotification('success', `Imported ${file.name}`)
+        } else {
+          addNotification('error', 'Invalid document format')
+        }
+      } else {
+        addNotification('error', 'Only JSON files can be imported. Export as JSON first.')
+      }
+    } catch (error) {
+      console.error('Import error:', error)
+      addNotification('error', 'Failed to import file')
+    }
+    
+    // Reset input
+    e.target.value = ''
   }
 
   // Sketch tools
@@ -175,6 +363,15 @@ export function Toolbar() {
 
   return (
     <div className="flex items-center h-14 px-2 bg-cad-dark border-b border-cad-border">
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      
       {/* Logo */}
       <div className="flex items-center gap-2 px-3 mr-4">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">

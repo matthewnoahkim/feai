@@ -1964,6 +1964,181 @@ function CircularPatternPreview() {
   return <group>{previewElements}</group>
 }
 
+// Completed sketches visualization - shows all sketches in 3D view when not in sketch mode
+function CompletedSketchesVisualization() {
+  const { sketchMode, viewSettings } = useUIStore()
+  const { document } = useDocumentStore()
+  
+  // Don't show if we're actively editing a sketch (SketchVisualization handles that)
+  // But DO show completed sketches
+  const activePartStudio = document?.partStudios.find(ps => ps.id === document?.activeElementId)
+  if (!activePartStudio) return null
+  
+  // Get all sketches
+  const sketches = Array.from(activePartStudio.sketches.entries())
+  if (sketches.length === 0) return null
+  
+  return (
+    <group>
+      {sketches.map(([sketchId, sketch]) => {
+        // Skip the sketch being edited
+        if (sketchMode?.sketchId === sketchId) return null
+        
+        // Determine sketch plane transform
+        const planeNormal = sketch.plane?.normal || [0, 0, 1]
+        const planeOrigin = sketch.plane?.origin || [0, 0, 0]
+        
+        // Create rotation based on plane normal
+        let rotation: [number, number, number] = [0, 0, 0]
+        if (planeNormal[1] === 1 || planeNormal[1] === -1) {
+          // XZ plane (front)
+          rotation = [-Math.PI / 2, 0, 0]
+        } else if (planeNormal[0] === 1 || planeNormal[0] === -1) {
+          // YZ plane (right)
+          rotation = [0, Math.PI / 2, 0]
+        }
+        // XY plane (top) - default, no rotation needed
+        
+        return (
+          <group 
+            key={sketchId}
+            position={[planeOrigin[0], planeOrigin[1], planeOrigin[2]]}
+            rotation={rotation}
+          >
+            {sketch.entities.map((entity) => {
+              const color = entity.construction ? '#f59e0b' : '#22c55e'
+              const opacity = 0.7
+              
+              switch (entity.type) {
+                case 'line':
+                  if (entity.data.start && entity.data.end) {
+                    return (
+                      <Line
+                        key={entity.id}
+                        points={[
+                          [entity.data.start.x, entity.data.start.y, 0],
+                          [entity.data.end.x, entity.data.end.y, 0]
+                        ]}
+                        color={color}
+                        lineWidth={1.5}
+                        transparent
+                        opacity={opacity}
+                      />
+                    )
+                  }
+                  return null
+                  
+                case 'circle':
+                  if (entity.data.center && entity.data.radius) {
+                    const points: [number, number, number][] = []
+                    const segments = 64
+                    for (let i = 0; i <= segments; i++) {
+                      const angle = (i / segments) * Math.PI * 2
+                      points.push([
+                        entity.data.center.x + Math.cos(angle) * entity.data.radius,
+                        entity.data.center.y + Math.sin(angle) * entity.data.radius,
+                        0
+                      ])
+                    }
+                    return (
+                      <Line
+                        key={entity.id}
+                        points={points}
+                        color={color}
+                        lineWidth={1.5}
+                        transparent
+                        opacity={opacity}
+                      />
+                    )
+                  }
+                  return null
+                  
+                case 'rectangle':
+                  if (entity.data.corner1 && entity.data.corner2) {
+                    const c1 = entity.data.corner1
+                    const c2 = entity.data.corner2
+                    return (
+                      <Line
+                        key={entity.id}
+                        points={[
+                          [c1.x, c1.y, 0],
+                          [c2.x, c1.y, 0],
+                          [c2.x, c2.y, 0],
+                          [c1.x, c2.y, 0],
+                          [c1.x, c1.y, 0]
+                        ]}
+                        color={color}
+                        lineWidth={1.5}
+                        transparent
+                        opacity={opacity}
+                      />
+                    )
+                  }
+                  return null
+                  
+                case 'polygon':
+                  if (entity.data.center && entity.data.radius && entity.data.sides) {
+                    const points: [number, number, number][] = []
+                    const sides = entity.data.sides
+                    for (let i = 0; i <= sides; i++) {
+                      const angle = (i / sides) * Math.PI * 2 - Math.PI / 2
+                      points.push([
+                        entity.data.center.x + Math.cos(angle) * entity.data.radius,
+                        entity.data.center.y + Math.sin(angle) * entity.data.radius,
+                        0
+                      ])
+                    }
+                    return (
+                      <Line
+                        key={entity.id}
+                        points={points}
+                        color={color}
+                        lineWidth={1.5}
+                        transparent
+                        opacity={opacity}
+                      />
+                    )
+                  }
+                  return null
+                  
+                case 'arc':
+                  if (entity.data.center && entity.data.radius) {
+                    const points: [number, number, number][] = []
+                    const startAngle = entity.data.startAngle || 0
+                    const endAngle = entity.data.endAngle || Math.PI
+                    const segments = 32
+                    for (let i = 0; i <= segments; i++) {
+                      const angle = startAngle + (i / segments) * (endAngle - startAngle)
+                      points.push([
+                        entity.data.center.x + Math.cos(angle) * entity.data.radius,
+                        entity.data.center.y + Math.sin(angle) * entity.data.radius,
+                        0
+                      ])
+                    }
+                    return (
+                      <Line
+                        key={entity.id}
+                        points={points}
+                        color={color}
+                        lineWidth={1.5}
+                        transparent
+                        opacity={opacity}
+                      />
+                    )
+                  }
+                  return null
+                  
+                default:
+                  return null
+              }
+            })}
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
 // Scene content
 function Scene() {
   const { viewSettings, selection, sketchMode } = useUIStore()
@@ -2000,7 +2175,10 @@ function Scene() {
         />
       ))}
       
-      {/* Sketch visualization */}
+      {/* Completed sketches visualization - always visible */}
+      <CompletedSketchesVisualization />
+      
+      {/* Active sketch visualization - only when editing */}
       <SketchVisualization />
       
       {/* Extrude preview */}
