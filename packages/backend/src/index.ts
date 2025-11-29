@@ -104,9 +104,10 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`
+// Start server (only if not in serverless environment)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║                 feai REST API Server v1.0.0                  ║
 ╠══════════════════════════════════════════════════════════════╣
@@ -123,8 +124,10 @@ app.listen(PORT, () => {
 ║    Export:       GET /api/export/:docId/:elementId           ║
 ║    Import:       POST /api/import/:docId                     ║
 ║    Analysis:     GET /api/analysis/:docId/:elementId/...     ║
+║    FEA:          POST /api/fea/mesh, /api/fea/run            ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
-});
+  });
+}
 
 export default app;
