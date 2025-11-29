@@ -3,6 +3,7 @@
  */
 
 export { MeshGenerator, meshGenerator } from './mesh-generator';
-export { InpWriter, inpWriter } from './inp-writer';
 export { ResultParser, resultParser } from './result-parser';
+export { CalculiXInputWriter } from './inp-writer';
+export { FRDParser } from './frd-parser';
 

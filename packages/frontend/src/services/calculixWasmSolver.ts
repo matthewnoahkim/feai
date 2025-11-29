@@ -4,16 +4,25 @@
  */
 
 import type { FEMesh, SimulationSetup, FEAResults } from '@feai/shared';
-import { CalculiXInputWriter, CalculiXResultParser } from '@feai/kernel';
-import type { CalculiXModule } from '../../calculix-wasm/calculix';
+import { CalculiXInputWriter, FRDParser } from '@feai/kernel';
+import { inpGenerator } from './inpGenerator';
+import { frdParser } from './frdParser';
 
 export interface SolverProgress {
-  stage: 'initializing' | 'factorizing' | 'solving' | 'complete' | 'error';
+  stage: 'initializing' | 'factorizing' | 'solving' | 'parsing' | 'complete' | 'error';
   message: string;
   percent?: number;
 }
 
 export type SolverCallback = (progress: SolverProgress) => void;
+
+interface CalculiXModule {
+  FS: any;
+  callMain: (args: string[]) => number;
+  onExit?: (status: number) => void;
+  print?: (text: string) => void;
+  printErr?: (text: string) => void;
+}
 
 class CalculiXWASMSolver {
   private module: CalculiXModule | null = null;
@@ -49,51 +58,94 @@ class CalculiXWASMSolver {
   }
 
   private async initializeMainThread(): Promise<CalculiXModule> {
-    // Dynamically import the WASM module
-    const createModule = await import('/wasm/calculix.js');
-    
-    this.module = await createModule.default({
-      locateFile: (path: string) => {
-        if (path.endsWith('.wasm')) {
-          return '/wasm/calculix.wasm';
-        }
-        return path;
-      },
-      print: (text: string) => {
-        console.log('[CCX]', text);
-      },
-      printErr: (text: string) => {
-        console.error('[CCX]', text);
-      },
-    });
+    try {
+      // Check if WASM files exist before trying to load
+      const response = await fetch('/wasm/calculix.js');
+      if (!response.ok) {
+        throw new Error('CalculiX WASM files not found. Please place calculix.js and calculix.wasm in public/wasm/');
+      }
 
-    // Set up working directory
-    this.module.FS.mkdir('/work');
-    this.module.FS.chdir('/work');
+      // Dynamically import the WASM module using a script tag approach
+      // This avoids Vite build issues with dynamic imports
+      return await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = '/wasm/calculix.js';
+        script.onload = async () => {
+          // @ts-ignore - Global module
+          const createModule = window.createCalculiXModule || window.CCXModule;
+          if (!createModule) {
+            reject(new Error('CalculiX module not found after loading script'));
+            return;
+          }
 
-    return this.module;
+          try {
+            const module = await createModule({
+              locateFile: (path: string) => {
+                if (path.endsWith('.wasm')) {
+                  return '/wasm/calculix.wasm';
+                }
+                return path;
+              },
+              print: (text: string) => {
+                console.log('[CCX]', text);
+              },
+              printErr: (text: string) => {
+                console.error('[CCX]', text);
+              },
+            });
+
+            // Set up working directory
+            module.FS.mkdir('/work');
+            module.FS.chdir('/work');
+
+            this.module = module;
+            resolve(module);
+          } catch (error: any) {
+            reject(error);
+          }
+        };
+        script.onerror = () => {
+          reject(new Error('Failed to load CalculiX WASM script'));
+        };
+        document.head.appendChild(script);
+      });
+    } catch (error: any) {
+      console.error('[CalculiX WASM] Failed to load module:', error);
+      throw new Error(`Failed to load CalculiX WASM: ${error.message}. Make sure calculix.js and calculix.wasm are in /public/wasm/`);
+    }
   }
 
   private async initializeWorker(): Promise<CalculiXModule> {
     return new Promise((resolve, reject) => {
-      this.worker = new Worker(
-        new URL('./calculix-worker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      try {
+        this.worker = new Worker(
+          new URL('./calculix-worker.ts', import.meta.url),
+          { type: 'module' }
+        );
 
-      this.worker.onmessage = (e) => {
-        if (e.data.type === 'initialized') {
-          resolve({} as CalculiXModule); // Worker-based, no direct module access
-        } else if (e.data.type === 'error') {
-          reject(new Error(e.data.message));
-        }
-      };
+        const timeout = setTimeout(() => {
+          reject(new Error('Worker initialization timeout'));
+        }, 30000); // 30 second timeout
 
-      this.worker.onerror = (error) => {
-        reject(error);
-      };
+        this.worker.onmessage = (e) => {
+          if (e.data.type === 'initialized') {
+            clearTimeout(timeout);
+            resolve({} as CalculiXModule); // Worker-based, no direct module access
+          } else if (e.data.type === 'error') {
+            clearTimeout(timeout);
+            reject(new Error(e.data.message));
+          }
+        };
 
-      this.worker.postMessage({ type: 'initialize' });
+        this.worker.onerror = (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        };
+
+        this.worker.postMessage({ type: 'initialize' });
+      } catch (error: any) {
+        reject(new Error(`Failed to create worker: ${error.message}`));
+      }
     });
   }
 
@@ -114,17 +166,17 @@ class CalculiXWASMSolver {
     try {
       onProgress?.({
         stage: 'initializing',
-        message: 'Generating input file...',
+        message: 'Generating CalculiX input file...',
         percent: 0,
       });
 
-      // Generate CalculiX input file
+      // Generate CalculiX input file using full writer
       const inputContent = CalculiXInputWriter.writeInput(mesh, setup);
 
       if (this.worker) {
-        return await this.solveInWorker(jobName, inputContent, onProgress);
+        return await this.solveInWorker(jobName, inputContent, mesh, onProgress);
       } else {
-        return await this.solveInMainThread(jobName, inputContent, onProgress);
+        return await this.solveInMainThread(jobName, inputContent, mesh, onProgress);
       }
     } catch (error: any) {
       onProgress?.({
@@ -138,6 +190,7 @@ class CalculiXWASMSolver {
   private async solveInMainThread(
     jobName: string,
     inputContent: string,
+    mesh: FEMesh,
     onProgress?: SolverCallback
   ): Promise<FEAResults> {
     if (!this.module) {
@@ -158,6 +211,17 @@ class CalculiXWASMSolver {
         percent: 10,
       });
 
+      // Capture console output
+      const logs: string[] = [];
+      this.module.print = (text: string) => {
+        logs.push(text);
+        console.log('[CCX]', text);
+      };
+      this.module.printErr = (text: string) => {
+        logs.push('[ERROR] ' + text);
+        console.error('[CCX]', text);
+      };
+
       // Run CalculiX
       const exitCode = this.module.callMain([jobName]);
 
@@ -175,7 +239,7 @@ class CalculiXWASMSolver {
       }
 
       onProgress?.({
-        stage: 'complete',
+        stage: 'parsing',
         message: 'Parsing results...',
         percent: 90,
       });
@@ -191,8 +255,9 @@ class CalculiXWASMSolver {
         this.module.FS.unlink(frdFile);
       } catch {}
 
-      // Parse results
-      const results = CalculiXResultParser.parseResults(frdContent, datContent);
+      // Parse results using full FRD parser
+      const parsedResults = FRDParser.parse(frdContent, datContent);
+      const results = this.convertToFEAResults(parsedResults, mesh);
 
       onProgress?.({
         stage: 'complete',
@@ -215,6 +280,7 @@ class CalculiXWASMSolver {
   private async solveInWorker(
     jobName: string,
     inputContent: string,
+    mesh: FEMesh,
     onProgress?: SolverCallback
   ): Promise<FEAResults> {
     return new Promise((resolve, reject) => {
@@ -249,6 +315,10 @@ class CalculiXWASMSolver {
         type: 'solve',
         jobName,
         inputContent,
+        mesh: {
+          nodeCount: mesh.nodeCount,
+          elementCount: mesh.elementCount,
+        }
       });
     });
   }
@@ -258,7 +328,7 @@ class CalculiXWASMSolver {
     const lines = datContent.split('\n');
 
     for (const line of lines) {
-      if (line.includes('***ERROR') || line.includes('*ERROR*')) {
+      if (line.includes('***ERROR') || line.includes('*ERROR*') || line.includes('ERROR:')) {
         errors.push(line.trim());
       }
     }
@@ -267,15 +337,69 @@ class CalculiXWASMSolver {
   }
 
   /**
+   * Convert parsed FRD results to FEAResults format
+   */
+  private convertToFEAResults(parsed: any, mesh: FEMesh): FEAResults {
+    const displacements: any[] = [];
+    const stresses: any[] = [];
+
+    // Convert displacements
+    for (const [nodeId, values] of parsed.displacements) {
+      displacements.push({
+        nodeId,
+        values: values, // [Ux, Uy, Uz, magnitude]
+      });
+    }
+
+    // Convert von Mises stresses
+    for (const [nodeId, value] of parsed.vonMisesStress) {
+      stresses.push({
+        nodeId,
+        values: [value],
+      });
+    }
+
+    // Calculate min/max
+    const dispMagnitudes = displacements.map(d => d.values[3]);
+    const stressValues = stresses.map(s => s.values[0]);
+
+    return {
+      analysisType: 'static',
+      timestamp: new Date().toISOString(),
+      staticResults: {
+        displacements: {
+          nodeValues: displacements,
+          min: Math.min(...dispMagnitudes),
+          max: Math.max(...dispMagnitudes),
+          unit: 'mm'
+        },
+        vonMisesStress: {
+          nodeValues: stresses,
+          min: Math.min(...stressValues),
+          max: Math.max(...stressValues),
+          unit: 'MPa'
+        }
+      },
+      summary: {
+        maxDisplacement: Math.max(...dispMagnitudes),
+        maxVonMisesStress: Math.max(...stressValues),
+        solveTime: 0,
+        warnings: []
+      }
+    } as any;
+  }
+
+  // Note: parseResults and generateInputFile methods have been replaced with
+  // dedicated modules (CalculiXInputWriter and FRDParser) for better maintainability
+
+  /**
    * Get module statistics (memory usage, etc.)
    */
   getStats() {
-    // WASM memory info not easily accessible, but we can estimate
     return {
       initialized: !!this.module || !!this.worker,
       useWorker: this.useWorker,
-      // Approximate memory from WASM heap if available
-      memoryUsedMB: this.module ? 'unknown' : 'N/A',
+      memoryUsedMB: 'unknown', // WASM memory info not easily accessible
     };
   }
 

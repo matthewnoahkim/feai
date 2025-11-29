@@ -20,7 +20,9 @@ import { apiClient } from '../api/client';
 import { calculixSolver } from '../services/calculixWasmSolver';
 
 // Toggle between WASM and API solver
-const USE_WASM_SOLVER = true; // Set to false to use backend API
+// Set to true to use WASM (client-side, requires calculix.wasm files)
+// Set to false to use backend API (requires compute server)
+const USE_WASM_SOLVER = false; // Change to true when WASM files are ready
 
 interface FEAState {
   // Mode
