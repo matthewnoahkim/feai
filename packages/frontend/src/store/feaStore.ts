@@ -17,6 +17,10 @@ import {
   ColormapType,
 } from '@feai/shared';
 import { apiClient } from '../api/client';
+import { calculixSolver } from '../services/calculixWasmSolver';
+
+// Toggle between WASM and API solver
+const USE_WASM_SOLVER = true; // Set to false to use backend API
 
 interface FEAState {
   // Mode
@@ -401,27 +405,86 @@ export const useFEAStore = create<FEAState>((set, get) => ({
         meshSettings: state.meshSettings,
       };
 
-      // Submit job
-      const response = await apiClient.runSimulation(setup, partStudioId);
+      if (USE_WASM_SOLVER) {
+        // Use WebAssembly solver (client-side)
+        console.log('[FEA] Running simulation with WASM solver...');
+        
+        set({
+          solverStatus: 'solving',
+          solverProgress: 10,
+          solverMessage: 'Initializing CalculiX WASM module...',
+        });
 
-      set({
-        jobId: response.jobId,
-        solverStatus: 'solving',
-        solverMessage: 'Running solver...',
-      });
+        // Initialize WASM module
+        await calculixSolver.initialize();
 
-      // Start polling
-      get().pollJobStatus();
+        set({
+          solverProgress: 15,
+          solverMessage: 'Running finite element analysis...',
+        });
+
+        // Run simulation with progress callback
+        const results = await calculixSolver.solve(
+          state.mesh,
+          setup,
+          (progress) => {
+            const percent = progress.percent || 0;
+            set({
+              solverStatus: progress.stage === 'error' ? 'error' : 'solving',
+              solverProgress: percent,
+              solverMessage: progress.message,
+            });
+          }
+        );
+
+        // Success!
+        set({
+          solverStatus: 'completed',
+          solverProgress: 100,
+          solverMessage: 'Simulation completed successfully',
+          results: results as any,
+          activeFEAPanel: 'results',
+          jobId: null,
+        });
+
+        console.log('[FEA] WASM simulation completed:', results);
+      } else {
+        // Use backend API solver (requires compute server)
+        const response = await apiClient.runSimulation(setup, partStudioId);
+
+        set({
+          jobId: response.jobId,
+          solverStatus: 'solving',
+          solverMessage: 'Running solver...',
+        });
+
+        // Start polling
+        get().pollJobStatus();
+      }
     } catch (error: any) {
+      console.error('[FEA] Simulation failed:', error);
       set({
         solverStatus: 'error',
-        solverMessage: error.message,
+        solverMessage: error.message || 'Simulation failed',
+        jobId: null,
       });
     }
   },
 
   cancelSimulation: async () => {
     const { jobId } = get();
+    
+    if (USE_WASM_SOLVER) {
+      // For WASM, we can terminate the worker
+      calculixSolver.terminate();
+      set({
+        solverStatus: 'cancelled',
+        solverMessage: 'Simulation cancelled',
+        jobId: null,
+      });
+      return;
+    }
+
     if (!jobId) return;
 
     try {
