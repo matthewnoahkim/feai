@@ -67,6 +67,8 @@ echo "   This may take several minutes..."
 echo ""
 
 # Compile with Emscripten
+# Note: -s USE_PTHREADS=1 is commented out by default
+# Uncomment to enable threading (requires COOP/COEP headers on server)
 emcc \
   -O3 \
   -flto \
@@ -92,6 +94,36 @@ emcc \
   -o ${OUTPUT_DIR}/calculix.js \
   ${C_FILES} \
   ${SPOOLES_DIR}/libspooles.a
+
+# Uncomment below for pthread build (multi-threaded):
+# emcc \
+#   -O3 \
+#   -flto \
+#   -pthread \
+#   -I${SPOOLES_DIR} \
+#   -s WASM=1 \
+#   -s USE_PTHREADS=1 \
+#   -s PTHREAD_POOL_SIZE=4 \
+#   -s ALLOW_MEMORY_GROWTH=1 \
+#   -s INITIAL_MEMORY=134217728 \
+#   -s MAXIMUM_MEMORY=2147483648 \
+#   -s STACK_SIZE=5242880 \
+#   -s EXPORTED_FUNCTIONS='["_main"]' \
+#   -s EXPORTED_RUNTIME_METHODS='["FS","callMain","cwrap","ccall"]' \
+#   -s MODULARIZE=1 \
+#   -s EXPORT_NAME="createCalculiXModule" \
+#   -s FORCE_FILESYSTEM=1 \
+#   -s ENVIRONMENT='web,worker' \
+#   -s ASSERTIONS=0 \
+#   -s ALLOW_TABLE_GROWTH=1 \
+#   -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
+#   -s INCOMING_MODULE_JS_API='["preRun","postRun","print","printErr","onExit","locateFile"]' \
+#   -DUSE_MT=1 \
+#   -DARCH=\"Linux\" \
+#   --pre-js pre.js \
+#   -o ${OUTPUT_DIR}/calculix-mt.js \
+#   ${C_FILES} \
+#   ${SPOOLES_DIR}/libspooles.a
 
 if [ $? -eq 0 ]; then
     echo ""
