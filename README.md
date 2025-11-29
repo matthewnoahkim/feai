@@ -68,10 +68,7 @@ npm run dev
 
 ## 📚 Documentation
 
-- **[IMPLEMENTATION-COMPLETE.md](docs/IMPLEMENTATION-COMPLETE.md)** - Complete WASM FEA implementation guide
-- **[IMPLEMENTATION-SUMMARY.md](docs/IMPLEMENTATION-SUMMARY.md)** - High-level feature summary
-- **[TESTING-GUIDE.md](docs/TESTING-GUIDE.md)** - Comprehensive testing procedures
-- **[WASM-COMPLETE.md](docs/WASM-COMPLETE.md)** - CalculiX compilation guide
+- **[WASM-FEA-GUIDE.md](docs/WASM-FEA-GUIDE.md)** - Complete guide for WebAssembly FEA implementation, building, testing, and usage
 
 ## Tech Stack
 
