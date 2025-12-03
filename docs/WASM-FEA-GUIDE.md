@@ -159,16 +159,44 @@ cd SPOOLES.2.2
 # Create Emscripten makefile
 cat > Make.inc << 'EOF'
 CC = emcc
-CFLAGS = -O2 -I.
+CFLAGS = -O2 -I. -Wno-int-conversion
 AR = emar
 RANLIB = emranlib
 EOF
+
+# IMPORTANT: Fix NULL -> int compatibility issues
+# Old C code uses NULL for integer parameters, modern compilers reject this
+echo "Patching SPOOLES for Emscripten compatibility..."
+
+# Fix all IVinit(x, NULL) calls to IVinit(x, 0)
+find . -name "*.c" -type f -exec sed -i.bak 's/IVinit(\([^,]*\), NULL)/IVinit(\1, 0)/g' {} \;
+
+# Fix other common NULL-as-int cases
+find . -name "*.c" -type f -exec sed -i.bak 's/\(IV[a-zA-Z]*([^,]*, \)NULL\s*)/\10)/g' {} \;
+find . -name "*.c" -type f -exec sed -i.bak 's/\(DV[a-zA-Z]*([^,]*, \)NULL\s*)/\10)/g' {} \;
+
+echo "✓ SPOOLES patched"
 
 # Build library
 make lib
 
 cd ..
 ```
+
+**Common Issue**: If you get `incompatible pointer to integer conversion` errors:
+
+This happens because old SPOOLES code passes `NULL` (which is `void*`) to functions expecting `int`. 
+
+**Quick Fix**:
+```bash
+cd packages/calculix-wasm
+chmod +x fix-spooles-null.sh
+./fix-spooles-null.sh
+```
+
+Or manually edit the problematic files (e.g., `transform.c`) and replace:
+- `IVinit(nfront, NULL)` → `IVinit(nfront, 0)`
+- Any `functionName(param, NULL)` where an `int` is expected → use `0` instead
 
 ### Compile to WASM
 
