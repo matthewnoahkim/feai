@@ -309,18 +309,18 @@ export function LoftDialog() {
   
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-16 overflow-y-auto">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[480px] mb-20">
+      <div className="bg-gray-50 border border-cad-border shadow-2xl w-[480px] mb-20">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-amber-900/30 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-amber-500/20 rounded flex items-center justify-center">
-              <Layers size={14} className="text-amber-400" />
+            <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
+              <Layers size={14} className="text-cad-accent" />
             </div>
             <h2 className="font-semibold text-cad-text">Loft</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel transition-colors"
           >
             <X size={18} />
           </button>
@@ -334,21 +334,21 @@ export function LoftDialog() {
             <label className="flex items-center gap-2 text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               <Target size={12} />
               Profiles (Sections)
-              <span className="ml-auto text-amber-400 text-[10px] normal-case">
+              <span className="ml-auto text-cad-accent text-[10px] normal-case">
                 {selectedProfiles.length} selected • Min 2 required
               </span>
             </label>
             
             {/* Selected profiles list */}
             {selectedProfiles.length > 0 && (
-              <div className="bg-cad-darker rounded-lg border border-amber-500/30 p-2 space-y-1">
+              <div className="bg-white border border-amber-500/30 p-2 space-y-1">
                 <p className="text-xs text-cad-text-dim mb-2">Selected profiles (in order):</p>
                 {selectedProfiles.map((profile, index) => (
                   <div 
                     key={profile.entityId}
-                    className="flex items-center gap-2 p-2 bg-amber-500/10 rounded border border-amber-500/30"
+                    className="flex items-center gap-2 p-2 bg-white border border-cad-border"
                   >
-                    <span className="text-amber-400 font-bold text-sm w-6">{index + 1}</span>
+                    <span className="text-cad-accent font-bold text-sm w-6">{index + 1}</span>
                     <div className="flex items-center gap-2 text-cad-text-dim">
                       {getEntityIcon(profile.entityType)}
                     </div>
@@ -357,7 +357,7 @@ export function LoftDialog() {
                       <button
                         onClick={() => moveProfileUp(index)}
                         disabled={index === 0}
-                        className="p-1 hover:bg-cad-panel rounded disabled:opacity-30"
+                        className="p-1 hover:bg-cad-panel disabled:opacity-30"
                         title="Move up"
                       >
                         <ChevronUp size={14} />
@@ -365,14 +365,14 @@ export function LoftDialog() {
                       <button
                         onClick={() => moveProfileDown(index)}
                         disabled={index === selectedProfiles.length - 1}
-                        className="p-1 hover:bg-cad-panel rounded disabled:opacity-30"
+                        className="p-1 hover:bg-cad-panel disabled:opacity-30"
                         title="Move down"
                       >
                         <ChevronDown size={14} />
                       </button>
                       <button
                         onClick={() => removeProfile(profile.entityId)}
-                        className="p-1 hover:bg-red-500/20 rounded text-red-400"
+                        className="p-1 hover:bg-cad-accent/20 text-cad-accent"
                         title="Remove"
                       >
                         <Trash2 size={14} />
@@ -385,12 +385,12 @@ export function LoftDialog() {
             
             {/* Available profiles to add */}
             {availableProfiles.length === 0 ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-4 bg-white border border-cad-border">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="text-amber-300 font-medium">No profiles found</p>
-                    <p className="text-amber-400/70 mt-1">
+                    <p className="text-cad-text font-medium">No profiles found</p>
+                    <p className="text-cad-accent/70 mt-1">
                       Create sketches with closed profiles (rectangles, circles, or polygons) on different planes to loft between.
                     </p>
                   </div>
@@ -398,7 +398,7 @@ export function LoftDialog() {
               </div>
             ) : (
               <div 
-                className={`space-y-1 max-h-32 overflow-y-auto bg-cad-darker rounded-lg border p-2 transition-colors ${
+                className={`space-y-1 max-h-32 overflow-y-auto bg-white border p-2 transition-colors ${
                   selectionMode === 'profiles' ? 'border-amber-500/50' : 'border-cad-border'
                 }`}
                 onClick={() => setSelectionMode('profiles')}
@@ -408,10 +408,10 @@ export function LoftDialog() {
                   <button
                     key={profile.entityId}
                     onClick={() => addProfile(profile.entityId)}
-                    className="w-full flex items-center gap-3 p-2 rounded cursor-pointer transition-colors hover:bg-amber-500/20 border border-transparent hover:border-amber-500/30"
+                    className="w-full flex items-center gap-3 p-2 cursor-pointer transition-colors hover:bg-cad-accent/20 border border-transparent hover:border-amber-500/30"
                   >
-                    <div className="w-6 h-6 bg-cad-panel rounded flex items-center justify-center">
-                      <Plus size={12} className="text-amber-400" />
+                    <div className="w-6 h-6 bg-cad-panel flex items-center justify-center">
+                      <Plus size={12} className="text-cad-accent" />
                     </div>
                     <div className="flex items-center gap-2 text-cad-text-dim">
                       {getEntityIcon(profile.entityType)}
@@ -437,14 +437,14 @@ export function LoftDialog() {
             </label>
             
             {availableGuides.length === 0 ? (
-              <div className="p-3 bg-cad-darker rounded-lg border border-cad-border">
+              <div className="p-3 bg-white border border-cad-border">
                 <p className="text-xs text-cad-text-dim">
                   No guide curves available. Create lines, arcs, or splines connecting the profiles to control the loft shape.
                 </p>
               </div>
             ) : (
               <div 
-                className={`space-y-1 max-h-28 overflow-y-auto bg-cad-darker rounded-lg border p-2 transition-colors ${
+                className={`space-y-1 max-h-28 overflow-y-auto bg-white border p-2 transition-colors ${
                   selectionMode === 'guides' ? 'border-amber-500/50' : 'border-cad-border'
                 }`}
                 onClick={() => setSelectionMode('guides')}
@@ -453,9 +453,9 @@ export function LoftDialog() {
                   <label
                     key={guide.entityId}
                     className={`
-                      flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                      flex items-center gap-3 p-2 cursor-pointer transition-colors
                       ${selectedGuides.includes(guide.entityId)
-                        ? 'bg-amber-500/20 border border-amber-500/50'
+                        ? 'bg-cad-accent/20 border border-amber-500/50'
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -466,9 +466,9 @@ export function LoftDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                      w-5 h-5 border-2 flex items-center justify-center transition-colors
                       ${selectedGuides.includes(guide.entityId)
-                        ? 'bg-amber-500 border-amber-500'
+                        ? 'bg-cad-accent border-cad-accent'
                         : 'border-cad-border'}
                     `}>
                       {selectedGuides.includes(guide.entityId) && <Check size={12} className="text-white" />}
@@ -488,18 +488,18 @@ export function LoftDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Operation
             </label>
-            <div className="grid grid-cols-4 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-4 gap-1 bg-white p-1">
               {[
                 { value: 'new', label: 'New', icon: <Plus size={14} /> },
-                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-green-400" /> },
-                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-red-400" /> },
-                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-purple-400" /> },
+                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-cad-accent" /> },
+                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-cad-accent" /> },
+                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-cad-accent" /> },
               ].map((op) => (
                 <button
                   key={op.value}
                   onClick={() => setOperation(op.value as OperationType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${operation === op.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -514,13 +514,13 @@ export function LoftDialog() {
           
           {/* Merge Scope (for add/remove/intersect) */}
           {operation !== 'new' && availableBodies.length > 0 && (
-            <div className="space-y-2 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+            <div className="space-y-2 p-3 bg-white/50 border border-cad-border">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={mergeWithAll}
                   onChange={(e) => setMergeWithAll(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                 />
                 <span className="text-sm text-cad-text">Merge with all intersecting parts</span>
               </label>
@@ -528,7 +528,7 @@ export function LoftDialog() {
           )}
           
           {/* Start/End Conditions */}
-          <div className="space-y-3 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+          <div className="space-y-3 p-3 bg-white/50 border border-cad-border">
             <label className="text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Tangency Conditions
             </label>
@@ -540,7 +540,7 @@ export function LoftDialog() {
                 <select
                   value={startCondition}
                   onChange={(e) => setStartCondition(e.target.value as TangencyCondition)}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent appearance-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent appearance-none cursor-pointer"
                 >
                   <option value="free">Free</option>
                   <option value="normal">Normal to Plane</option>
@@ -557,7 +557,7 @@ export function LoftDialog() {
                       min={0.1}
                       max={5}
                       step={0.1}
-                      className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                      className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                     />
                   </div>
                 )}
@@ -569,7 +569,7 @@ export function LoftDialog() {
                 <select
                   value={endCondition}
                   onChange={(e) => setEndCondition(e.target.value as TangencyCondition)}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent appearance-none cursor-pointer"
+                  className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent appearance-none cursor-pointer"
                 >
                   <option value="free">Free</option>
                   <option value="normal">Normal to Plane</option>
@@ -586,7 +586,7 @@ export function LoftDialog() {
                       min={0.1}
                       max={5}
                       step={0.1}
-                      className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                      className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                     />
                   </div>
                 )}
@@ -599,7 +599,7 @@ export function LoftDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Output Type
             </label>
-            <div className="grid grid-cols-2 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-2 gap-1 bg-white p-1">
               {[
                 { value: 'solid', label: 'Solid' },
                 { value: 'surface', label: 'Surface' },
@@ -608,7 +608,7 @@ export function LoftDialog() {
                   key={type.value}
                   onClick={() => setLoftType(type.value as LoftType)}
                   className={`
-                    p-2 rounded transition-colors text-xs
+                    p-2 transition-colors text-xs
                     ${loftType === type.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -621,13 +621,13 @@ export function LoftDialog() {
           </div>
           
           {/* Additional Options */}
-          <div className="space-y-2 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+          <div className="space-y-2 p-3 bg-white/50 border border-cad-border">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={closedLoft}
                 onChange={(e) => setClosedLoft(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text">Closed Loft (connect last to first)</span>
             </label>
@@ -637,32 +637,32 @@ export function LoftDialog() {
                 type="checkbox"
                 checked={showConnectors}
                 onChange={(e) => setShowConnectors(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text">Show connection lines</span>
             </label>
           </div>
           
           {/* Preview Toggle */}
-          <div className="flex items-center justify-between p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center justify-between p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPreview}
                 onChange={(e) => setShowPreview(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text">Show preview</span>
             </label>
           </div>
           
           {/* Summary */}
-          <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
-            <h4 className="text-xs font-medium text-amber-300 mb-2">Summary</h4>
-            <ul className="text-xs text-amber-200/70 space-y-1">
+          <div className="p-3 bg-white border border-cad-border">
+            <h4 className="text-xs font-medium text-cad-text mb-2">Summary</h4>
+            <ul className="text-xs text-cad-text space-y-1">
               <li>• Profiles: {selectedProfiles.length} selected</li>
               {selectedProfiles.length > 0 && (
-                <li className="ml-2 text-amber-300/60">
+                <li className="ml-2 text-cad-text/60">
                   Order: {selectedProfiles.map((p, i) => p.displayName.split(' - ')[1] || `Profile ${i+1}`).join(' → ')}
                 </li>
               )}
@@ -677,10 +677,10 @@ export function LoftDialog() {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-white/50">
           <div className="text-xs text-cad-text-dim">
             {!isValid && (
-              <span className="text-amber-400 flex items-center gap-1">
+              <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
                 {selectedProfiles.length < 2 
                   ? `Need ${2 - selectedProfiles.length} more profile(s)`
@@ -691,7 +691,7 @@ export function LoftDialog() {
           <div className="flex gap-2">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border transition-colors"
             >
               Cancel
             </button>
@@ -699,9 +699,9 @@ export function LoftDialog() {
               onClick={handleCreate}
               disabled={!isValid}
               className={`
-                px-4 py-2 text-sm rounded transition-colors flex items-center gap-2
+                px-4 py-2 text-sm transition-colors flex items-center gap-2
                 ${isValid 
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white' 
+                  ? 'bg-cad-accent hover:bg-cad-accent-hover text-white' 
                   : 'bg-cad-border text-cad-text-dim cursor-not-allowed'}
               `}
             >

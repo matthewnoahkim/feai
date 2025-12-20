@@ -398,7 +398,7 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
         {/* Submenu */}
         {hasSubmenu && activeSubmenu === item.id && (
           <div
-            className="absolute left-full top-0 ml-1 min-w-[160px] bg-cad-dark border border-cad-border rounded-lg shadow-xl overflow-hidden z-50"
+            className="absolute left-full top-0 ml-1 min-w-[160px] bg-gray-50 border border-cad-border shadow-xl overflow-hidden z-50"
             data-context-menu
           >
             {item.submenu!.map(subItem => renderMenuItem(subItem, depth + 1))}
@@ -411,7 +411,7 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
   return (
     <div
       data-context-menu
-      className="fixed z-50 min-w-[180px] bg-cad-dark border border-cad-border rounded-lg shadow-xl overflow-hidden"
+      className="fixed z-50 min-w-[180px] bg-gray-50 border border-cad-border shadow-xl overflow-hidden"
       style={{
         left: position.x,
         top: position.y,
@@ -419,7 +419,7 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
     >
       {/* Header showing selection info */}
       {selection.ids.length > 0 && (
-        <div className="px-3 py-2 border-b border-cad-border bg-cad-darker">
+        <div className="px-3 py-2 border-b border-cad-border bg-white">
           <span className="text-[10px] font-medium text-cad-text-dim uppercase tracking-wide">
             {selection.ids.length} {selection.type}{selection.ids.length > 1 ? 's' : ''} selected
           </span>

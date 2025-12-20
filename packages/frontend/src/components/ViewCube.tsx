@@ -215,13 +215,13 @@ export function ViewControls({ onViewChange, onZoomIn, onZoomOut, onZoomFit, onR
   return (
     <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
       {/* View buttons */}
-      <div className="bg-cad-dark/90 border border-cad-border rounded-lg p-1 backdrop-blur-sm">
+      <div className="bg-gray-50/90 border border-cad-border p-1 backdrop-blur-sm">
         <div className="grid grid-cols-3 gap-0.5">
           {/* Top row */}
           <div />
           <button
             onClick={() => onViewChange('top')}
-            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
             title="Top View"
           >
             T
@@ -231,21 +231,21 @@ export function ViewControls({ onViewChange, onZoomIn, onZoomOut, onZoomFit, onR
           {/* Middle row */}
           <button
             onClick={() => onViewChange('left')}
-            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
             title="Left View"
           >
             L
           </button>
           <button
             onClick={() => onViewChange('front')}
-            className="w-8 h-8 flex items-center justify-center text-[10px] font-bold text-cad-text bg-cad-panel hover:bg-cad-border rounded transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-[10px] font-bold text-cad-text bg-cad-panel hover:bg-cad-border transition-colors"
             title="Front View"
           >
             F
           </button>
           <button
             onClick={() => onViewChange('right')}
-            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
             title="Right View"
           >
             R
@@ -255,7 +255,7 @@ export function ViewControls({ onViewChange, onZoomIn, onZoomOut, onZoomFit, onR
           <div />
           <button
             onClick={() => onViewChange('bottom')}
-            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-[10px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
             title="Bottom View"
           >
             B
@@ -267,14 +267,14 @@ export function ViewControls({ onViewChange, onZoomIn, onZoomOut, onZoomFit, onR
         <div className="flex gap-0.5 mt-1 pt-1 border-t border-cad-border">
           <button
             onClick={() => onViewChange('back')}
-            className="flex-1 h-6 flex items-center justify-center text-[9px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+            className="flex-1 h-6 flex items-center justify-center text-[9px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
             title="Back View"
           >
             Back
           </button>
           <button
             onClick={() => onViewChange('iso')}
-            className="flex-1 h-6 flex items-center justify-center text-[9px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+            className="flex-1 h-6 flex items-center justify-center text-[9px] font-medium text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
             title="Isometric View"
           >
             Iso
@@ -283,24 +283,24 @@ export function ViewControls({ onViewChange, onZoomIn, onZoomOut, onZoomFit, onR
       </div>
       
       {/* Zoom controls */}
-      <div className="bg-cad-dark/90 border border-cad-border rounded-lg p-1 flex flex-col gap-0.5 backdrop-blur-sm">
+      <div className="bg-gray-50/90 border border-cad-border p-1 flex flex-col gap-0.5 backdrop-blur-sm">
         <button
           onClick={onZoomIn}
-          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
           title="Zoom In"
         >
           <ZoomIn size={16} />
         </button>
         <button
           onClick={onZoomOut}
-          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
           title="Zoom Out"
         >
           <ZoomOut size={16} />
         </button>
         <button
           onClick={onZoomFit}
-          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
           title="Zoom to Fit"
         >
           <Maximize2 size={16} />
@@ -308,10 +308,10 @@ export function ViewControls({ onViewChange, onZoomIn, onZoomOut, onZoomFit, onR
       </div>
       
       {/* Home/Reset button */}
-      <div className="bg-cad-dark/90 border border-cad-border rounded-lg p-1 backdrop-blur-sm">
+      <div className="bg-gray-50/90 border border-cad-border p-1 backdrop-blur-sm">
         <button
           onClick={onResetView}
-          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel rounded transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-cad-text-dim hover:text-cad-text hover:bg-cad-panel transition-colors"
           title="Reset View (Home)"
         >
           <Home size={16} />

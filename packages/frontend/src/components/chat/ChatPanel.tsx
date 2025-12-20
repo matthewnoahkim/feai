@@ -1,5 +1,6 @@
 /**
  * ChatPanel Component - AI-Assisted Chat Panel for CAD
+ * Academic/scholarly theme styling
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
@@ -24,20 +25,20 @@ interface QuickActionsProps {
 
 function QuickActions({ onSelect, disabled }: QuickActionsProps) {
   const suggestions = [
-    { label: '📦 Create cube', text: 'Create a 50mm cube' },
-    { label: '⬡ Add cylinder', text: 'Add a cylinder 30mm diameter and 40mm tall' },
-    { label: '🔘 Fillet edges', text: 'Fillet all edges with 5mm radius' },
-    { label: '↩️ Undo', text: 'Undo the last action' }
+    { label: 'Create cube', text: 'Create a 50mm cube' },
+    { label: 'Add cylinder', text: 'Add a cylinder 30mm diameter and 40mm tall' },
+    { label: 'Fillet edges', text: 'Fillet all edges with 5mm radius' },
+    { label: 'Undo', text: 'Undo the last action' }
   ]
   
   return (
-    <div className="flex flex-wrap gap-1 p-2 border-t border-cad-border/50">
+    <div className="flex flex-wrap gap-1 p-2 border-t border-cad-border">
       {suggestions.map((s, i) => (
         <button
           key={i}
           onClick={() => onSelect(s.text)}
           disabled={disabled}
-          className="px-2 py-1 text-[10px] bg-cad-panel/50 hover:bg-cad-panel border border-cad-border/50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-1 text-[10px] bg-cad-panel hover:bg-gray-50 border border-cad-border transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-sans"
         >
           {s.label}
         </button>
@@ -111,9 +112,9 @@ export function ChatPanel() {
           <div className="chat-panel-icon">
             <Sparkles size={16} />
           </div>
-          <span className="font-semibold text-sm">CAD Assistant</span>
+          <span className="font-serif font-semibold text-sm">CAD Assistant</span>
           {isExecuting && (
-            <span className="flex items-center gap-1 text-[10px] text-cad-accent">
+            <span className="flex items-center gap-1 text-[10px] text-cad-accent font-sans">
               <Loader2 size={10} className="animate-spin" />
               Working...
             </span>
@@ -125,7 +126,7 @@ export function ChatPanel() {
             <button
               onClick={undoLastAction}
               disabled={isExecuting}
-              className="p-1.5 hover:bg-cad-panel rounded transition-colors disabled:opacity-50"
+              className="p-1.5 hover:bg-cad-panel border border-transparent hover:border-cad-border transition-colors disabled:opacity-50"
               title="Undo last action"
             >
               <Undo2 size={14} />
@@ -133,14 +134,14 @@ export function ChatPanel() {
           )}
           <button
             onClick={() => clearMessages()}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel border border-transparent hover:border-cad-border transition-colors"
             title="Clear chat"
           >
             <Trash2 size={14} />
           </button>
           <button
             onClick={toggleOpen}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel border border-transparent hover:border-cad-border transition-colors"
             title="Close"
           >
             <X size={14} />
@@ -152,11 +153,11 @@ export function ChatPanel() {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cad-accent to-purple-500 flex items-center justify-center mb-4 shadow-lg shadow-cad-accent/20">
+            <div className="w-16 h-16 bg-cad-accent flex items-center justify-center mb-4 shadow-md">
               <Bot size={32} className="text-white" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">CAD Assistant</h3>
-            <p className="text-sm text-cad-text-dim">
+            <h3 className="text-lg font-serif font-semibold mb-2">CAD Assistant</h3>
+            <p className="text-sm text-cad-text-dim font-sans">
               Describe what you want to create and I'll help you build it.
             </p>
           </div>
@@ -243,7 +244,7 @@ export function ChatToggleButton() {
       <div className="relative">
         <MessageSquare size={22} />
         {messages.length > 0 && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 bg-cad-accent rounded-full" />
+          <span className="absolute -top-1 -right-1 w-2 h-2 bg-white" />
         )}
       </div>
       <span className="chat-toggle-label">AI Assistant</span>

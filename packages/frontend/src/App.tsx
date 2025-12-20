@@ -168,7 +168,7 @@ function App() {
 
         {/* 3D Viewport / Sketch Canvas */}
         <div 
-          className="flex-1 relative bg-cad-darker min-h-0 min-w-0"
+          className="flex-1 relative bg-white min-h-0 min-w-0"
           onContextMenu={!isSketchMode ? openContextMenu : undefined}
         >
           <SelectionManager>
@@ -191,11 +191,11 @@ function App() {
             
             {/* View controls hint */}
             {!isSketchMode && (
-              <div className="absolute bottom-4 left-4 text-xs text-cad-text-dim bg-cad-darker/80 backdrop-blur px-3 py-2 rounded-lg border border-cad-border/30 z-10">
+              <div className="absolute bottom-4 left-4 text-xs text-cad-text-dim bg-cad-panel/90 backdrop-blur px-3 py-2 border border-cad-border z-10 font-sans">
                 <div className="flex items-center gap-4">
-                  <span>🖱️ Left: Rotate</span>
-                  <span>🖱️ Middle: Pan</span>
-                  <span>🖱️ Scroll: Zoom</span>
+                  <span>Left: Rotate</span>
+                  <span>Middle: Pan</span>
+                  <span>Scroll: Zoom</span>
                 </div>
               </div>
             )}

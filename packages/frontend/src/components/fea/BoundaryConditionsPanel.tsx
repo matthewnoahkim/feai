@@ -49,7 +49,7 @@ const BCTypeIcons: Record<BoundaryConditionType, React.ReactNode> = {
 };
 
 const BCTypeColors: Record<BoundaryConditionType, string> = {
-  fixed: 'bg-blue-500',
+  fixed: 'bg-cad-accent',
   displacement: 'bg-purple-500',
   force: 'bg-red-500',
   pressure: 'bg-orange-500',
@@ -187,7 +187,7 @@ export function BoundaryConditionsPanel() {
       <div className="relative">
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
-          className="w-full py-2 px-4 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-2 px-4 bg-cad-accent/10 text-cad-accent border border-blue-500/30 text-sm font-medium hover:bg-cad-accent/20 transition-colors flex items-center justify-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -197,7 +197,7 @@ export function BoundaryConditionsPanel() {
 
         {/* Add Menu Dropdown */}
         {showAddMenu && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-cad-darker border border-cad-border rounded-lg shadow-lg z-10 overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-cad-border shadow-lg z-10 overflow-hidden">
             <div className="p-2 text-xs text-cad-text-dim border-b border-cad-border">
               Constraints
             </div>
@@ -246,9 +246,9 @@ export function BoundaryConditionsPanel() {
 
       {/* Add Form */}
       {addingType && (
-        <div className="p-3 bg-cad-darker border border-blue-500/30 rounded-lg space-y-3">
+        <div className="p-3 bg-white border border-blue-500/30 space-y-3">
           <div className="flex items-center gap-2">
-            <div className={`p-1 rounded ${BCTypeColors[addingType]}`}>
+            <div className={`p-1 ${BCTypeColors[addingType]}`}>
               {BCTypeIcons[addingType]}
             </div>
             <span className="text-sm font-medium text-cad-text">Add {addingType}</span>
@@ -260,7 +260,7 @@ export function BoundaryConditionsPanel() {
               placeholder="Name"
               value={newBC.name}
               onChange={(e) => setNewBC({ ...newBC, name: e.target.value })}
-              className="w-full px-2 py-1.5 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+              className="w-full px-2 py-1.5 bg-gray-50 border border-cad-border text-sm text-cad-text"
             />
 
             {/* Face selector (for fixed, force, pressure) */}
@@ -270,7 +270,7 @@ export function BoundaryConditionsPanel() {
                 <select
                   value={newBC.faceName}
                   onChange={(e) => setNewBC({ ...newBC, faceName: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                  className="w-full px-2 py-1.5 bg-gray-50 border border-cad-border text-sm text-cad-text"
                 >
                   {availableFaces.length > 0 ? (
                     availableFaces.map(face => (
@@ -301,7 +301,7 @@ export function BoundaryConditionsPanel() {
                       type="number"
                       value={newBC.forceX}
                       onChange={(e) => setNewBC({ ...newBC, forceX: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                      className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                     />
                   </div>
                   <div>
@@ -310,16 +310,16 @@ export function BoundaryConditionsPanel() {
                       type="number"
                       value={newBC.forceY}
                       onChange={(e) => setNewBC({ ...newBC, forceY: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                      className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                     />
                   </div>
                   <div>
-                    <span className="text-xs text-blue-400">Z</span>
+                    <span className="text-xs text-cad-accent">Z</span>
                     <input
                       type="number"
                       value={newBC.forceZ}
                       onChange={(e) => setNewBC({ ...newBC, forceZ: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                      className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                     />
                   </div>
                 </div>
@@ -334,7 +334,7 @@ export function BoundaryConditionsPanel() {
                   type="number"
                   value={newBC.pressure}
                   onChange={(e) => setNewBC({ ...newBC, pressure: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-2 py-1.5 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                  className="w-full px-2 py-1.5 bg-gray-50 border border-cad-border text-sm text-cad-text"
                 />
                 <p className="text-xs text-cad-text-dim mt-1">
                   = {(newBC.pressure / 1e6).toFixed(2)} MPa
@@ -351,7 +351,7 @@ export function BoundaryConditionsPanel() {
                     type="number"
                     value={newBC.gravityAccel}
                     onChange={(e) => setNewBC({ ...newBC, gravityAccel: parseFloat(e.target.value) || 9.81 })}
-                    className="w-full px-2 py-1.5 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                    className="w-full px-2 py-1.5 bg-gray-50 border border-cad-border text-sm text-cad-text"
                   />
                 </div>
                 <div>
@@ -359,13 +359,13 @@ export function BoundaryConditionsPanel() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setNewBC({ ...newBC, gravityDir: { x: 0, y: 0, z: -1 } })}
-                      className={`flex-1 py-1.5 rounded text-xs ${newBC.gravityDir.z === -1 ? 'bg-green-500/20 text-green-400' : 'bg-cad-border text-cad-text'}`}
+                      className={`flex-1 py-1.5 text-xs ${newBC.gravityDir.z === -1 ? 'bg-green-500/20 text-green-400' : 'bg-cad-border text-cad-text'}`}
                     >
                       -Z (Down)
                     </button>
                     <button
                       onClick={() => setNewBC({ ...newBC, gravityDir: { x: 0, y: -1, z: 0 } })}
-                      className={`flex-1 py-1.5 rounded text-xs ${newBC.gravityDir.y === -1 ? 'bg-green-500/20 text-green-400' : 'bg-cad-border text-cad-text'}`}
+                      className={`flex-1 py-1.5 text-xs ${newBC.gravityDir.y === -1 ? 'bg-green-500/20 text-green-400' : 'bg-cad-border text-cad-text'}`}
                     >
                       -Y
                     </button>
@@ -378,13 +378,13 @@ export function BoundaryConditionsPanel() {
           <div className="flex gap-2">
             <button
               onClick={handleConfirmAdd}
-              className="flex-1 py-1.5 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30"
+              className="flex-1 py-1.5 bg-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/30"
             >
               Add
             </button>
             <button
               onClick={() => setAddingType(null)}
-              className="py-1.5 px-3 text-cad-text-dim rounded text-xs hover:bg-cad-border"
+              className="py-1.5 px-3 text-cad-text-dim text-xs hover:bg-cad-border"
             >
               Cancel
             </button>
@@ -409,16 +409,16 @@ export function BoundaryConditionsPanel() {
                 key={bc.id}
                 onClick={() => selectBoundaryCondition(bc.id)}
                 className={`
-                  p-2 rounded-lg cursor-pointer transition-all
+                  p-2 cursor-pointer transition-all
                   ${selectedBCId === bc.id
-                    ? 'bg-blue-500/20 border border-blue-500/30'
-                    : 'bg-cad-darker hover:bg-cad-border'
+                    ? 'bg-cad-accent/20 border border-blue-500/30'
+                    : 'bg-white hover:bg-cad-border'
                   }
                   ${!bc.enabled ? 'opacity-50' : ''}
                 `}
               >
                 <div className="flex items-center gap-2">
-                  <div className={`p-1 rounded ${BCTypeColors[bc.type]} ${!bc.enabled ? 'opacity-50' : ''}`}>
+                  <div className={`p-1 ${BCTypeColors[bc.type]} ${!bc.enabled ? 'opacity-50' : ''}`}>
                     {BCTypeIcons[bc.type]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -428,7 +428,7 @@ export function BoundaryConditionsPanel() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleBoundaryCondition(bc.id); }}
-                      className={`p-1 rounded transition-colors ${bc.enabled ? 'text-green-400 hover:bg-green-500/20' : 'text-cad-text-dim hover:bg-cad-border'}`}
+                      className={`p-1 transition-colors ${bc.enabled ? 'text-green-400 hover:bg-green-500/20' : 'text-cad-text-dim hover:bg-cad-border'}`}
                       title={bc.enabled ? 'Disable' : 'Enable'}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -441,7 +441,7 @@ export function BoundaryConditionsPanel() {
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); removeBoundaryCondition(bc.id); }}
-                      className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                      className="p-1 text-red-400 hover:bg-red-500/20 transition-colors"
                       title="Delete"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -457,8 +457,8 @@ export function BoundaryConditionsPanel() {
       </div>
 
       {/* Helper info */}
-      <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-        <p className="text-xs text-blue-400">
+      <div className="p-3 bg-cad-accent/10 border border-blue-500/20">
+        <p className="text-xs text-cad-accent">
           💡 Add at least one fixed support to prevent rigid body motion
         </p>
       </div>

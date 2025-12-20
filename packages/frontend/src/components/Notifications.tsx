@@ -1,5 +1,6 @@
 /**
  * Notifications - Enhanced toast notifications and message panel
+ * Academic/scholarly theme styling
  * 
  * Features:
  * - Toast notifications for quick feedback
@@ -31,28 +32,28 @@ const icons = {
 
 const colors = {
   success: {
-    bg: 'bg-green-600',
-    border: 'border-green-500',
-    text: 'text-green-400',
-    iconBg: 'bg-green-500/20'
+    bg: 'bg-cad-success',
+    border: 'border-cad-success',
+    text: 'text-cad-success',
+    iconBg: 'bg-white/20'
   },
   error: {
-    bg: 'bg-red-600',
-    border: 'border-red-500',
-    text: 'text-red-400',
-    iconBg: 'bg-red-500/20'
+    bg: 'bg-cad-error',
+    border: 'border-cad-error',
+    text: 'text-cad-error',
+    iconBg: 'bg-white/20'
   },
   warning: {
-    bg: 'bg-yellow-600',
-    border: 'border-yellow-500',
-    text: 'text-yellow-400',
-    iconBg: 'bg-yellow-500/20'
+    bg: 'bg-cad-warning',
+    border: 'border-cad-warning',
+    text: 'text-cad-warning',
+    iconBg: 'bg-white/20'
   },
   info: {
-    bg: 'bg-blue-600',
-    border: 'border-blue-500',
-    text: 'text-blue-400',
-    iconBg: 'bg-blue-500/20'
+    bg: 'bg-cad-accent',
+    border: 'border-cad-accent',
+    text: 'text-cad-accent',
+    iconBg: 'bg-white/20'
   }
 }
 
@@ -90,13 +91,13 @@ function Toast({ notification, onRemove }: ToastProps) {
   return (
     <div
       className={`
-        flex flex-col rounded-lg border shadow-xl overflow-hidden
+        flex flex-col border shadow-lg overflow-hidden font-sans
         ${color.bg} ${color.border} text-white
         animate-slide-in max-w-sm
       `}
     >
       <div className="flex items-start gap-3 px-4 py-3">
-        <div className={`p-1 rounded ${color.iconBg}`}>
+        <div className={`p-1 ${color.iconBg}`}>
           <Icon size={16} />
         </div>
         
@@ -115,7 +116,7 @@ function Toast({ notification, onRemove }: ToastProps) {
         
         <button
           onClick={() => onRemove(notification.id)}
-          className="p-1 hover:bg-white/20 rounded flex-shrink-0"
+          className="p-1 hover:bg-white/20 flex-shrink-0"
         >
           <X size={14} />
         </button>
@@ -206,25 +207,25 @@ export function MessagePanel({ messages, onClear, onMessageClick }: MessagePanel
   if (messages.length === 0) return null
   
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-xl overflow-hidden">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 font-sans">
+      <div className="bg-cad-panel border border-cad-border shadow-lg overflow-hidden">
         {/* Header */}
         <div 
-          className="flex items-center justify-between px-4 py-2 bg-cad-darker cursor-pointer"
+          className="flex items-center justify-between px-4 py-2 bg-gray-50 cursor-pointer"
           onClick={() => setIsOpen(!isOpen)}
         >
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-cad-text">Messages</span>
             
             {errorCount > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-red-500/20 rounded text-xs text-red-400">
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-cad-error/10 text-xs text-cad-error">
                 <AlertCircle size={12} />
                 {errorCount} error{errorCount !== 1 ? 's' : ''}
               </span>
             )}
             
             {warningCount > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 rounded text-xs text-yellow-400">
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-cad-warning/10 text-xs text-cad-warning">
                 <AlertTriangle size={12} />
                 {warningCount} warning{warningCount !== 1 ? 's' : ''}
               </span>
@@ -257,7 +258,7 @@ export function MessagePanel({ messages, onClear, onMessageClick }: MessagePanel
                   key={message.id}
                   className={`
                     flex items-start gap-3 px-4 py-3 border-b border-cad-border last:border-b-0
-                    ${message.featureId ? 'cursor-pointer hover:bg-cad-panel' : ''}
+                    ${message.featureId ? 'cursor-pointer hover:bg-gray-50' : ''}
                   `}
                   onClick={() => message.featureId && onMessageClick?.(message.featureId)}
                 >
@@ -290,11 +291,11 @@ interface InlineErrorProps {
 }
 
 export function InlineError({ message, type = 'error' }: InlineErrorProps) {
-  const color = type === 'error' ? 'text-red-400' : 'text-yellow-400'
+  const color = type === 'error' ? 'text-cad-error' : 'text-cad-warning'
   const Icon = type === 'error' ? AlertCircle : AlertTriangle
   
   return (
-    <div className={`flex items-center gap-2 ${color} text-xs mt-1`}>
+    <div className={`flex items-center gap-2 ${color} text-xs mt-1 font-sans`}>
       <Icon size={12} />
       <span>{message}</span>
     </div>
@@ -310,23 +311,23 @@ interface ConstraintStatusProps {
 export function ConstraintStatus({ status, details }: ConstraintStatusProps) {
   const statusConfig = {
     'under-constrained': {
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/20',
-      border: 'border-blue-500/50',
+      color: 'text-cad-accent',
+      bg: 'bg-cad-accent/10',
+      border: 'border-cad-accent/30',
       label: 'Under-Defined',
       description: 'Sketch needs more constraints or dimensions'
     },
     'fully-constrained': {
-      color: 'text-green-400',
-      bg: 'bg-green-500/20',
-      border: 'border-green-500/50',
+      color: 'text-cad-success',
+      bg: 'bg-cad-success/10',
+      border: 'border-cad-success/30',
       label: 'Fully Defined',
       description: 'All geometry is fully constrained'
     },
     'over-constrained': {
-      color: 'text-red-400',
-      bg: 'bg-red-500/20',
-      border: 'border-red-500/50',
+      color: 'text-cad-error',
+      bg: 'bg-cad-error/10',
+      border: 'border-cad-error/30',
       label: 'Over-Constrained',
       description: 'Conflicting constraints detected'
     }
@@ -336,10 +337,10 @@ export function ConstraintStatus({ status, details }: ConstraintStatusProps) {
   
   return (
     <div 
-      className={`flex items-center gap-2 px-3 py-2 rounded border ${config.bg} ${config.border}`}
+      className={`flex items-center gap-2 px-3 py-2 border ${config.bg} ${config.border} font-sans`}
       title={details || config.description}
     >
-      <span className={`w-2 h-2 rounded-full ${config.bg} ${config.color}`} />
+      <span className={`w-2 h-2 ${config.bg} ${config.color}`} />
       <span className={`text-sm font-medium ${config.color}`}>{config.label}</span>
     </div>
   )

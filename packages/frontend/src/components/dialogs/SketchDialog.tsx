@@ -1,5 +1,6 @@
 /**
  * SketchDialog - Enhanced sketch plane selection dialog
+ * Academic/scholarly theme styling
  * 
  * Features:
  * - Visual plane previews with 3D representation
@@ -47,14 +48,14 @@ export function SketchDialog() {
     [document]
   )
   
-  // Standard reference planes
+  // Standard reference planes - all navy blue
   const referencePlanes: PlaneOption[] = [
     { 
       id: 'top', 
       name: 'Top Plane', 
       description: 'XY Plane (looking down Z axis)',
-      color: '#3b82f6',
-      colorClass: 'bg-blue-500',
+      color: '#1a4d8f',
+      colorClass: 'bg-cad-accent',
       normal: [0, 0, 1], 
       origin: [0, 0, 0],
       icon: <Square size={16} className="text-white" />
@@ -63,8 +64,8 @@ export function SketchDialog() {
       id: 'front', 
       name: 'Front Plane', 
       description: 'XZ Plane (looking down Y axis)',
-      color: '#22c55e',
-      colorClass: 'bg-green-500',
+      color: '#1a4d8f',
+      colorClass: 'bg-cad-accent',
       normal: [0, 1, 0], 
       origin: [0, 0, 0],
       icon: <Square size={16} className="text-white" />
@@ -73,8 +74,8 @@ export function SketchDialog() {
       id: 'right', 
       name: 'Right Plane', 
       description: 'YZ Plane (looking down X axis)',
-      color: '#ef4444',
-      colorClass: 'bg-red-500',
+      color: '#1a4d8f',
+      colorClass: 'bg-cad-accent',
       normal: [1, 0, 0], 
       origin: [0, 0, 0],
       icon: <Square size={16} className="text-white" />
@@ -99,10 +100,10 @@ export function SketchDialog() {
       faceTypes.forEach((faceType, index) => {
         faces.push({
           id: `${part.id}-face-${index}`,
-          name: `${part.name} - ${faceType.name}`,
+          name: `${part.name} — ${faceType.name}`,
           description: 'Planar face on existing body',
-          color: '#6b7280',
-          colorClass: 'bg-gray-500',
+          color: '#5c5c5c',
+          colorClass: 'bg-cad-text-dim',
           normal: faceType.normal,
           origin: [0, 0, 0],
           icon: <Box size={16} className="text-white" />
@@ -177,26 +178,26 @@ export function SketchDialog() {
   }
   
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[480px] overflow-hidden">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-cad-panel border border-cad-border shadow-xl w-[480px] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-cad-accent/20 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gray-50">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-cad-accent/20 rounded flex items-center justify-center">
+            <div className="w-6 h-6 bg-cad-accent/10 flex items-center justify-center">
               <Grid3X3 size={14} className="text-cad-accent" />
             </div>
-            <h2 className="font-semibold text-cad-text">Create Sketch</h2>
+            <h2 className="font-serif font-semibold text-cad-text">Create Sketch</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel border border-transparent hover:border-cad-border transition-colors"
           >
             <X size={18} />
           </button>
         </div>
         
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 font-sans">
           {/* Sketch Name */}
           <div className="space-y-2">
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
@@ -206,7 +207,7 @@ export function SketchDialog() {
               type="text"
               value={sketchName}
               onChange={(e) => setSketchName(e.target.value)}
-              className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent focus:outline-none"
+              className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent focus:outline-none"
               placeholder="Enter sketch name..."
             />
           </div>
@@ -226,15 +227,15 @@ export function SketchDialog() {
                   onMouseEnter={() => setHoveredPlane(plane.id)}
                   onMouseLeave={() => setHoveredPlane(null)}
                   className={`
-                    relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all
+                    relative flex flex-col items-center gap-2 p-3 border-2 transition-all
                     ${selectedPlane === plane.id 
-                      ? 'border-cad-accent bg-cad-accent/10' 
-                      : 'border-cad-border hover:border-cad-accent/50 hover:bg-cad-panel/50'}
+                      ? 'border-cad-accent bg-cad-accent/5' 
+                      : 'border-cad-border hover:border-cad-accent/50 hover:bg-gray-50'}
                   `}
                 >
                   {/* Plane preview */}
                   <div 
-                    className={`w-12 h-12 ${plane.colorClass} rounded-lg flex items-center justify-center shadow-lg`}
+                    className={`w-12 h-12 ${plane.colorClass} flex items-center justify-center shadow`}
                     style={{ 
                       transform: plane.id === 'top' ? 'perspective(100px) rotateX(30deg)' :
                                  plane.id === 'front' ? 'perspective(100px) rotateY(-10deg)' :
@@ -248,13 +249,13 @@ export function SketchDialog() {
                   <span className="text-xs font-medium text-cad-text">{plane.name}</span>
                   
                   {/* Keyboard hint */}
-                  <span className="absolute top-1 right-1 text-[10px] text-cad-text-dim px-1.5 py-0.5 bg-cad-darker rounded">
+                  <span className="absolute top-1 right-1 text-[10px] text-cad-text-dim px-1.5 py-0.5 bg-gray-50 border border-cad-border">
                     {plane.id === 'top' ? '1' : plane.id === 'front' ? '2' : '3'}
                   </span>
                   
                   {/* Selection indicator */}
                   {selectedPlane === plane.id && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-cad-accent rounded-full flex items-center justify-center">
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-cad-accent flex items-center justify-center">
                       <Check size={12} className="text-white" />
                     </div>
                   )}
@@ -271,7 +272,7 @@ export function SketchDialog() {
                 Planar Faces on Bodies
               </label>
               
-              <div className="max-h-32 overflow-y-auto space-y-1 bg-cad-darker rounded-lg border border-cad-border p-2">
+              <div className="max-h-32 overflow-y-auto space-y-1 bg-gray-50 border border-cad-border p-2">
                 {planarFaces.slice(0, 6).map((face) => (
                   <button
                     key={face.id}
@@ -279,13 +280,13 @@ export function SketchDialog() {
                     onMouseEnter={() => setHoveredPlane(face.id)}
                     onMouseLeave={() => setHoveredPlane(null)}
                     className={`
-                      w-full flex items-center gap-2 p-2 rounded transition-colors text-left
+                      w-full flex items-center gap-2 p-2 transition-colors text-left
                       ${selectedPlane === face.id 
-                        ? 'bg-cad-accent/20 border border-cad-accent/50' 
+                        ? 'bg-cad-accent/10 border border-cad-accent/50' 
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
-                    <div className={`w-6 h-6 ${face.colorClass} rounded flex items-center justify-center`}>
+                    <div className={`w-6 h-6 ${face.colorClass} flex items-center justify-center`}>
                       {face.icon}
                     </div>
                     <span className="text-xs text-cad-text truncate">{face.name}</span>
@@ -300,10 +301,10 @@ export function SketchDialog() {
           
           {/* Selected Plane Info */}
           {selectedPlaneInfo && (
-            <div className="p-3 bg-cad-darker rounded-lg border border-cad-border">
+            <div className="p-3 bg-gray-50 border border-cad-border">
               <div className="flex items-center gap-2 mb-2">
                 <div 
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3"
                   style={{ backgroundColor: selectedPlaneInfo.color }}
                 />
                 <span className="text-sm font-medium text-cad-text">{selectedPlaneInfo.name}</span>
@@ -319,7 +320,7 @@ export function SketchDialog() {
                 type="checkbox"
                 checked={autoOrientView}
                 onChange={(e) => setAutoOrientView(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-cad-panel accent-cad-accent"
               />
               <span className="text-sm text-cad-text flex items-center gap-2">
                 <Eye size={14} />
@@ -329,29 +330,29 @@ export function SketchDialog() {
           </div>
           
           {/* Help text */}
-          <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
-            <p className="text-xs text-blue-300">
-              <strong>Tip:</strong> You can also click directly on a planar face in the viewport 
+          <div className="p-3 bg-cad-accent/5 border border-cad-accent/20">
+            <p className="text-xs text-cad-text-dim">
+              <strong className="text-cad-accent">Tip:</strong> You can also click directly on a planar face in the viewport 
               before clicking "Sketch" to automatically select that face as the sketch plane.
             </p>
           </div>
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
-          <div className="text-xs text-cad-text-dim">
-            Press <kbd className="px-1.5 py-0.5 bg-cad-panel rounded text-[10px]">Enter</kbd> to create
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-gray-50">
+          <div className="text-xs text-cad-text-dim font-sans">
+            Press <kbd className="px-1.5 py-0.5 bg-cad-panel text-[10px] border border-cad-border">Enter</kbd> to create
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 font-sans">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel border border-cad-border hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
-              className="px-4 py-2 text-sm bg-cad-accent hover:bg-cad-accent-hover text-white rounded transition-colors flex items-center gap-2"
+              className="px-4 py-2 text-sm bg-cad-accent hover:bg-cad-accent-hover text-white transition-colors flex items-center gap-2"
             >
               <Check size={14} />
               Create Sketch

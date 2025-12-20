@@ -1,28 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --cad-dark: #1a1d21;
-  --cad-darker: #131518;
-  --cad-panel: #252830;
-  --cad-border: #3a3f4b;
-  --cad-text: #e4e6eb;
-  --cad-text-dim: #9ca3af;
-  --cad-accent: #3b82f6;
-  --cad-accent-hover: #60a5fa;
+  --cad-bg: #ffffff;
+  --cad-panel: #ffffff;
+  --cad-border: #1a4d8f;
+  --cad-text: #1a4d8f;
+  --cad-text-dim: #1a4d8f;
+  --cad-accent: #1a4d8f;
+  --cad-accent-hover: #0d2a4d;
   
-  /* Sketch colors */
-  --sketch-entity: #3b82f6;
-  --sketch-construction: #f59e0b;
-  --sketch-preview: #22c55e;
-  --sketch-constrained: #000000;
-  --sketch-underconstrained: #3b82f6;
-  --sketch-inference-h: #ef4444;
-  --sketch-inference-v: #22c55e;
-  --snap-highlight: #f59e0b;
+  /* Sketch colors - all navy */
+  --sketch-entity: #1a4d8f;
+  --sketch-construction: #1a4d8f;
+  --sketch-preview: #1a4d8f;
 }
 
 * {
@@ -35,68 +27,83 @@ html, body, #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--cad-darker);
+  background: var(--cad-bg);
   color: var(--cad-text);
-  font-family: 'Outfit', system-ui, sans-serif;
+  font-family: Georgia, serif;
 }
 
-/* Custom scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--cad-darker);
+  background: var(--cad-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--cad-border);
-  border-radius: 4px;
+  background: var(--cad-accent);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #4a4f5b;
+/* Thin scrollbar for toolbar */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 2px;
 }
 
-/* Selection highlight */
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(26, 77, 143, 0.3);
+  border-radius: 1px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26, 77, 143, 0.3) transparent;
+}
+
+/* Selection */
 ::selection {
   background: var(--cad-accent);
   color: white;
 }
 
-/* Input focus styles */
+/* Focus */
 input:focus, select:focus, textarea:focus, button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--cad-accent);
+  outline: 2px solid var(--cad-accent);
+  outline-offset: -2px;
 }
 
-/* Disable text selection on UI elements */
+/* No select */
 .no-select {
   user-select: none;
-  -webkit-user-select: none;
 }
 
-/* Panel styles */
+/* Panel */
 .cad-panel {
   background: var(--cad-panel);
   border: 1px solid var(--cad-border);
-  border-radius: 6px;
 }
 
-/* Button styles */
+/* Button */
 .cad-btn {
-  @apply px-3 py-1.5 rounded text-sm font-medium transition-colors;
-  background: var(--cad-border);
+  @apply px-3 py-1.5 text-sm transition-colors;
+  background: var(--cad-panel);
+  border: 1px solid var(--cad-border);
   color: var(--cad-text);
 }
 
 .cad-btn:hover {
-  background: #4a5568;
+  background: var(--cad-accent);
+  color: white;
 }
 
 .cad-btn-primary {
   background: var(--cad-accent);
+  border-color: var(--cad-accent);
   color: white;
 }
 
@@ -104,45 +111,17 @@ input:focus, select:focus, textarea:focus, button:focus {
   background: var(--cad-accent-hover);
 }
 
-/* Keyboard shortcuts */
+/* Keyboard */
 kbd {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: monospace;
   font-size: 10px;
   padding: 2px 6px;
-  background: var(--cad-panel);
+  background: white;
   border: 1px solid var(--cad-border);
-  border-radius: 4px;
-  color: var(--cad-text-dim);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  color: var(--cad-text);
 }
 
-/* Tooltip */
-.tooltip {
-  position: relative;
-}
-
-.tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 8px;
-  background: #1f2937;
-  color: white;
-  font-size: 12px;
-  border-radius: 4px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-
-.tooltip:hover::after {
-  opacity: 1;
-}
-
-/* Canvas container */
+/* Canvas */
 .canvas-container {
   position: relative;
   width: 100%;
@@ -155,233 +134,134 @@ kbd {
 
 /* Feature tree item */
 .feature-item {
-  @apply flex items-center gap-2 px-2 py-1 rounded cursor-pointer;
-  transition: background-color 0.15s;
+  @apply flex items-center gap-2 px-2 py-1 cursor-pointer;
+  transition: background-color 0.1s;
 }
 
 .feature-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(26, 77, 143, 0.1);
 }
 
 .feature-item.selected {
-  background: rgba(59, 130, 246, 0.2);
-}
-
-/* Sketch mode indicator */
-.sketch-mode-badge {
-  @apply px-4 py-2 text-sm font-medium rounded-full shadow-lg;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: var(--cad-accent);
   color: white;
-  animation: pulseGlow 2s infinite;
 }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.7);
-  }
-}
-
-/* Tool flyout animation */
-@keyframes flyoutIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.tool-flyout {
-  animation: flyoutIn 0.15s ease-out;
+/* Sketch mode badge */
+.sketch-mode-badge {
+  @apply px-4 py-2 text-sm font-medium;
+  background: var(--cad-accent);
+  color: white;
 }
 
 /* Dimension input */
 .dimension-input {
-  @apply bg-cad-dark border border-cad-accent rounded-lg shadow-xl overflow-hidden;
-  animation: fadeIn 0.15s ease-out;
+  @apply bg-white border border-cad-border overflow-hidden;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Sketch cursor styles */
+/* Cursor */
 .cursor-crosshair {
   cursor: crosshair;
 }
 
-.cursor-draw {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2'%3E%3Cline x1='12' y1='0' x2='12' y2='24'/%3E%3Cline x1='0' y1='12' x2='24' y2='12'/%3E%3C/svg%3E") 12 12, crosshair;
-}
-
 /* Constraint icons */
 .constraint-icon {
-  @apply inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded;
+  @apply inline-flex items-center justify-center w-5 h-5 text-xs font-bold;
+  background: rgba(26, 77, 143, 0.1);
+  color: var(--cad-accent);
 }
 
-.constraint-horizontal {
-  @apply bg-red-500/20 text-red-400;
-}
-
-.constraint-vertical {
-  @apply bg-green-500/20 text-green-400;
-}
-
-.constraint-coincident {
-  @apply bg-yellow-500/20 text-yellow-400;
-}
-
-.constraint-perpendicular {
-  @apply bg-purple-500/20 text-purple-400;
-}
-
+.constraint-horizontal,
+.constraint-vertical,
+.constraint-coincident,
+.constraint-perpendicular,
 .constraint-parallel {
-  @apply bg-blue-500/20 text-blue-400;
+  background: rgba(26, 77, 143, 0.1);
+  color: var(--cad-accent);
 }
 
-/* Tool button active state */
+/* Tool button active */
 .tool-button-active {
-  @apply bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-lg;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  @apply text-white;
+  background: var(--cad-accent);
 }
 
-/* Grid overlay for sketch mode */
+/* Sketch grid */
 .sketch-grid {
   background-image: 
-    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+    linear-gradient(rgba(26, 77, 143, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 77, 143, 0.15) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
-/* Sketch entity colors */
+/* Sketch entities */
 .sketch-entity-line { stroke: var(--sketch-entity); }
 .sketch-entity-circle { stroke: var(--sketch-entity); }
 .sketch-entity-arc { stroke: var(--sketch-entity); }
 .sketch-entity-construction { stroke: var(--sketch-construction); stroke-dasharray: 5, 5; }
 .sketch-entity-preview { stroke: var(--sketch-preview); stroke-dasharray: 8, 4; }
 
-/* Snap indicators */
+/* Snap indicator */
 .snap-indicator {
   @apply absolute pointer-events-none;
-  animation: snapPulse 0.5s ease-out;
 }
 
-@keyframes snapPulse {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Status bar styling */
+/* Status bar */
 .status-bar {
   @apply h-7 px-3 text-xs select-none;
-  background: linear-gradient(180deg, var(--cad-darker), #0f1012);
+  background: var(--cad-panel);
   border-top: 1px solid var(--cad-border);
 }
 
-/* Notification animations */
+/* Notification */
 .notification-enter {
-  animation: notificationSlideIn 0.3s ease-out;
+  animation: slideIn 0.2s ease-out;
 }
 
-@keyframes notificationSlideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-/* Glass effect for panels */
+/* Glass panel */
 .glass-panel {
-  background: rgba(37, 40, 48, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(58, 63, 75, 0.5);
+  background: var(--cad-panel);
+  border: 1px solid var(--cad-border);
 }
 
-/* Smooth transitions */
+/* Smooth transition */
 .smooth-transition {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s ease;
 }
 
 /* ============================================================================
-   CHAT PANEL STYLES - AI-Assisted CAD Chat Panel
+   CHAT PANEL
    ============================================================================ */
 
-/* Panel Container */
 .chat-panel {
   @apply fixed right-0 top-0 bottom-0 w-96 flex flex-col z-50;
-  background: linear-gradient(180deg, #1e2127 0%, #16181d 100%);
+  background: var(--cad-panel);
   border-left: 1px solid var(--cad-border);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
-  animation: chatPanelSlideIn 0.25s ease-out;
 }
 
-@keyframes chatPanelSlideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Panel Header */
 .chat-panel-header {
   @apply flex items-center justify-between px-4 py-3;
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+  background: white;
   border-bottom: 1px solid var(--cad-border);
 }
 
 .chat-panel-icon {
-  @apply w-8 h-8 rounded-xl flex items-center justify-center;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  @apply w-8 h-8 flex items-center justify-center;
+  background: var(--cad-accent);
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-/* Messages Container */
 .chat-messages {
   @apply flex-1 overflow-y-auto px-4 py-4 space-y-4;
-  scrollbar-width: thin;
-  scrollbar-color: var(--cad-border) transparent;
 }
 
-/* Message Styles */
 .chat-message {
   @apply flex gap-3;
-  animation: messageAppear 0.3s ease-out;
-}
-
-@keyframes messageAppear {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .chat-message-user {
@@ -392,102 +272,79 @@ kbd {
   @apply flex-row;
 }
 
-/* Avatar Styles */
 .chat-avatar {
-  @apply w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0;
-  font-size: 14px;
+  @apply w-8 h-8 flex items-center justify-center flex-shrink-0 text-sm;
+  background: var(--cad-accent);
+  color: white;
 }
 
 .chat-avatar-user {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: var(--cad-accent);
   color: white;
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
 }
 
 .chat-avatar-assistant {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: var(--cad-accent);
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
 }
 
-/* Message Bubble */
 .chat-bubble {
-  @apply px-4 py-3 rounded-2xl;
+  @apply px-4 py-3;
   max-width: 90%;
 }
 
 .chat-bubble-user {
-  @apply rounded-tr-sm;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: var(--cad-accent);
   color: white;
-  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.2);
 }
 
 .chat-bubble-assistant {
-  @apply rounded-tl-sm;
-  background: var(--cad-panel);
+  background: white;
   border: 1px solid var(--cad-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Typing Indicator */
 .typing-indicator {
   @apply flex items-center gap-1 py-1;
 }
 
 .typing-indicator span {
-  @apply w-2 h-2 rounded-full bg-cad-text-dim;
-  animation: typingBounce 1.4s infinite ease-in-out both;
+  @apply w-2 h-2;
+  background: var(--cad-accent);
+  animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-indicator span:nth-child(1) {
-  animation-delay: 0s;
+.typing-indicator span:nth-child(1) { animation-delay: 0s; }
+.typing-indicator span:nth-child(2) { animation-delay: 0.16s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.32s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
 }
 
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.16s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.32s;
-}
-
-@keyframes typingBounce {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Input Area */
 .chat-input-area {
   @apply flex items-end gap-2 p-4;
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.2) 100%);
+  background: white;
   border-top: 1px solid var(--cad-border);
 }
 
 .chat-input {
-  @apply flex-1 px-4 py-3 text-sm rounded-xl resize-none;
-  background: var(--cad-darker);
+  @apply flex-1 px-4 py-3 text-sm resize-none;
+  background: white;
   border: 1px solid var(--cad-border);
   color: var(--cad-text);
   min-height: 44px;
   max-height: 120px;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .chat-input:focus {
-  outline: none;
-  border-color: var(--cad-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  outline: 2px solid var(--cad-accent);
+  outline-offset: -2px;
 }
 
 .chat-input::placeholder {
-  color: var(--cad-text-dim);
+  color: var(--cad-text);
+  opacity: 0.5;
 }
 
 .chat-input:disabled {
@@ -496,64 +353,36 @@ kbd {
 }
 
 .chat-send-btn {
-  @apply w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  @apply w-11 h-11 flex items-center justify-center flex-shrink-0;
+  background: var(--cad-accent);
   color: white;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .chat-send-btn:hover:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-}
-
-.chat-send-btn:active:not(:disabled) {
-  transform: scale(0.95);
+  background: var(--cad-accent-hover);
 }
 
 .chat-send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
-/* Toggle Button */
 .chat-toggle-btn {
-  @apply fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-2xl z-40;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  @apply fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 z-40;
+  background: var(--cad-accent);
   color: white;
   font-weight: 500;
   font-size: 14px;
-  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  transition: transform 0.2s, box-shadow 0.2s;
-  animation: toggleButtonPulse 3s infinite;
 }
 
 .chat-toggle-btn:hover {
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
-}
-
-.chat-toggle-btn:active {
-  transform: scale(0.98);
-}
-
-@keyframes toggleButtonPulse {
-  0%, 100% {
-    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-  }
-  50% {
-    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
-  }
+  background: var(--cad-accent-hover);
 }
 
 .chat-toggle-label {
   @apply hidden sm:inline;
 }
 
-/* Responsive adjustments */
 @media (max-width: 640px) {
   .chat-panel {
     @apply w-full;
@@ -565,20 +394,27 @@ kbd {
   }
 }
 
-/* Custom scrollbar for messages */
-.chat-messages::-webkit-scrollbar {
-  width: 6px;
+/* Links */
+a {
+  color: var(--cad-accent);
+  text-decoration: underline;
 }
 
-.chat-messages::-webkit-scrollbar-track {
-  background: transparent;
+a:hover {
+  color: var(--cad-accent-hover);
 }
 
-.chat-messages::-webkit-scrollbar-thumb {
-  background: var(--cad-border);
-  border-radius: 3px;
+/* Checkboxes - navy blue */
+input[type="checkbox"] {
+  accent-color: var(--cad-accent);
 }
 
-.chat-messages::-webkit-scrollbar-thumb:hover {
-  background: #4a4f5b;
+input[type="checkbox"]:checked {
+  background-color: var(--cad-accent);
+  border-color: var(--cad-accent);
+}
+
+/* Range inputs */
+input[type="range"] {
+  accent-color: var(--cad-accent);
 }

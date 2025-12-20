@@ -6,9 +6,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex flex-col h-screen w-screen bg-cad-darker text-cad-text overflow-hidden">
+    <div className="flex flex-col h-screen w-screen bg-white text-cad-text overflow-hidden">
       {children}
     </div>
   )
 }
-

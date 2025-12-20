@@ -61,14 +61,14 @@ export function MeshPanel() {
             step="0.5"
             value={meshSettings.globalSize}
             onChange={(e) => setMeshSettings({ globalSize: parseFloat(e.target.value) })}
-            className="flex-1 h-2 bg-cad-border rounded-lg appearance-none cursor-pointer accent-blue-500"
+            className="flex-1 h-2 bg-cad-border appearance-none cursor-pointer accent-cad-accent"
           />
           <input
             type="number"
             min="2"
             value={meshSettings.globalSize}
             onChange={(e) => setMeshSettings({ globalSize: Math.max(2, parseFloat(e.target.value) || 5) })}
-            className="w-16 px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text text-center"
+            className="w-16 px-2 py-1 bg-white border border-cad-border text-sm text-cad-text text-center"
           />
         </div>
         <div className="space-y-1">
@@ -94,7 +94,7 @@ export function MeshPanel() {
         <select
           value={meshSettings.elementType}
           onChange={(e) => setMeshSettings({ elementType: e.target.value as FEAElementType })}
-          className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded-lg text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="w-full px-3 py-2 bg-white border border-cad-border text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-cad-accent"
         >
           {elementTypeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -132,7 +132,7 @@ export function MeshPanel() {
                 value={meshSettings.minSize || ''}
                 onChange={(e) => setMeshSettings({ minSize: parseFloat(e.target.value) || undefined })}
                 placeholder="Auto"
-                className="w-full px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text"
+                className="w-full px-2 py-1 bg-white border border-cad-border text-sm text-cad-text"
               />
             </div>
             <div>
@@ -142,7 +142,7 @@ export function MeshPanel() {
                 value={meshSettings.maxSize || ''}
                 onChange={(e) => setMeshSettings({ maxSize: parseFloat(e.target.value) || undefined })}
                 placeholder="Auto"
-                className="w-full px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text"
+                className="w-full px-2 py-1 bg-white border border-cad-border text-sm text-cad-text"
               />
             </div>
           </div>
@@ -157,7 +157,7 @@ export function MeshPanel() {
               step="0.1"
               value={meshSettings.growthRate || 1.5}
               onChange={(e) => setMeshSettings({ growthRate: parseFloat(e.target.value) })}
-              className="w-full px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text"
+              className="w-full px-2 py-1 bg-white border border-cad-border text-sm text-cad-text"
             />
           </div>
 
@@ -171,7 +171,7 @@ export function MeshPanel() {
               step="0.1"
               value={meshSettings.curvatureSensitivity || 0.5}
               onChange={(e) => setMeshSettings({ curvatureSensitivity: parseFloat(e.target.value) })}
-              className="w-full h-2 bg-cad-border rounded-lg appearance-none cursor-pointer accent-blue-500"
+              className="w-full h-2 bg-cad-border appearance-none cursor-pointer accent-cad-accent"
             />
           </div>
         </div>
@@ -179,7 +179,7 @@ export function MeshPanel() {
 
       {/* Generate Button */}
       {!hasDocument || !hasActiveElement ? (
-        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs text-yellow-400">
+        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-400">
           {!hasDocument 
             ? 'Please create or open a document first'
             : 'Please create a part studio with geometry first'
@@ -191,12 +191,12 @@ export function MeshPanel() {
         onClick={handleGenerateMesh}
         disabled={isMeshing || !hasActiveElement}
         className={`
-          w-full py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-all
+          w-full py-2 px-4 font-medium flex items-center justify-center gap-2 transition-all
           ${isMeshing
-            ? 'bg-blue-500/20 text-blue-400'
+            ? 'bg-cad-accent/20 text-cad-accent'
             : !hasActiveElement
             ? 'bg-cad-border/50 text-cad-text-dim cursor-not-allowed'
-            : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30'
+            : 'bg-cad-accent/10 text-cad-accent hover:bg-cad-accent/20 border border-blue-500/30'
           }
         `}
       >
@@ -220,14 +220,14 @@ export function MeshPanel() {
 
       {/* Error Message */}
       {meshError && (
-        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+        <div className="p-3 bg-red-500/10 border border-red-500/30 text-xs text-red-400">
           {meshError}
         </div>
       )}
 
       {/* Mesh Statistics */}
       {mesh && (
-        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg space-y-2">
+        <div className="p-3 bg-green-500/10 border border-green-500/30 space-y-2">
           <div className="flex items-center gap-2 text-green-400 font-medium text-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -261,7 +261,7 @@ export function MeshPanel() {
 
           <button
             onClick={clearMesh}
-            className="w-full mt-2 py-1.5 text-xs text-red-400 hover:bg-red-500/10 rounded transition-colors"
+            className="w-full mt-2 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
           >
             Clear Mesh
           </button>
@@ -271,8 +271,8 @@ export function MeshPanel() {
       {/* Preview Toggle (informational) */}
       <div className="flex items-center justify-between text-xs text-cad-text-dim">
         <span>Mesh preview in viewport</span>
-        <div className={`w-8 h-4 rounded-full ${showMeshPreview ? 'bg-blue-500' : 'bg-cad-border'} relative`}>
-          <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showMeshPreview ? 'left-4' : 'left-0.5'}`} />
+        <div className={`w-8 h-4 ${showMeshPreview ? 'bg-cad-accent' : 'bg-cad-border'} relative`}>
+          <div className={`absolute top-0.5 w-3 h-3 bg-white transition-all ${showMeshPreview ? 'left-4' : 'left-0.5'}`} />
         </div>
       </div>
     </div>

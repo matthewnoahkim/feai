@@ -331,18 +331,18 @@ export function LinearPatternDialog() {
   
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-16 overflow-y-auto">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[520px] mb-20">
+      <div className="bg-gray-50 border border-cad-border shadow-2xl w-[520px] mb-20">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-cyan-900/30 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-cyan-500/20 rounded flex items-center justify-center">
-              <Grid3X3 size={14} className="text-cyan-400" />
+            <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
+              <Grid3X3 size={14} className="text-cad-accent" />
             </div>
             <h2 className="font-semibold text-cad-text">Linear Pattern</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel transition-colors"
           >
             <X size={18} />
           </button>
@@ -356,7 +356,7 @@ export function LinearPatternDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Pattern Type
             </label>
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'part', label: 'Part', icon: <Box size={14} /> },
                 { value: 'feature', label: 'Feature', icon: <Layers size={14} /> },
@@ -366,9 +366,9 @@ export function LinearPatternDialog() {
                   key={type.value}
                   onClick={() => setPatternType(type.value as PatternType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${patternType === type.value 
-                      ? 'bg-cyan-500 text-white' 
+                      ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
                   `}
                 >
@@ -384,29 +384,29 @@ export function LinearPatternDialog() {
             <label className="flex items-center gap-2 text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               {getEntityIcon(patternType)}
               {patternType === 'part' ? 'Parts' : patternType === 'feature' ? 'Features' : 'Faces'} to Pattern
-              <span className="ml-auto text-cyan-400 text-[10px] normal-case">
+              <span className="ml-auto text-cad-accent text-[10px] normal-case">
                 {selectedEntities.length} selected
               </span>
             </label>
             
             {entitiesList.length === 0 ? (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-3 bg-white border border-cad-border">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={14} className="text-amber-400 mt-0.5" />
-                  <p className="text-sm text-amber-300">
+                  <AlertCircle size={14} className="text-cad-accent mt-0.5" />
+                  <p className="text-sm text-cad-text">
                     No {patternType}s available to pattern
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-1 max-h-28 overflow-y-auto bg-cad-darker rounded-lg border border-cad-border p-2">
+              <div className="space-y-1 max-h-28 overflow-y-auto bg-white border border-cad-border p-2">
                 {entitiesList.map((entity) => (
                   <label
                     key={entity.id}
                     className={`
-                      flex items-center gap-2 p-1.5 rounded cursor-pointer transition-colors text-xs
+                      flex items-center gap-2 p-1.5 cursor-pointer transition-colors text-xs
                       ${selectedEntities.includes(entity.id)
-                        ? 'bg-cyan-500/20 border border-cyan-500/50'
+                        ? 'bg-cad-accent/20 border border-cad-accent/50'
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -417,9 +417,9 @@ export function LinearPatternDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors
+                      w-3.5 h-3.5 border flex items-center justify-center transition-colors
                       ${selectedEntities.includes(entity.id)
-                        ? 'bg-cyan-500 border-cyan-500'
+                        ? 'bg-cad-accent border-cad-accent'
                         : 'border-cad-border'}
                     `}>
                       {selectedEntities.includes(entity.id) && <Check size={8} className="text-white" />}
@@ -433,9 +433,9 @@ export function LinearPatternDialog() {
           </div>
           
           {/* Direction 1 */}
-          <div className="p-3 bg-cad-darker/50 rounded-lg border border-cad-border space-y-3">
+          <div className="p-3 bg-white/50 border border-cad-border space-y-3">
             <div className="flex items-center gap-2">
-              <ArrowRight size={14} className="text-cyan-400" />
+              <ArrowRight size={14} className="text-cad-accent" />
               <span className="text-sm font-medium text-cad-text">Direction 1</span>
             </div>
             
@@ -446,7 +446,7 @@ export function LinearPatternDialog() {
                 <select
                   value={direction1 || ''}
                   onChange={(e) => setDirection1(e.target.value || null)}
-                  className="w-full px-2 py-1.5 bg-cad-darker border border-cad-border rounded text-sm"
+                  className="w-full px-2 py-1.5 bg-white border border-cad-border text-sm"
                 >
                   <option value="">Select direction...</option>
                   <optgroup label="Reference Axes">
@@ -470,10 +470,10 @@ export function LinearPatternDialog() {
                 <button
                   onClick={() => setFlip1(!flip1)}
                   className={`
-                    w-full px-2 py-1.5 rounded border text-sm flex items-center justify-center gap-2
+                    w-full px-2 py-1.5 border text-sm flex items-center justify-center gap-2
                     ${flip1 
-                      ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' 
-                      : 'bg-cad-darker border-cad-border text-cad-text-dim hover:bg-cad-panel'}
+                      ? 'bg-cad-accent/20 border-cad-accent/50 text-cad-accent' 
+                      : 'bg-white border-cad-border text-cad-text-dim hover:bg-cad-panel'}
                   `}
                 >
                   <FlipHorizontal size={14} />
@@ -492,7 +492,7 @@ export function LinearPatternDialog() {
                   onChange={(e) => setSpacing1(parseFloat(e.target.value) || 0)}
                   min={0.1}
                   step={5}
-                  className="w-full px-2 py-1.5 bg-cad-darker border border-cad-border rounded text-sm"
+                  className="w-full px-2 py-1.5 bg-white border border-cad-border text-sm"
                 />
               </div>
               
@@ -506,17 +506,17 @@ export function LinearPatternDialog() {
                     onChange={(e) => setCount1(parseInt(e.target.value) || 2)}
                     min={2}
                     max={100}
-                    className="flex-1 px-2 py-1.5 bg-cad-darker border border-cad-border rounded text-sm"
+                    className="flex-1 px-2 py-1.5 bg-white border border-cad-border text-sm"
                   />
                   <button
                     onClick={() => setCount1(Math.max(2, count1 - 1))}
-                    className="px-2 bg-cad-darker border border-cad-border rounded hover:bg-cad-panel"
+                    className="px-2 bg-white border border-cad-border hover:bg-cad-panel"
                   >
                     <Minus size={12} />
                   </button>
                   <button
                     onClick={() => setCount1(Math.min(100, count1 + 1))}
-                    className="px-2 bg-cad-darker border border-cad-border rounded hover:bg-cad-panel"
+                    className="px-2 bg-white border border-cad-border hover:bg-cad-panel"
                   >
                     <Plus size={12} />
                   </button>
@@ -526,20 +526,20 @@ export function LinearPatternDialog() {
           </div>
           
           {/* Direction 2 (Grid) */}
-          <div className="border border-cad-border rounded-lg overflow-hidden">
+          <div className="border border-cad-border overflow-hidden">
             <button
               onClick={() => setUseDirection2(!useDirection2)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-cad-darker/50 hover:bg-cad-panel transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 bg-white/50 hover:bg-cad-panel transition-colors"
             >
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={useDirection2}
                   onChange={(e) => setUseDirection2(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                   onClick={(e) => e.stopPropagation()}
                 />
-                <ArrowDown size={14} className="text-cyan-400" />
+                <ArrowDown size={14} className="text-cad-accent" />
                 <span className="text-sm font-medium text-cad-text">Direction 2 (Grid Pattern)</span>
               </div>
               {useDirection2 ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -553,7 +553,7 @@ export function LinearPatternDialog() {
                     <select
                       value={direction2 || ''}
                       onChange={(e) => setDirection2(e.target.value || null)}
-                      className="w-full px-2 py-1.5 bg-cad-darker border border-cad-border rounded text-sm"
+                      className="w-full px-2 py-1.5 bg-white border border-cad-border text-sm"
                     >
                       <option value="">Select direction...</option>
                       {availableDirections.map(d => (
@@ -567,10 +567,10 @@ export function LinearPatternDialog() {
                     <button
                       onClick={() => setFlip2(!flip2)}
                       className={`
-                        w-full px-2 py-1.5 rounded border text-sm flex items-center justify-center gap-2
+                        w-full px-2 py-1.5 border text-sm flex items-center justify-center gap-2
                         ${flip2 
-                          ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' 
-                          : 'bg-cad-darker border-cad-border text-cad-text-dim hover:bg-cad-panel'}
+                          ? 'bg-cad-accent/20 border-cad-accent/50 text-cad-accent' 
+                          : 'bg-white border-cad-border text-cad-text-dim hover:bg-cad-panel'}
                       `}
                     >
                       <FlipHorizontal size={14} />
@@ -588,7 +588,7 @@ export function LinearPatternDialog() {
                       onChange={(e) => setSpacing2(parseFloat(e.target.value) || 0)}
                       min={0.1}
                       step={5}
-                      className="w-full px-2 py-1.5 bg-cad-darker border border-cad-border rounded text-sm"
+                      className="w-full px-2 py-1.5 bg-white border border-cad-border text-sm"
                     />
                   </div>
                   
@@ -601,17 +601,17 @@ export function LinearPatternDialog() {
                         onChange={(e) => setCount2(parseInt(e.target.value) || 2)}
                         min={2}
                         max={100}
-                        className="flex-1 px-2 py-1.5 bg-cad-darker border border-cad-border rounded text-sm"
+                        className="flex-1 px-2 py-1.5 bg-white border border-cad-border text-sm"
                       />
                       <button
                         onClick={() => setCount2(Math.max(2, count2 - 1))}
-                        className="px-2 bg-cad-darker border border-cad-border rounded hover:bg-cad-panel"
+                        className="px-2 bg-white border border-cad-border hover:bg-cad-panel"
                       >
                         <Minus size={12} />
                       </button>
                       <button
                         onClick={() => setCount2(Math.min(100, count2 + 1))}
-                        className="px-2 bg-cad-darker border border-cad-border rounded hover:bg-cad-panel"
+                        className="px-2 bg-white border border-cad-border hover:bg-cad-panel"
                       >
                         <Plus size={12} />
                       </button>
@@ -623,13 +623,13 @@ export function LinearPatternDialog() {
           </div>
           
           {/* Centered Option */}
-          <div className="flex items-center gap-3 p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center gap-3 p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={centered}
                 onChange={(e) => setCentered(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text">Centered Pattern</span>
             </label>
@@ -643,12 +643,12 @@ export function LinearPatternDialog() {
             <label className="flex items-center gap-2 text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               <XCircle size={12} />
               Skip Instances
-              <span className="ml-auto text-amber-400 text-[10px] normal-case">
+              <span className="ml-auto text-cad-accent text-[10px] normal-case">
                 {skippedInstances.length} skipped
               </span>
             </label>
             
-            <div className="p-2 bg-cad-darker rounded-lg border border-cad-border">
+            <div className="p-2 bg-white border border-cad-border">
               <p className="text-xs text-cad-text-dim mb-2">
                 Click instance numbers to skip them:
               </p>
@@ -659,11 +659,11 @@ export function LinearPatternDialog() {
                     onClick={() => toggleSkipInstance(i)}
                     disabled={i === 0 && !centered}
                     className={`
-                      w-8 h-8 rounded text-xs font-medium transition-colors
+                      w-8 h-8 text-xs font-medium transition-colors
                       ${i === 0 && !centered
-                        ? 'bg-cyan-500/30 text-cyan-300 cursor-not-allowed'
+                        ? 'bg-cad-accent/30 text-cad-accent cursor-not-allowed'
                         : skippedInstances.includes(i)
-                          ? 'bg-red-500/30 text-red-300 border border-red-500/50 line-through'
+                          ? 'bg-cad-border text-cad-text-dim border border-cad-border line-through'
                           : 'bg-cad-panel hover:bg-cad-border text-cad-text'}
                     `}
                     title={i === 0 && !centered ? 'Seed instance (cannot skip)' : `Instance ${i + 1}`}
@@ -675,7 +675,7 @@ export function LinearPatternDialog() {
               {skippedInstances.length > 0 && (
                 <button
                   onClick={() => setSkippedInstances([])}
-                  className="mt-2 text-xs text-amber-400 hover:text-amber-300"
+                  className="mt-2 text-xs text-cad-accent hover:text-cad-text"
                 >
                   Clear all skipped
                 </button>
@@ -688,7 +688,7 @@ export function LinearPatternDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Operation
             </label>
-            <div className="grid grid-cols-4 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-4 gap-1 bg-white p-1">
               {[
                 { value: 'new', label: 'New' },
                 { value: 'add', label: 'Add' },
@@ -699,7 +699,7 @@ export function LinearPatternDialog() {
                   key={op.value}
                   onClick={() => setOperation(op.value as OperationType)}
                   className={`
-                    p-2 rounded transition-colors text-xs
+                    p-2 transition-colors text-xs
                     ${operation === op.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -713,10 +713,10 @@ export function LinearPatternDialog() {
           
           {/* Advanced Options */}
           {patternType === 'feature' && (
-            <div className="border border-cad-border rounded-lg overflow-hidden">
+            <div className="border border-cad-border overflow-hidden">
               <button
                 onClick={() => setAdvancedExpanded(!advancedExpanded)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-cad-darker/50 hover:bg-cad-panel transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 bg-white/50 hover:bg-cad-panel transition-colors"
               >
                 <span className="text-xs font-medium text-cad-text-dim uppercase tracking-wide">
                   Advanced Options
@@ -731,7 +731,7 @@ export function LinearPatternDialog() {
                       type="checkbox"
                       checked={reapplyFeatures}
                       onChange={(e) => setReapplyFeatures(e.target.checked)}
-                      className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                      className="w-4 h-4 border-cad-border bg-white"
                     />
                     <span className="text-sm text-cad-text flex items-center gap-2">
                       <RefreshCw size={14} />
@@ -747,13 +747,13 @@ export function LinearPatternDialog() {
           )}
           
           {/* Preview Toggle */}
-          <div className="flex items-center justify-between p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center justify-between p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPreview}
                 onChange={(e) => setShowPreview(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text flex items-center gap-2">
                 {showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -763,7 +763,7 @@ export function LinearPatternDialog() {
           </div>
           
           {/* Visual Representation */}
-          <div className="p-3 bg-cad-darker rounded-lg border border-cad-border">
+          <div className="p-3 bg-white border border-cad-border">
             <div className="flex items-center justify-center">
               <svg width="200" height="100" viewBox="0 0 200 100">
                 {/* Direction 1 arrow */}
@@ -818,9 +818,9 @@ export function LinearPatternDialog() {
           </div>
           
           {/* Summary */}
-          <div className="p-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
-            <h4 className="text-xs font-medium text-cyan-300 mb-2">Summary</h4>
-            <ul className="text-xs text-cyan-200/70 space-y-1">
+          <div className="p-3 bg-white border border-cad-border">
+            <h4 className="text-xs font-medium text-cad-accent mb-2">Summary</h4>
+            <ul className="text-xs text-cad-text space-y-1">
               <li>• Pattern: {patternType.charAt(0).toUpperCase() + patternType.slice(1)}</li>
               <li>• Direction 1: {count1} × {spacing1}mm</li>
               {useDirection2 && <li>• Direction 2: {count2} × {spacing2}mm</li>}
@@ -831,10 +831,10 @@ export function LinearPatternDialog() {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-white/50">
           <div className="text-xs text-cad-text-dim">
             {!isValid && (
-              <span className="text-amber-400 flex items-center gap-1">
+              <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
                 {validity.message}
               </span>
@@ -843,7 +843,7 @@ export function LinearPatternDialog() {
           <div className="flex gap-2">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border transition-colors"
             >
               Cancel
             </button>
@@ -851,9 +851,9 @@ export function LinearPatternDialog() {
               onClick={handleCreate}
               disabled={!isValid}
               className={`
-                px-4 py-2 text-sm rounded transition-colors flex items-center gap-2
+                px-4 py-2 text-sm transition-colors flex items-center gap-2
                 ${isValid 
-                  ? 'bg-cyan-500 hover:bg-cyan-600 text-white' 
+                  ? 'bg-cad-accent hover:bg-cad-accent-hover text-white' 
                   : 'bg-cad-border text-cad-text-dim cursor-not-allowed'}
               `}
             >

@@ -6,7 +6,6 @@ import React, { useRef, useMemo, useCallback, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber'
 import { 
   OrbitControls, 
-  Grid, 
   GizmoHelper, 
   GizmoViewport,
   Line
@@ -17,30 +16,71 @@ import { useDocumentStore } from '../store/documentStore'
 import { useFEAStore } from '../store/feaStore'
 import { FEAResultsViewer, FEAMeshPreview, FEABCIcons } from './fea'
 
-// Grid component
+// Grid component - efficient grid using single geometry
 function CADGrid() {
   const { viewSettings } = useUIStore()
+
+  const gridSize = 400
+  const cellSize = 10
+  const majorCellSize = 50
   
+  // Generate grid points for a single LineSegments geometry
+  const { minorPoints, majorPoints } = useMemo(() => {
+    const minor: number[] = []
+    const major: number[] = []
+    const half = gridSize / 2
+    
+    // Lines parallel to X axis (running along Z)
+    for (let z = -half; z <= half; z += cellSize) {
+      const isMajor = z % majorCellSize === 0
+      const target = isMajor ? major : minor
+      target.push(-half, 0, z, half, 0, z)
+    }
+    
+    // Lines parallel to Z axis (running along X)
+    for (let x = -half; x <= half; x += cellSize) {
+      const isMajor = x % majorCellSize === 0
+      const target = isMajor ? major : minor
+      target.push(x, 0, -half, x, 0, half)
+    }
+    
+    return { minorPoints: new Float32Array(minor), majorPoints: new Float32Array(major) }
+  }, [])
+
+  // Early return AFTER all hooks
   if (!viewSettings.showGrid) return null
 
   return (
-    <Grid
-      args={[200, 200]}
-      cellSize={10}
-      cellThickness={0.5}
-      cellColor="#3a3f4b"
-      sectionSize={50}
-      sectionThickness={1}
-      sectionColor="#4a5568"
-      fadeDistance={500}
-      fadeStrength={1}
-      followCamera={false}
-      infiniteGrid={true}
-    />
+    <group position={[0, 0.01, 0]}>
+      {/* Minor grid lines */}
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={minorPoints.length / 3}
+            array={minorPoints}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#000000" transparent opacity={0.1} depthWrite={false} />
+      </lineSegments>
+      {/* Major grid lines */}
+      <lineSegments>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={majorPoints.length / 3}
+            array={majorPoints}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color="#000000" transparent opacity={0.25} depthWrite={false} />
+      </lineSegments>
+    </group>
   )
 }
 
-// Origin axes
+// Origin axes - RGB colored (X=Red, Y=Green, Z=Blue)
 function OriginAxes() {
   const { viewSettings } = useUIStore()
   
@@ -60,33 +100,33 @@ function OriginAxes() {
   )
 }
 
-// Reference planes
+// Reference planes - RGB colored (XY=Blue, XZ=Green, YZ=Red)
 function ReferencePlanes() {
   const { viewSettings, sketchMode } = useUIStore()
   
   if (!viewSettings.showPlanes) return null
 
   const planeSize = 80
-  const opacity = sketchMode ? 0.05 : 0.1
+  const opacity = sketchMode ? 0.03 : 0.06
 
   return (
     <group>
-      {/* XY Plane (Top) - Blue */}
-      <mesh rotation={[0, 0, 0]} position={[0, 0, 0]}>
+      {/* XY Plane (Top) - Blue, offset slightly below grid */}
+      <mesh rotation={[0, 0, 0]} position={[0, -0.1, 0]}>
         <planeGeometry args={[planeSize, planeSize]} />
-        <meshBasicMaterial color="#3b82f6" transparent opacity={opacity} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       
       {/* XZ Plane (Front) - Green */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[planeSize, planeSize]} />
-        <meshBasicMaterial color="#22c55e" transparent opacity={opacity} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#22c55e" transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       
       {/* YZ Plane (Right) - Red */}
       <mesh rotation={[0, Math.PI / 2, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[planeSize, planeSize]} />
-        <meshBasicMaterial color="#ef4444" transparent opacity={opacity} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#ef4444" transparent opacity={opacity} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -1364,7 +1404,7 @@ function FilletPreview() {
   // If no selections, nothing to preview
   if (selectedEdges.length === 0 && selectedFaces.length === 0) return null
   
-  // Create preview geometry - show rounded edge indicators
+  // Create preview geometry - show edge indicators
   const previewElements: JSX.Element[] = []
   
   // For each selected edge, create a small torus-like indicator
@@ -2240,18 +2280,24 @@ function Scene() {
         enableDamping
         dampingFactor={0.1}
         rotateSpeed={0.5}
-        panSpeed={0.5}
+        panSpeed={0.8}
         zoomSpeed={0.8}
         minDistance={10}
-        maxDistance={1000}
+        maxDistance={2000}
         makeDefault
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.PAN,
+          RIGHT: THREE.MOUSE.DOLLY
+        }}
       />
 
-      {/* View cube */}
+      {/* View cube with XYZ labels */}
       <GizmoHelper alignment="top-right" margin={[80, 80]}>
         <GizmoViewport 
           axisColors={['#ef4444', '#22c55e', '#3b82f6']} 
-          labelColor="white"
+          labelColor="black"
+          labels={['X', 'Y', 'Z']}
         />
       </GizmoHelper>
     </>
@@ -2484,7 +2530,7 @@ export function Viewport3D() {
         camera={{ position: [100, 80, 100], fov: 45, near: 0.1, far: 5000 }}
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => {
-          gl.setClearColor('#1a1d21')
+          gl.setClearColor('#ffffff')
         }}
         onPointerMissed={() => clearSelection()}
         resize={{ scroll: false, debounce: { scroll: 0, resize: 0 } }}

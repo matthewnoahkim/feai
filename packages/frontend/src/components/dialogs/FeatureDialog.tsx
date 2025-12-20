@@ -1,5 +1,6 @@
 /**
  * Feature Dialog - Create/edit modeling features
+ * Academic/scholarly theme styling
  */
 
 import React, { useState } from 'react'
@@ -107,21 +108,21 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
   }
   
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-96 max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-cad-panel border border-cad-border shadow-xl w-96 max-h-[80vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border">
-          <h2 className="font-semibold text-cad-text">{titles[type]}</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gray-50">
+          <h2 className="font-serif font-semibold text-cad-text">{titles[type]}</h2>
           <button
             onClick={closeDialog}
-            className="p-1 hover:bg-cad-panel rounded"
+            className="p-1 hover:bg-cad-panel border border-transparent hover:border-cad-border"
           >
             <X size={18} />
           </button>
         </div>
         
         {/* Content */}
-        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+        <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto font-sans">
           {/* Extrude options */}
           {type === 'extrude' && (
             <>
@@ -131,7 +132,7 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                   type="number"
                   value={depth}
                   onChange={(e) => setDepth(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                  className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent focus:ring-1 focus:ring-cad-accent/20"
                 />
               </div>
               
@@ -140,7 +141,7 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                 <select
                   value={direction}
                   onChange={(e) => setDirection(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                  className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent"
                 >
                   <option value="one">One Direction</option>
                   <option value="symmetric">Symmetric</option>
@@ -153,7 +154,7 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                 <select
                   value={operation}
                   onChange={(e) => setOperation(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                  className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent"
                 >
                   <option value="new">New</option>
                   <option value="add">Add</option>
@@ -175,7 +176,7 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                   onChange={(e) => setAngle(parseFloat(e.target.value) || 0)}
                   min={0}
                   max={360}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                  className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent focus:ring-1 focus:ring-cad-accent/20"
                 />
               </div>
               
@@ -184,7 +185,7 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                 <select
                   value={operation}
                   onChange={(e) => setOperation(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                  className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent"
                 >
                   <option value="new">New</option>
                   <option value="add">Add</option>
@@ -207,7 +208,7 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                 onChange={(e) => setRadius(parseFloat(e.target.value) || 0)}
                 min={0.1}
                 step={0.5}
-                className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent focus:ring-1 focus:ring-cad-accent/20"
               />
             </div>
           )}
@@ -222,13 +223,13 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
                 onChange={(e) => setThickness(parseFloat(e.target.value) || 0)}
                 min={0.1}
                 step={0.5}
-                className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                className="w-full px-3 py-2 bg-cad-panel border border-cad-border text-sm focus:border-cad-accent focus:ring-1 focus:ring-cad-accent/20"
               />
             </div>
           )}
           
           {/* Selection info */}
-          <div className="p-3 bg-cad-darker rounded border border-cad-border">
+          <div className="p-3 bg-gray-50 border border-cad-border">
             <p className="text-xs text-cad-text-dim">
               {type === 'extrude' || type === 'revolve' ? (
                 'Select a sketch profile to extrude/revolve, or a default profile will be used.'
@@ -242,16 +243,16 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
         </div>
         
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t border-cad-border">
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-cad-border bg-gray-50 font-sans">
           <button
             onClick={closeDialog}
-            className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+            className="px-4 py-2 text-sm bg-cad-panel border border-cad-border hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
-            className="px-4 py-2 text-sm bg-cad-accent hover:bg-cad-accent-hover text-white rounded transition-colors"
+            className="px-4 py-2 text-sm bg-cad-accent hover:bg-cad-accent-hover text-white transition-colors"
           >
             Create
           </button>
@@ -260,4 +261,3 @@ export function FeatureDialog({ type }: FeatureDialogProps) {
     </div>
   )
 }
-

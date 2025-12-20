@@ -60,9 +60,9 @@ function ToolButton({
   return (
     <button
       className={`
-        relative flex flex-col items-center justify-center p-2 min-w-[52px] rounded-lg transition-all duration-150
+        relative flex flex-col items-center justify-center p-2 min-w-[52px] transition-all duration-150
         ${active 
-          ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30' 
+          ? 'bg-cad-accent text-white shadow-lg shadow-blue-500/30' 
           : 'hover:bg-cad-panel/80 text-cad-text-dim hover:text-cad-text border border-transparent hover:border-cad-border/50'
         }
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
@@ -117,7 +117,7 @@ function ToolFlyout({ isOpen, onClose, position, children }: ToolFlyoutProps) {
   return (
     <div 
       ref={ref}
-      className="absolute z-50 bg-cad-dark border border-cad-border rounded-lg shadow-2xl py-1 min-w-[180px]"
+      className="absolute z-50 bg-gray-50 border border-cad-border shadow-2xl py-1 min-w-[180px]"
       style={{ 
         top: position.y + 'px', 
         left: position.x + 'px',
@@ -144,7 +144,7 @@ function FlyoutItem({ icon, label, shortcut, description, active, onClick }: Fly
       className={`
         w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors
         ${active 
-          ? 'bg-blue-500/20 text-blue-400' 
+          ? 'bg-cad-accent/20 text-cad-accent' 
           : 'hover:bg-cad-panel text-cad-text-dim hover:text-cad-text'
         }
       `}
@@ -153,7 +153,7 @@ function FlyoutItem({ icon, label, shortcut, description, active, onClick }: Fly
       {icon}
       <span className="flex-1 text-left">{label}</span>
       {shortcut && (
-        <span className="text-[10px] font-mono opacity-50 bg-cad-panel px-1.5 py-0.5 rounded">
+        <span className="text-[10px] font-mono opacity-50 bg-cad-panel px-1.5 py-0.5">
           {shortcut}
         </span>
       )}
@@ -225,12 +225,12 @@ export function SketchToolbar() {
   return (
     <div 
       ref={toolbarRef}
-      className="flex items-center h-14 px-3 bg-gradient-to-b from-cad-dark to-cad-darker border-b border-cad-border"
+      className="flex items-center h-14 px-3 bg-white border-b border-cad-border"
     >
       {/* Sketch mode indicator */}
       <div className="flex items-center gap-2 px-3 mr-3">
-        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-        <span className="text-sm font-semibold text-blue-400">Sketch Mode</span>
+        <div className="w-2 h-2 bg-cad-accent animate-pulse" />
+        <span className="text-sm font-semibold text-cad-accent">Sketch Mode</span>
       </div>
       
       <ToolDivider />
@@ -397,14 +397,14 @@ export function SketchToolbar() {
       <div className="flex items-center gap-2">
         <button
           onClick={handleCancelSketch}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-cad-text-dim hover:text-cad-text bg-cad-panel hover:bg-cad-border rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-cad-text-dim hover:text-cad-text bg-cad-panel hover:bg-cad-border transition-colors"
         >
           <X size={16} />
           Cancel
         </button>
         <button
           onClick={handleFinishSketch}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-lg shadow-lg shadow-green-500/20 transition-all"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-cad-accent hover:from-green-400 hover:to-emerald-500 shadow-lg shadow-green-500/20 transition-all"
         >
           <Check size={16} />
           Finish Sketch

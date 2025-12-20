@@ -291,18 +291,18 @@ export function RevolveDialog() {
   
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-20 overflow-y-auto">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[420px] mb-20">
+      <div className="bg-gray-50 border border-cad-border shadow-2xl w-[420px] mb-20">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-purple-900/30 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-purple-500/20 rounded flex items-center justify-center">
-              <RotateCcw size={14} className="text-purple-400" />
+            <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
+              <RotateCcw size={14} className="text-cad-accent" />
             </div>
             <h2 className="font-semibold text-cad-text">Revolve</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel transition-colors"
           >
             <X size={18} />
           </button>
@@ -317,17 +317,17 @@ export function RevolveDialog() {
               <Target size={12} />
               Profile to Revolve
               {selectionMode === 'profile' && (
-                <span className="ml-auto text-blue-400 text-[10px] normal-case">Click to select</span>
+                <span className="ml-auto text-cad-accent text-[10px] normal-case">Click to select</span>
               )}
             </label>
             
             {availableProfiles.length === 0 ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-4 bg-white border border-cad-border">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="text-amber-300 font-medium">No profiles found</p>
-                    <p className="text-amber-400/70 mt-1">
+                    <p className="text-cad-text font-medium">No profiles found</p>
+                    <p className="text-cad-accent/70 mt-1">
                       Create a sketch with closed profiles (rectangles, circles, or polygons) to revolve.
                     </p>
                   </div>
@@ -335,7 +335,7 @@ export function RevolveDialog() {
               </div>
             ) : (
               <div 
-                className={`space-y-1 max-h-32 overflow-y-auto bg-cad-darker rounded-lg border p-2 transition-colors ${
+                className={`space-y-1 max-h-32 overflow-y-auto bg-white border p-2 transition-colors ${
                   selectionMode === 'profile' ? 'border-blue-500/50' : 'border-cad-border'
                 }`}
                 onClick={() => setSelectionMode('profile')}
@@ -344,9 +344,9 @@ export function RevolveDialog() {
                   <label 
                     key={profile.entityId}
                     className={`
-                      flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                      flex items-center gap-3 p-2 cursor-pointer transition-colors
                       ${selectedProfile === profile.entityId 
-                        ? 'bg-purple-500/20 border border-purple-500/50' 
+                        ? 'bg-cad-accent/20 border border-cad-accent/50' 
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -358,12 +358,12 @@ export function RevolveDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                      w-4 h-4 border-2 flex items-center justify-center transition-colors
                       ${selectedProfile === profile.entityId 
-                        ? 'bg-purple-500 border-purple-500' 
+                        ? 'bg-cad-accent border-cad-accent' 
                         : 'border-cad-border'}
                     `}>
-                      {selectedProfile === profile.entityId && <div className="w-2 h-2 bg-white rounded-full" />}
+                      {selectedProfile === profile.entityId && <div className="w-2 h-2 bg-white" />}
                     </div>
                     <div className="flex items-center gap-2 text-cad-text-dim">
                       {getEntityIcon(profile.entityType)}
@@ -381,12 +381,12 @@ export function RevolveDialog() {
               <RefreshCw size={12} />
               Revolve Axis
               {selectionMode === 'axis' && (
-                <span className="ml-auto text-blue-400 text-[10px] normal-case">Click to select</span>
+                <span className="ml-auto text-cad-accent text-[10px] normal-case">Click to select</span>
               )}
             </label>
             
             <div 
-              className={`space-y-1 max-h-32 overflow-y-auto bg-cad-darker rounded-lg border p-2 transition-colors ${
+              className={`space-y-1 max-h-32 overflow-y-auto bg-white border p-2 transition-colors ${
                 selectionMode === 'axis' ? 'border-blue-500/50' : 'border-cad-border'
               }`}
               onClick={() => setSelectionMode('axis')}
@@ -395,9 +395,9 @@ export function RevolveDialog() {
                 <label 
                   key={axis.entityId}
                   className={`
-                    flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                    flex items-center gap-3 p-2 cursor-pointer transition-colors
                     ${selectedAxis === axis.entityId 
-                      ? 'bg-purple-500/20 border border-purple-500/50' 
+                      ? 'bg-cad-accent/20 border border-cad-accent/50' 
                       : 'hover:bg-cad-panel border border-transparent'}
                   `}
                 >
@@ -409,12 +409,12 @@ export function RevolveDialog() {
                     className="sr-only"
                   />
                   <div className={`
-                    w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                    w-4 h-4 border-2 flex items-center justify-center transition-colors
                     ${selectedAxis === axis.entityId 
-                      ? 'bg-purple-500 border-purple-500' 
+                      ? 'bg-cad-accent border-cad-accent' 
                       : 'border-cad-border'}
                   `}>
-                    {selectedAxis === axis.entityId && <div className="w-2 h-2 bg-white rounded-full" />}
+                    {selectedAxis === axis.entityId && <div className="w-2 h-2 bg-white" />}
                   </div>
                   <div className="flex items-center gap-2 text-cad-text-dim">
                     {getEntityIcon(axis.entityType)}
@@ -430,18 +430,18 @@ export function RevolveDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Operation
             </label>
-            <div className="grid grid-cols-4 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-4 gap-1 bg-white p-1">
               {[
                 { value: 'new', label: 'New', icon: <Plus size={14} /> },
-                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-green-400" /> },
-                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-red-400" /> },
-                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-purple-400" /> },
+                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-cad-accent" /> },
+                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-cad-accent" /> },
+                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-cad-accent" /> },
               ].map((op) => (
                 <button
                   key={op.value}
                   onClick={() => setOperation(op.value as OperationType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${operation === op.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -456,13 +456,13 @@ export function RevolveDialog() {
           
           {/* Merge Scope (for add/remove/intersect) */}
           {operation !== 'new' && availableBodies.length > 0 && (
-            <div className="space-y-2 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+            <div className="space-y-2 p-3 bg-white/50 border border-cad-border">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={mergeWithAll}
                   onChange={(e) => setMergeWithAll(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                 />
                 <span className="text-sm text-cad-text">Merge with all intersecting parts</span>
               </label>
@@ -471,7 +471,7 @@ export function RevolveDialog() {
                 <div className="mt-2 space-y-1">
                   <p className="text-xs text-cad-text-dim">Select target parts:</p>
                   {availableBodies.map((part) => (
-                    <label key={part.id} className="flex items-center gap-2 p-2 hover:bg-cad-panel rounded">
+                    <label key={part.id} className="flex items-center gap-2 p-2 hover:bg-cad-panel">
                       <input
                         type="checkbox"
                         checked={selectedBodies.includes(part.id)}
@@ -480,7 +480,7 @@ export function RevolveDialog() {
                             ? [...prev, part.id]
                             : prev.filter(id => id !== part.id)
                         )}
-                        className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                        className="w-4 h-4 border-cad-border bg-white"
                       />
                       <span className="text-sm text-cad-text">{part.name}</span>
                     </label>
@@ -491,13 +491,13 @@ export function RevolveDialog() {
           )}
           
           {/* Angle and Direction */}
-          <div className="space-y-3 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+          <div className="space-y-3 p-3 bg-white/50 border border-cad-border">
             <label className="text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Angle & Direction
             </label>
             
             {/* Direction Type */}
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'full', label: 'Full (360°)' },
                 { value: 'one-direction', label: 'One Direction' },
@@ -507,9 +507,9 @@ export function RevolveDialog() {
                   key={dir.value}
                   onClick={() => setDirectionType(dir.value as DirectionType)}
                   className={`
-                    p-2 rounded transition-colors text-xs
+                    p-2 transition-colors text-xs
                     ${directionType === dir.value 
-                      ? 'bg-purple-500 text-white' 
+                      ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
                   `}
                 >
@@ -532,7 +532,7 @@ export function RevolveDialog() {
                     min={1}
                     max={360}
                     step={5}
-                    className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                    className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                   />
                 </div>
                 
@@ -548,7 +548,7 @@ export function RevolveDialog() {
                       min={0}
                       max={360}
                       step={5}
-                      className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                      className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                     />
                   </div>
                 )}
@@ -574,7 +574,7 @@ export function RevolveDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Revolve Type
             </label>
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'solid', label: 'Solid' },
                 { value: 'surface', label: 'Surface' },
@@ -584,7 +584,7 @@ export function RevolveDialog() {
                   key={type.value}
                   onClick={() => setRevolveType(type.value as RevolveType)}
                   className={`
-                    p-2 rounded transition-colors text-xs
+                    p-2 transition-colors text-xs
                     ${revolveType === type.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -597,7 +597,7 @@ export function RevolveDialog() {
             
             {/* Thin revolve options */}
             {revolveType === 'thin' && (
-              <div className="p-3 bg-cad-darker/50 rounded-lg border border-cad-border space-y-3">
+              <div className="p-3 bg-white/50 border border-cad-border space-y-3">
                 <div>
                   <label className="block text-xs text-cad-text-dim mb-1">Wall Thickness (mm)</label>
                   <input
@@ -606,7 +606,7 @@ export function RevolveDialog() {
                     onChange={(e) => setWallThickness(parseFloat(e.target.value) || 0)}
                     min={0.1}
                     step={0.5}
-                    className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                    className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                   />
                 </div>
                 <label className="flex items-center gap-2">
@@ -614,7 +614,7 @@ export function RevolveDialog() {
                     type="checkbox"
                     checked={thinSymmetric}
                     onChange={(e) => setThinSymmetric(e.target.checked)}
-                    className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                    className="w-4 h-4 border-cad-border bg-white"
                   />
                   <span className="text-sm text-cad-text">Symmetric thickness</span>
                 </label>
@@ -623,22 +623,22 @@ export function RevolveDialog() {
           </div>
           
           {/* Preview Toggle */}
-          <div className="flex items-center justify-between p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center justify-between p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPreview}
                 onChange={(e) => setShowPreview(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text">Show preview</span>
             </label>
           </div>
           
           {/* Summary */}
-          <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
-            <h4 className="text-xs font-medium text-purple-300 mb-2">Summary</h4>
-            <ul className="text-xs text-purple-200/70 space-y-1">
+          <div className="p-3 bg-white border border-cad-border">
+            <h4 className="text-xs font-medium text-cad-text mb-2">Summary</h4>
+            <ul className="text-xs text-cad-text space-y-1">
               <li>• Profile: {selectedProfile ? availableProfiles.find(p => p.entityId === selectedProfile)?.displayName || 'Selected' : 'None'}</li>
               <li>• Axis: {availableAxes.find(a => a.entityId === selectedAxis)?.displayName || selectedAxis}</li>
               <li>• Operation: {operation.charAt(0).toUpperCase() + operation.slice(1)}</li>
@@ -649,10 +649,10 @@ export function RevolveDialog() {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-white/50">
           <div className="text-xs text-cad-text-dim">
             {!isValid && (
-              <span className="text-amber-400 flex items-center gap-1">
+              <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
                 {!selectedProfile ? 'Select a profile' : !selectedAxis ? 'Select an axis' : 'Enter valid angle'}
               </span>
@@ -661,7 +661,7 @@ export function RevolveDialog() {
           <div className="flex gap-2">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border transition-colors"
             >
               Cancel
             </button>
@@ -669,9 +669,9 @@ export function RevolveDialog() {
               onClick={handleCreate}
               disabled={!isValid}
               className={`
-                px-4 py-2 text-sm rounded transition-colors flex items-center gap-2
+                px-4 py-2 text-sm transition-colors flex items-center gap-2
                 ${isValid 
-                  ? 'bg-purple-500 hover:bg-purple-600 text-white' 
+                  ? 'bg-cad-accent hover:bg-cad-accent-hover text-white' 
                   : 'bg-cad-border text-cad-text-dim cursor-not-allowed'}
               `}
             >

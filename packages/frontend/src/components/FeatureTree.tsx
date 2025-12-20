@@ -1,5 +1,6 @@
 /**
  * Feature Tree - Enhanced hierarchical view of model structure
+ * Academic/scholarly theme styling
  * 
  * Features:
  * - Feature history with icons and states
@@ -125,24 +126,24 @@ function TreeItem({
   const getStateStyles = () => {
     switch (state) {
       case 'error':
-        return 'bg-red-500/10 border-l-2 border-red-500'
+        return 'bg-cad-error/10 border-l-2 border-cad-error'
       case 'warning':
-        return 'bg-yellow-500/10 border-l-2 border-yellow-500'
+        return 'bg-cad-warning/10 border-l-2 border-cad-warning'
       case 'editing':
-        return 'bg-cad-accent/20 border-l-2 border-cad-accent ring-1 ring-cad-accent/50'
+        return 'bg-cad-accent/10 border-l-2 border-cad-accent'
       case 'suppressed':
         return 'opacity-50 italic'
       default:
-        return selected ? 'bg-cad-accent/20 border-l-2 border-cad-accent' : 'hover:bg-cad-panel/50'
+        return selected ? 'bg-cad-accent/10 border-l-2 border-cad-accent' : 'hover:bg-gray-50'
     }
   }
   
   return (
     <div
       className={`
-        feature-item group flex items-center gap-1 px-2 py-1.5 rounded cursor-pointer transition-colors
+        feature-item group flex items-center gap-1 px-2 py-1.5 cursor-pointer transition-colors font-sans
         ${getStateStyles()}
-        ${isDragOver ? 'ring-2 ring-cad-accent bg-cad-accent/10' : ''}
+        ${isDragOver ? 'ring-2 ring-cad-accent bg-cad-accent/5' : ''}
       `}
       style={{ paddingLeft: `${level * 16 + 8}px` }}
       onClick={onClick}
@@ -195,7 +196,7 @@ function TreeItem({
             onRename?.(localName)
             onRenameEnd?.()
           }}
-          className="flex-1 bg-cad-darker border border-cad-accent px-1 py-0.5 text-sm rounded outline-none"
+          className="flex-1 bg-cad-panel border border-cad-accent px-1 py-0.5 text-sm outline-none"
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
@@ -228,24 +229,24 @@ function FeatureIcon({ type, state }: { type: string; state?: FeatureState }) {
   const iconProps = { size: 16 }
   
   const getIconColor = () => {
-    if (state === 'error') return 'text-red-500'
-    if (state === 'warning') return 'text-yellow-500'
-    if (state === 'suppressed') return 'text-gray-500'
+    if (state === 'error') return 'text-cad-error'
+    if (state === 'warning') return 'text-cad-warning'
+    if (state === 'suppressed') return 'text-cad-text-dim'
     
     switch (type) {
-      case 'sketch': return 'text-yellow-500'
-      case 'extrude': return 'text-blue-400'
-      case 'revolve': return 'text-green-400'
-      case 'sweep': return 'text-cyan-400'
-      case 'loft': return 'text-purple-400'
-      case 'fillet': return 'text-orange-400'
-      case 'chamfer': return 'text-orange-400'
-      case 'shell': return 'text-pink-400'
-      case 'mirror': return 'text-indigo-400'
-      case 'linearPattern': return 'text-teal-400'
-      case 'circularPattern': return 'text-teal-400'
-      case 'plane': return 'text-gray-400'
-      default: return 'text-gray-400'
+      case 'sketch': return 'text-cad-warning'
+      case 'extrude': return 'text-cad-accent'
+      case 'revolve': return 'text-cad-success'
+      case 'sweep': return 'text-cyan-600'
+      case 'loft': return 'text-purple-600'
+      case 'fillet': return 'text-orange-600'
+      case 'chamfer': return 'text-orange-600'
+      case 'shell': return 'text-pink-600'
+      case 'mirror': return 'text-indigo-600'
+      case 'linearPattern': return 'text-teal-600'
+      case 'circularPattern': return 'text-teal-600'
+      case 'plane': return 'text-cad-text-dim'
+      default: return 'text-cad-text-dim'
     }
   }
   
@@ -287,13 +288,13 @@ function StatusIcon({ state, message }: { state: FeatureState; message?: string 
   switch (state) {
     case 'error':
       return (
-        <span className="text-red-500" title={message}>
+        <span className="text-cad-error" title={message}>
           <AlertCircle size={14} />
         </span>
       )
     case 'warning':
       return (
-        <span className="text-yellow-500" title={message}>
+        <span className="text-cad-warning" title={message}>
           <AlertTriangle size={14} />
         </span>
       )
@@ -408,7 +409,7 @@ function FeatureContextMenu({
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div 
-        className="fixed bg-cad-dark border border-cad-border rounded-lg shadow-xl py-1 z-50 min-w-[180px]"
+        className="fixed bg-cad-panel border border-cad-border shadow-lg py-1 z-50 min-w-[180px] font-sans"
         style={{ left: position.x, top: position.y }}
       >
         {/* Header showing feature info */}
@@ -427,8 +428,8 @@ function FeatureContextMenu({
             <button 
               key={item.id}
               className={`
-                w-full px-3 py-1.5 text-left text-sm hover:bg-cad-panel flex items-center gap-2
-                ${item.danger ? 'text-red-400 hover:text-red-300' : 'text-cad-text'}
+                w-full px-3 py-1.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2
+                ${item.danger ? 'text-cad-error hover:text-cad-error' : 'text-cad-text'}
                 ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
               onClick={item.action}
@@ -465,17 +466,17 @@ function RollbackBar({
     <div 
       className={`
         flex items-center gap-2 px-4 py-1 cursor-ns-resize select-none
-        ${isDragging ? 'bg-yellow-500/20' : 'hover:bg-yellow-500/10'}
+        ${isDragging ? 'bg-cad-warning/10' : 'hover:bg-cad-warning/5'}
       `}
       onMouseDown={() => setIsDragging(true)}
       onMouseUp={() => setIsDragging(false)}
       title="Drag to roll back/forward in history"
     >
-      <div className="flex-1 h-0.5 bg-yellow-500/50 rounded" />
-      <span className="text-[10px] text-yellow-500 font-medium">
+      <div className="flex-1 h-0.5 bg-cad-warning/50" />
+      <span className="text-[10px] text-cad-warning font-medium font-sans">
         {position < totalFeatures ? `Rolled back to ${position}` : 'Current'}
       </span>
-      <div className="flex-1 h-0.5 bg-yellow-500/50 rounded" />
+      <div className="flex-1 h-0.5 bg-cad-warning/50" />
     </div>
   )
 }
@@ -618,12 +619,12 @@ export function FeatureTree() {
   }, [selection, features, activePartStudio, renamingId])
 
   return (
-    <div className="w-72 flex flex-col bg-cad-dark border-r border-cad-border">
+    <div className="w-72 flex flex-col bg-cad-panel border-r border-cad-border">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border">
-        <span className="font-semibold text-sm">Feature Tree</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gray-50">
+        <span className="font-semibold text-sm font-serif">Feature Tree</span>
         <button 
-          className="p-1 hover:bg-cad-panel rounded" 
+          className="p-1 hover:bg-cad-panel border border-transparent hover:border-cad-border" 
           title="Add Feature"
           onClick={() => openDialog('sketch')}
         >
@@ -660,21 +661,21 @@ export function FeatureTree() {
               <>
                 <TreeItem
                   label="Top Plane"
-                  icon={<Square size={16} className="text-blue-400" />}
+                  icon={<Square size={16} className="text-cad-accent" />}
                   level={2}
                   onClick={() => setSelection({ type: 'feature', ids: ['top-plane'] })}
                   selected={selection.ids.includes('top-plane')}
                 />
                 <TreeItem
                   label="Front Plane"
-                  icon={<Square size={16} className="text-green-400" />}
+                  icon={<Square size={16} className="text-cad-accent" />}
                   level={2}
                   onClick={() => setSelection({ type: 'feature', ids: ['front-plane'] })}
                   selected={selection.ids.includes('front-plane')}
                 />
                 <TreeItem
                   label="Right Plane"
-                  icon={<Square size={16} className="text-red-400" />}
+                  icon={<Square size={16} className="text-cad-accent" />}
                   level={2}
                   onClick={() => setSelection({ type: 'feature', ids: ['right-plane'] })}
                   selected={selection.ids.includes('right-plane')}
@@ -687,7 +688,7 @@ export function FeatureTree() {
 
             {/* Features */}
             {features.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-cad-text-dim text-center">
+              <div className="px-4 py-3 text-sm text-cad-text-dim text-center font-sans">
                 No features yet.<br />
                 <button 
                   className="text-cad-accent hover:underline mt-1"
@@ -728,7 +729,7 @@ export function FeatureTree() {
                           {/* Visibility toggle for sketches */}
                           {isSketch && (
                             <button 
-                              className="p-1 hover:bg-cad-border rounded"
+                              className="p-1 hover:bg-gray-50"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 toggleSketchVisibility(sketchId!)
@@ -741,7 +742,7 @@ export function FeatureTree() {
                           
                           {/* Suppress toggle */}
                           <button 
-                            className="p-1 hover:bg-cad-border rounded"
+                            className="p-1 hover:bg-gray-50"
                             onClick={(e) => {
                               e.stopPropagation()
                               toggleFeatureSuppression(activePartStudio!.id, feature.id)
@@ -753,7 +754,7 @@ export function FeatureTree() {
                           
                           {/* More options */}
                           <button 
-                            className="p-1 hover:bg-cad-border rounded"
+                            className="p-1 hover:bg-gray-50"
                             onClick={(e) => {
                               e.stopPropagation()
                               handleContextMenu(e, feature, activePartStudio!.id)
@@ -796,13 +797,13 @@ export function FeatureTree() {
                   <TreeItem
                     key={part.id}
                     label={part.name}
-                    icon={<Box size={16} className="text-gray-400" />}
+                    icon={<Box size={16} className="text-cad-text-dim" />}
                     level={2}
                     selected={selection.ids.includes(part.id)}
                     onClick={() => setSelection({ type: 'body', ids: [part.id] })}
                     actions={
                       <button 
-                        className="p-1 hover:bg-cad-border rounded"
+                        className="p-1 hover:bg-gray-50"
                         onClick={(e) => {
                           e.stopPropagation()
                           // TODO: Toggle part visibility
@@ -821,8 +822,8 @@ export function FeatureTree() {
       </div>
 
       {/* Footer with stats and legend */}
-      <div className="border-t border-cad-border">
-        <div className="px-4 py-2 text-xs text-cad-text-dim">
+      <div className="border-t border-cad-border bg-gray-50">
+        <div className="px-4 py-2 text-xs text-cad-text-dim font-sans">
           {features.length} feature{features.length !== 1 ? 's' : ''}
           {activePartStudio && activePartStudio.parts.length > 0 && (
             <> • {activePartStudio.parts.length} part{activePartStudio.parts.length !== 1 ? 's' : ''}</>
@@ -830,17 +831,17 @@ export function FeatureTree() {
         </div>
         
         {/* Legend for states */}
-        <div className="px-4 py-2 border-t border-cad-border flex items-center gap-3 text-[10px] text-cad-text-dim">
+        <div className="px-4 py-2 border-t border-cad-border flex items-center gap-3 text-[10px] text-cad-text-dim font-sans">
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
+            <span className="w-2 h-2 bg-cad-error" />
             Error
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-yellow-500" />
+            <span className="w-2 h-2 bg-cad-warning" />
             Warning
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-gray-500" />
+            <span className="w-2 h-2 bg-cad-text-dim" />
             Suppressed
           </span>
         </div>

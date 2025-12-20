@@ -248,18 +248,18 @@ export function ShellDialog() {
   
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-16 overflow-y-auto">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[460px] mb-20">
+      <div className="bg-gray-50 border border-cad-border shadow-2xl w-[460px] mb-20">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-pink-900/30 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-pink-500/20 rounded flex items-center justify-center">
-              <Box size={14} className="text-pink-400" />
+            <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
+              <Box size={14} className="text-cad-accent" />
             </div>
             <h2 className="font-semibold text-cad-text">Shell</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel transition-colors"
           >
             <X size={18} />
           </button>
@@ -274,14 +274,14 @@ export function ShellDialog() {
               <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
                 Select Part to Shell
               </label>
-              <div className="space-y-1 bg-cad-darker rounded-lg border border-cad-border p-2">
+              <div className="space-y-1 bg-white border border-cad-border p-2">
                 {availableParts.map((part) => (
                   <label
                     key={part.id}
                     className={`
-                      flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                      flex items-center gap-3 p-2 cursor-pointer transition-colors
                       ${selectedPart === part.id
-                        ? 'bg-pink-500/20 border border-pink-500/50'
+                        ? 'bg-cad-accent/20 border border-cad-accent/50'
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -296,12 +296,12 @@ export function ShellDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                      w-4 h-4 border-2 flex items-center justify-center transition-colors
                       ${selectedPart === part.id 
-                        ? 'bg-pink-500 border-pink-500' 
+                        ? 'bg-cad-accent border-cad-accent' 
                         : 'border-cad-border'}
                     `}>
-                      {selectedPart === part.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                      {selectedPart === part.id && <div className="w-2 h-2 bg-white" />}
                     </div>
                     <Box size={14} className="text-cad-text-dim" />
                     <span className="text-sm text-cad-text">{part.name}</span>
@@ -313,12 +313,12 @@ export function ShellDialog() {
           
           {/* No Parts Warning */}
           {availableParts.length === 0 && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div className="p-4 bg-white border border-cad-border">
               <div className="flex items-start gap-2">
-                <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
-                  <p className="text-amber-300 font-medium">No parts found</p>
-                  <p className="text-amber-400/70 mt-1">
+                  <p className="text-cad-text font-medium">No parts found</p>
+                  <p className="text-cad-accent/70 mt-1">
                     Create 3D geometry (extrude, revolve, etc.) first to use the shell feature.
                   </p>
                 </div>
@@ -339,25 +339,25 @@ export function ShellDialog() {
                 min={0.1}
                 step={0.5}
                 className={`
-                  flex-1 px-3 py-2 bg-cad-darker border rounded text-sm focus:border-cad-accent
+                  flex-1 px-3 py-2 bg-white border text-sm focus:border-cad-accent
                   ${validateThickness() ? 'border-cad-border' : 'border-red-500'}
                 `}
               />
               <button
                 onClick={() => setThickness(prev => Math.max(0.1, prev - 0.5))}
-                className="px-3 py-2 bg-cad-darker border border-cad-border rounded hover:bg-cad-panel"
+                className="px-3 py-2 bg-white border border-cad-border hover:bg-cad-panel"
               >
                 -
               </button>
               <button
                 onClick={() => setThickness(prev => prev + 0.5)}
-                className="px-3 py-2 bg-cad-darker border border-cad-border rounded hover:bg-cad-panel"
+                className="px-3 py-2 bg-white border border-cad-border hover:bg-cad-panel"
               >
                 +
               </button>
             </div>
             {!validateThickness() && (
-              <p className="text-xs text-red-400 flex items-center gap-1">
+              <p className="text-xs text-cad-accent flex items-center gap-1">
                 <AlertTriangle size={12} />
                 Thickness must be positive and reasonable
               </p>
@@ -368,13 +368,13 @@ export function ShellDialog() {
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Faces to Remove (Openings)
-              <span className="ml-auto text-pink-400 text-[10px] normal-case">
+              <span className="ml-auto text-cad-accent text-[10px] normal-case">
                 {facesToRemove.length} selected
               </span>
             </label>
             
             {selectedPart ? (
-              <div className="space-y-1 max-h-40 overflow-y-auto bg-cad-darker rounded-lg border border-cad-border p-2">
+              <div className="space-y-1 max-h-40 overflow-y-auto bg-white border border-cad-border p-2">
                 <p className="text-xs text-cad-text-dim mb-2">
                   Select faces to create openings in the shell:
                 </p>
@@ -383,9 +383,9 @@ export function ShellDialog() {
                     <label
                       key={face.faceId}
                       className={`
-                        flex items-center gap-2 p-2 rounded cursor-pointer transition-colors text-xs
+                        flex items-center gap-2 p-2 cursor-pointer transition-colors text-xs
                         ${facesToRemove.includes(face.faceId)
-                          ? 'bg-pink-500/30 border border-pink-500/50'
+                          ? 'bg-cad-accent/30 border border-cad-accent/50'
                           : 'hover:bg-cad-panel border border-transparent'}
                       `}
                     >
@@ -396,9 +396,9 @@ export function ShellDialog() {
                         className="sr-only"
                       />
                       <div className={`
-                        w-3 h-3 rounded border flex items-center justify-center transition-colors
+                        w-3 h-3 border flex items-center justify-center transition-colors
                         ${facesToRemove.includes(face.faceId)
-                          ? 'bg-pink-500 border-pink-500'
+                          ? 'bg-cad-accent border-cad-accent'
                           : 'border-cad-border'}
                       `}>
                         {facesToRemove.includes(face.faceId) && <X size={8} className="text-white" />}
@@ -411,14 +411,14 @@ export function ShellDialog() {
                 </div>
                 
                 {facesToRemove.length === 0 && (
-                  <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-cad-accent mt-2 flex items-center gap-1">
                     <AlertCircle size={12} />
                     Select at least one face for the shell opening
                   </p>
                 )}
               </div>
             ) : (
-              <div className="p-3 bg-cad-darker rounded-lg border border-cad-border">
+              <div className="p-3 bg-white border border-cad-border">
                 <p className="text-xs text-cad-text-dim">
                   Select a part first to see available faces
                 </p>
@@ -431,7 +431,7 @@ export function ShellDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Shell Direction
             </label>
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'inward', label: 'Inward', icon: <ArrowDownToLine size={14} />, desc: 'Hollow inside' },
                 { value: 'outward', label: 'Outward', icon: <ArrowUpFromLine size={14} />, desc: 'Expand outside' },
@@ -441,9 +441,9 @@ export function ShellDialog() {
                   key={dir.value}
                   onClick={() => setDirection(dir.value as ShellDirection)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${direction === dir.value 
-                      ? 'bg-pink-500 text-white' 
+                      ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
                   `}
                   title={dir.desc}
@@ -461,7 +461,7 @@ export function ShellDialog() {
           </div>
           
           {/* Visual Representation */}
-          <div className="p-3 bg-cad-darker rounded-lg border border-cad-border">
+          <div className="p-3 bg-white border border-cad-border">
             <div className="flex items-center justify-center">
               <svg width="180" height="100" viewBox="0 0 180 100">
                 {/* Original solid outline */}
@@ -476,7 +476,7 @@ export function ShellDialog() {
                   y={direction === 'outward' ? 10 : 20} 
                   width={thickness * 3} 
                   height={direction === 'outward' ? 80 : 60}
-                  fill="#ec4899" fillOpacity="0.3" stroke="#ec4899" strokeWidth="1"
+                  fill="#1a4d8f" fillOpacity="0.3" stroke="#1a4d8f" strokeWidth="1"
                 />
                 
                 {/* Shell wall - right */}
@@ -485,7 +485,7 @@ export function ShellDialog() {
                   y={direction === 'outward' ? 10 : 20} 
                   width={thickness * 3} 
                   height={direction === 'outward' ? 80 : 60}
-                  fill="#ec4899" fillOpacity="0.3" stroke="#ec4899" strokeWidth="1"
+                  fill="#1a4d8f" fillOpacity="0.3" stroke="#1a4d8f" strokeWidth="1"
                 />
                 
                 {/* Shell wall - bottom */}
@@ -494,23 +494,23 @@ export function ShellDialog() {
                   y={direction === 'outward' ? 90 - thickness * 3 : 80 - thickness * 3}
                   width={direction === 'outward' ? 160 : 140} 
                   height={thickness * 3}
-                  fill="#ec4899" fillOpacity="0.3" stroke="#ec4899" strokeWidth="1"
+                  fill="#1a4d8f" fillOpacity="0.3" stroke="#1a4d8f" strokeWidth="1"
                 />
                 
                 {/* Removed face indicator (top) */}
                 {facesToRemove.some(f => f.includes('face-0')) && (
                   <g>
-                    <line x1="20" y1="20" x2="160" y2="20" stroke="#ec4899" strokeWidth="2" strokeDasharray="6,3" />
-                    <text x="90" y="12" fill="#ec4899" fontSize="8" textAnchor="middle">OPEN</text>
+                    <line x1="20" y1="20" x2="160" y2="20" stroke="#1a4d8f" strokeWidth="2" strokeDasharray="6,3" />
+                    <text x="90" y="12" fill="#1a4d8f" fontSize="8" textAnchor="middle">OPEN</text>
                   </g>
                 )}
                 
                 {/* Thickness label */}
                 <g transform="translate(25, 50)">
-                  <line x1="0" y1="0" x2={thickness * 3} y2="0" stroke="#ec4899" strokeWidth="1" />
-                  <line x1="0" y1="-3" x2="0" y2="3" stroke="#ec4899" strokeWidth="1" />
-                  <line x1={thickness * 3} y1="-3" x2={thickness * 3} y2="3" stroke="#ec4899" strokeWidth="1" />
-                  <text x={thickness * 1.5} y="12" fill="#ec4899" fontSize="8" textAnchor="middle">{thickness}mm</text>
+                  <line x1="0" y1="0" x2={thickness * 3} y2="0" stroke="#1a4d8f" strokeWidth="1" />
+                  <line x1="0" y1="-3" x2="0" y2="3" stroke="#1a4d8f" strokeWidth="1" />
+                  <line x1={thickness * 3} y1="-3" x2={thickness * 3} y2="3" stroke="#1a4d8f" strokeWidth="1" />
+                  <text x={thickness * 1.5} y="12" fill="#1a4d8f" fontSize="8" textAnchor="middle">{thickness}mm</text>
                 </g>
                 
                 {/* Interior hollow area */}
@@ -532,10 +532,10 @@ export function ShellDialog() {
           </div>
           
           {/* Advanced Options (Collapsible) */}
-          <div className="border border-cad-border rounded-lg overflow-hidden">
+          <div className="border border-cad-border overflow-hidden">
             <button
               onClick={() => setAdvancedExpanded(!advancedExpanded)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-cad-darker/50 hover:bg-cad-panel transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 bg-white/50 hover:bg-cad-panel transition-colors"
             >
               <span className="text-xs font-medium text-cad-text-dim uppercase tracking-wide">
                 Multi-Thickness Options
@@ -550,7 +550,7 @@ export function ShellDialog() {
                     type="checkbox"
                     checked={useMultiThickness}
                     onChange={(e) => setUseMultiThickness(e.target.checked)}
-                    className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                    className="w-4 h-4 border-cad-border bg-white"
                   />
                   <span className="text-sm text-cad-text">Use different thickness for specific faces</span>
                 </label>
@@ -565,7 +565,7 @@ export function ShellDialog() {
                     {thicknessOverrides.map((override) => (
                       <div 
                         key={override.faceId}
-                        className="flex items-center gap-2 p-2 bg-pink-500/10 rounded border border-pink-500/30"
+                        className="flex items-center gap-2 p-2 bg-white border border-cad-border"
                       >
                         <span className="text-xs text-cad-text flex-1">{override.faceLabel}</span>
                         <input
@@ -574,12 +574,12 @@ export function ShellDialog() {
                           onChange={(e) => updateOverrideThickness(override.faceId, parseFloat(e.target.value) || 0)}
                           min={0.1}
                           step={0.5}
-                          className="w-20 px-2 py-1 bg-cad-darker border border-cad-border rounded text-xs"
+                          className="w-20 px-2 py-1 bg-white border border-cad-border text-xs"
                         />
                         <span className="text-xs text-cad-text-dim">mm</span>
                         <button
                           onClick={() => removeThicknessOverride(override.faceId)}
-                          className="p-1 hover:bg-red-500/20 rounded text-red-400"
+                          className="p-1 hover:bg-cad-accent/20 text-cad-accent"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -600,7 +600,7 @@ export function ShellDialog() {
                           <button
                             key={face.faceId}
                             onClick={() => addThicknessOverride(face.faceId, face.faceLabel)}
-                            className="px-2 py-1 text-xs bg-cad-darker border border-cad-border rounded hover:border-pink-500/50 hover:bg-pink-500/10"
+                            className="px-2 py-1 text-xs bg-white border border-cad-border hover:border-cad-accent/50 hover:bg-cad-accent/10"
                           >
                             + {face.faceLabel}
                           </button>
@@ -614,13 +614,13 @@ export function ShellDialog() {
           </div>
           
           {/* Preview Toggle */}
-          <div className="flex items-center justify-between p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center justify-between p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPreview}
                 onChange={(e) => setShowPreview(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text flex items-center gap-2">
                 {showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -628,7 +628,7 @@ export function ShellDialog() {
               </span>
             </label>
             {showPreview && !previewValid && (
-              <span className="text-xs text-amber-400 flex items-center gap-1">
+              <span className="text-xs text-cad-accent flex items-center gap-1">
                 <AlertTriangle size={12} />
                 Preview unavailable
               </span>
@@ -636,9 +636,9 @@ export function ShellDialog() {
           </div>
           
           {/* Summary */}
-          <div className="p-3 bg-pink-500/10 rounded-lg border border-pink-500/30">
-            <h4 className="text-xs font-medium text-pink-300 mb-2">Summary</h4>
-            <ul className="text-xs text-pink-200/70 space-y-1">
+          <div className="p-3 bg-white border border-cad-border">
+            <h4 className="text-xs font-medium text-cad-text mb-2">Summary</h4>
+            <ul className="text-xs text-cad-text space-y-1">
               <li>• Part: {availableParts.find(p => p.id === selectedPart)?.name || 'None selected'}</li>
               <li>• Wall Thickness: {thickness} mm</li>
               <li>• Direction: {direction.charAt(0).toUpperCase() + direction.slice(1)}</li>
@@ -653,10 +653,10 @@ export function ShellDialog() {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-white/50">
           <div className="text-xs text-cad-text-dim">
             {!isValid && (
-              <span className="text-amber-400 flex items-center gap-1">
+              <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
                 {validity.message}
               </span>
@@ -665,7 +665,7 @@ export function ShellDialog() {
           <div className="flex gap-2">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border transition-colors"
             >
               Cancel
             </button>
@@ -673,9 +673,9 @@ export function ShellDialog() {
               onClick={handleCreate}
               disabled={!isValid}
               className={`
-                px-4 py-2 text-sm rounded transition-colors flex items-center gap-2
+                px-4 py-2 text-sm transition-colors flex items-center gap-2
                 ${isValid 
-                  ? 'bg-pink-500 hover:bg-pink-600 text-white' 
+                  ? 'bg-cad-accent hover:bg-cad-accent-hover text-white' 
                   : 'bg-cad-border text-cad-text-dim cursor-not-allowed'}
               `}
             >

@@ -8,25 +8,27 @@ export default {
     extend: {
       colors: {
         'cad': {
-          'dark': '#1a1d21',
-          'darker': '#131518',
-          'panel': '#252830',
-          'border': '#3a3f4b',
-          'text': '#e4e6eb',
-          'text-dim': '#9ca3af',
-          'accent': '#3b82f6',
-          'accent-hover': '#60a5fa',
-          'success': '#22c55e',
-          'warning': '#f59e0b',
-          'error': '#ef4444',
+          'bg': '#ffffff',
+          'panel': '#ffffff',
+          'border': '#1a4d8f',
+          'text': '#1a4d8f',
+          'text-dim': '#1a4d8f',
+          'accent': '#1a4d8f',
+          'accent-hover': '#0d2a4d',
+          'success': '#1a4d8f',
+          'warning': '#1a4d8f',
+          'error': '#1a4d8f',
         }
       },
       fontFamily: {
-        'mono': ['JetBrains Mono', 'Fira Code', 'monospace'],
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
+        'serif': ['Georgia', 'serif'],
+        'mono': ['monospace'],
+      },
+      borderRadius: {
+        'none': '0',
+        DEFAULT: '0',
       }
     },
   },
   plugins: [],
 }
-

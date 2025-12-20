@@ -1,5 +1,6 @@
 /**
  * ChatMessage Component - Displays a single chat message with optional actions
+ * Academic/scholarly theme styling
  */
 
 import React from 'react'
@@ -24,11 +25,11 @@ function ActionItem({ action, index }: { action: CadAction; index: number }) {
   const getStatusIcon = () => {
     switch (action.status) {
       case 'success':
-        return <CheckCircle size={14} className="text-green-400" />
+        return <CheckCircle size={14} className="text-cad-success" />
       case 'error':
-        return <XCircle size={14} className="text-red-400" />
+        return <XCircle size={14} className="text-cad-error" />
       case 'executing':
-        return <Loader2 size={14} className="text-blue-400 animate-spin" />
+        return <Loader2 size={14} className="text-cad-accent animate-spin" />
       default:
         return <Play size={14} className="text-cad-text-dim" />
     }
@@ -37,18 +38,18 @@ function ActionItem({ action, index }: { action: CadAction; index: number }) {
   const getStatusClass = () => {
     switch (action.status) {
       case 'success':
-        return 'border-green-500/30 bg-green-500/5'
+        return 'border-cad-success/30 bg-cad-success/5'
       case 'error':
-        return 'border-red-500/30 bg-red-500/5'
+        return 'border-cad-error/30 bg-cad-error/5'
       case 'executing':
-        return 'border-blue-500/30 bg-blue-500/5'
+        return 'border-cad-accent/30 bg-cad-accent/5'
       default:
-        return 'border-cad-border/50 bg-cad-darker/50'
+        return 'border-cad-border bg-gray-50'
     }
   }
   
   return (
-    <div className={`flex items-center gap-2 px-2 py-1.5 rounded border ${getStatusClass()} text-xs`}>
+    <div className={`flex items-center gap-2 px-2 py-1.5 border ${getStatusClass()} text-xs font-sans`}>
       {getStatusIcon()}
       <span className="flex-1 truncate">{action.description}</span>
       <span className="text-cad-text-dim font-mono text-[10px]">{action.method}</span>
@@ -68,13 +69,13 @@ function ActionsDisplay({ actions }: { actions: CadAction[] }) {
     <div className="mt-2 pt-2 border-t border-cad-border/30">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-xs text-cad-text-dim hover:text-cad-text transition-colors"
+        className="flex items-center gap-1 text-xs text-cad-text-dim hover:text-cad-text transition-colors font-sans"
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <span>
           {actions.length} action{actions.length > 1 ? 's' : ''}
-          {successCount > 0 && <span className="text-green-400 ml-1">({successCount} ✓)</span>}
-          {errorCount > 0 && <span className="text-red-400 ml-1">({errorCount} ✗)</span>}
+          {successCount > 0 && <span className="text-cad-success ml-1">({successCount} ✓)</span>}
+          {errorCount > 0 && <span className="text-cad-error ml-1">({errorCount} ✗)</span>}
         </span>
       </button>
       
@@ -128,7 +129,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 font-sans">
           <span className="text-xs font-medium">
             {isUser ? 'You' : 'CAD Assistant'}
           </span>
@@ -136,7 +137,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
             {formatTime(message.timestamp)}
           </span>
           {message.status === 'error' && (
-            <span className="text-[10px] text-red-400 ml-auto">Failed</span>
+            <span className="text-[10px] text-cad-error ml-auto">Failed</span>
           )}
         </div>
         
@@ -156,7 +157,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
         {message.status === 'error' && onRetry && (
           <button
             onClick={onRetry}
-            className="mt-1 text-xs text-cad-accent hover:text-cad-accent-hover transition-colors"
+            className="mt-1 text-xs text-cad-accent hover:text-cad-accent-hover underline transition-colors font-sans"
           >
             Try again
           </button>
@@ -165,4 +166,3 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
     </div>
   )
 }
-

@@ -342,10 +342,10 @@ export function SelectionManager({ children, onSelectionChange }: SelectionManag
           <button
             onClick={() => setShowFilterMenu(!showFilterMenu)}
             className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors
+              flex items-center gap-2 px-3 py-2 border transition-colors
               ${selectionFilter !== 'all'
                 ? 'bg-cad-accent/20 border-cad-accent text-cad-accent'
-                : 'bg-cad-dark/90 border-cad-border text-cad-text-dim hover:text-cad-text'}
+                : 'bg-gray-50/90 border-cad-border text-cad-text-dim hover:text-cad-text'}
               backdrop-blur-sm
             `}
             title="Selection Filter"
@@ -358,7 +358,7 @@ export function SelectionManager({ children, onSelectionChange }: SelectionManag
           
           {/* Filter Menu */}
           {showFilterMenu && (
-            <div className="absolute top-full right-0 mt-1 w-40 bg-cad-dark border border-cad-border rounded-lg shadow-xl overflow-hidden z-50">
+            <div className="absolute top-full right-0 mt-1 w-40 bg-gray-50 border border-cad-border shadow-xl overflow-hidden z-50">
               {(['all', 'face', 'edge', 'vertex', 'body', 'feature'] as SelectionFilter[]).map((filter) => (
                 <button
                   key={filter}
@@ -386,13 +386,13 @@ export function SelectionManager({ children, onSelectionChange }: SelectionManag
       {/* Overlapping Entities Context Menu */}
       {showOverlapMenu && overlappingEntities.length > 0 && (
         <div
-          className="absolute z-50 bg-cad-dark border border-cad-border rounded-lg shadow-xl overflow-hidden min-w-[200px]"
+          className="absolute z-50 bg-gray-50 border border-cad-border shadow-xl overflow-hidden min-w-[200px]"
           style={{
             left: overlapMenuPosition.x,
             top: overlapMenuPosition.y,
           }}
         >
-          <div className="px-3 py-2 border-b border-cad-border bg-cad-darker">
+          <div className="px-3 py-2 border-b border-cad-border bg-white">
             <span className="text-xs font-medium text-cad-text-dim">Select Other</span>
           </div>
           {overlappingEntities.map((entity, index) => (
@@ -418,7 +418,7 @@ export function SelectionManager({ children, onSelectionChange }: SelectionManag
               <ChevronRight size={12} className="text-cad-text-dim" />
             </button>
           ))}
-          <div className="px-3 py-1.5 border-t border-cad-border bg-cad-darker">
+          <div className="px-3 py-1.5 border-t border-cad-border bg-white">
             <button
               onClick={() => setShowOverlapMenu(false)}
               className="text-[10px] text-cad-text-dim hover:text-cad-text"
@@ -432,7 +432,7 @@ export function SelectionManager({ children, onSelectionChange }: SelectionManag
       {/* Selection Info (bottom left) */}
       {selection.ids.length > 0 && (
         <div className="absolute bottom-20 left-4 z-40">
-          <div className="bg-cad-dark/90 border border-cad-border rounded-lg px-3 py-2 backdrop-blur-sm">
+          <div className="bg-gray-50/90 border border-cad-border px-3 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2 text-xs">
               {getEntityIcon(selection.type)}
               <span className="text-cad-text">
@@ -474,7 +474,7 @@ export function SelectionHighlight({ entityId, type, children }: SelectionHighli
   return (
     <div
       className={`
-        ${highlightType === 'selected' ? 'ring-2 ring-blue-500' : ''}
+        ${highlightType === 'selected' ? 'ring-2 ring-cad-accent' : ''}
         ${highlightType === 'preselection' ? 'ring-2 ring-amber-500' : ''}
       `}
       data-selectable

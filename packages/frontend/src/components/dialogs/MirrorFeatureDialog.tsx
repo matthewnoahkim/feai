@@ -279,18 +279,18 @@ export function MirrorFeatureDialog() {
   
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-16 overflow-y-auto">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[480px] mb-20">
+      <div className="bg-gray-50 border border-cad-border shadow-2xl w-[480px] mb-20">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-indigo-900/30 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-indigo-500/20 rounded flex items-center justify-center">
-              <FlipHorizontal size={14} className="text-indigo-400" />
+            <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
+              <FlipHorizontal size={14} className="text-cad-accent" />
             </div>
             <h2 className="font-semibold text-cad-text">Mirror</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel transition-colors"
           >
             <X size={18} />
           </button>
@@ -304,7 +304,7 @@ export function MirrorFeatureDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Mirror Type
             </label>
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'part', label: 'Part', icon: <Box size={14} />, desc: 'Mirror entire bodies' },
                 { value: 'feature', label: 'Feature', icon: <Layers size={14} />, desc: 'Mirror feature results' },
@@ -314,9 +314,9 @@ export function MirrorFeatureDialog() {
                   key={type.value}
                   onClick={() => setMirrorType(type.value as MirrorType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${mirrorType === type.value 
-                      ? 'bg-indigo-500 text-white' 
+                      ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
                   `}
                   title={type.desc}
@@ -340,16 +340,16 @@ export function MirrorFeatureDialog() {
               Mirror Plane
             </label>
             
-            <div className="space-y-1 max-h-36 overflow-y-auto bg-cad-darker rounded-lg border border-cad-border p-2">
+            <div className="space-y-1 max-h-36 overflow-y-auto bg-white border border-cad-border p-2">
               {/* Reference Planes */}
               <p className="text-xs text-cad-text-dim mb-1 font-medium">Reference Planes:</p>
               {availablePlanes.filter(p => p.type === 'reference').map((plane) => (
                 <label
                   key={plane.id}
                   className={`
-                    flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                    flex items-center gap-3 p-2 cursor-pointer transition-colors
                     ${selectedPlane === plane.id
-                      ? 'bg-indigo-500/20 border border-indigo-500/50'
+                      ? 'bg-cad-accent/20 border border-cad-accent/50'
                       : 'hover:bg-cad-panel border border-transparent'}
                   `}
                 >
@@ -361,14 +361,14 @@ export function MirrorFeatureDialog() {
                     className="sr-only"
                   />
                   <div className={`
-                    w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                    w-4 h-4 border-2 flex items-center justify-center transition-colors
                     ${selectedPlane === plane.id 
-                      ? 'bg-indigo-500 border-indigo-500' 
+                      ? 'bg-cad-accent border-cad-accent' 
                       : 'border-cad-border'}
                   `}>
-                    {selectedPlane === plane.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                    {selectedPlane === plane.id && <div className="w-2 h-2 bg-white" />}
                   </div>
-                  <Square size={12} className="text-blue-400" />
+                  <Square size={12} className="text-cad-accent" />
                   <span className="text-sm text-cad-text">{plane.name}</span>
                 </label>
               ))}
@@ -381,9 +381,9 @@ export function MirrorFeatureDialog() {
                     <label
                       key={plane.id}
                       className={`
-                        flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                        flex items-center gap-3 p-2 cursor-pointer transition-colors
                         ${selectedPlane === plane.id
-                          ? 'bg-indigo-500/20 border border-indigo-500/50'
+                          ? 'bg-cad-accent/20 border border-cad-accent/50'
                           : 'hover:bg-cad-panel border border-transparent'}
                       `}
                     >
@@ -395,12 +395,12 @@ export function MirrorFeatureDialog() {
                         className="sr-only"
                       />
                       <div className={`
-                        w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                        w-4 h-4 border-2 flex items-center justify-center transition-colors
                         ${selectedPlane === plane.id 
-                          ? 'bg-indigo-500 border-indigo-500' 
+                          ? 'bg-cad-accent border-cad-accent' 
                           : 'border-cad-border'}
                       `}>
-                        {selectedPlane === plane.id && <div className="w-2 h-2 bg-white rounded-full" />}
+                        {selectedPlane === plane.id && <div className="w-2 h-2 bg-white" />}
                       </div>
                       <Box size={12} className="text-gray-400" />
                       <span className="text-sm text-cad-text">{plane.name}</span>
@@ -416,20 +416,20 @@ export function MirrorFeatureDialog() {
             <label className="flex items-center gap-2 text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               {getEntityIcon(mirrorType)}
               {mirrorType === 'part' ? 'Parts' : mirrorType === 'feature' ? 'Features' : 'Faces'} to Mirror
-              <span className="ml-auto text-indigo-400 text-[10px] normal-case">
+              <span className="ml-auto text-cad-accent text-[10px] normal-case">
                 {selectedEntities.length} selected
               </span>
             </label>
             
             {entitiesList.length === 0 ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-4 bg-white border border-cad-border">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="text-amber-300 font-medium">
+                    <p className="text-cad-text font-medium">
                       No {mirrorType}s available
                     </p>
-                    <p className="text-amber-400/70 mt-1">
+                    <p className="text-cad-accent/70 mt-1">
                       {mirrorType === 'part' 
                         ? 'Create 3D geometry first to mirror parts.'
                         : mirrorType === 'feature'
@@ -440,14 +440,14 @@ export function MirrorFeatureDialog() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-1 max-h-40 overflow-y-auto bg-cad-darker rounded-lg border border-cad-border p-2">
+              <div className="space-y-1 max-h-40 overflow-y-auto bg-white border border-cad-border p-2">
                 {entitiesList.map((entity) => (
                   <label
                     key={entity.id}
                     className={`
-                      flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                      flex items-center gap-3 p-2 cursor-pointer transition-colors
                       ${selectedEntities.includes(entity.id)
-                        ? 'bg-indigo-500/20 border border-indigo-500/50'
+                        ? 'bg-cad-accent/20 border border-cad-accent/50'
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -458,9 +458,9 @@ export function MirrorFeatureDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-4 h-4 rounded border flex items-center justify-center transition-colors
+                      w-4 h-4 border flex items-center justify-center transition-colors
                       ${selectedEntities.includes(entity.id)
-                        ? 'bg-indigo-500 border-indigo-500'
+                        ? 'bg-cad-accent border-cad-accent'
                         : 'border-cad-border'}
                     `}>
                       {selectedEntities.includes(entity.id) && <Check size={10} className="text-white" />}
@@ -478,18 +478,18 @@ export function MirrorFeatureDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Result Operation
             </label>
-            <div className="grid grid-cols-4 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-4 gap-1 bg-white p-1">
               {[
                 { value: 'new', label: 'New', icon: <Plus size={14} />, desc: 'Create new part' },
-                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-green-400" />, desc: 'Add to existing' },
-                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-red-400" />, desc: 'Cut from existing' },
-                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-purple-400" />, desc: 'Keep common' },
+                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-cad-accent" />, desc: 'Add to existing' },
+                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-cad-accent" />, desc: 'Cut from existing' },
+                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-cad-accent" />, desc: 'Keep common' },
               ].map((op) => (
                 <button
                   key={op.value}
                   onClick={() => setOperation(op.value as OperationType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${operation === op.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -511,13 +511,13 @@ export function MirrorFeatureDialog() {
           
           {/* Merge Scope (for add/remove/intersect) */}
           {operation !== 'new' && availableParts.length > 0 && (
-            <div className="space-y-2 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+            <div className="space-y-2 p-3 bg-white/50 border border-cad-border">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={mergeWithAll}
                   onChange={(e) => setMergeWithAll(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                 />
                 <span className="text-sm text-cad-text">Merge with all intersecting parts</span>
               </label>
@@ -528,7 +528,7 @@ export function MirrorFeatureDialog() {
                   {availableParts.map((part) => (
                     <label
                       key={part.id}
-                      className="flex items-center gap-2 p-1 hover:bg-cad-panel rounded cursor-pointer"
+                      className="flex items-center gap-2 p-1 hover:bg-cad-panel cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -540,7 +540,7 @@ export function MirrorFeatureDialog() {
                             setSelectedMergeScope(prev => prev.filter(id => id !== part.id))
                           }
                         }}
-                        className="w-3 h-3 rounded border-cad-border bg-cad-darker"
+                        className="w-3 h-3 border-cad-border bg-white"
                       />
                       <span className="text-xs text-cad-text">{part.name}</span>
                     </label>
@@ -552,10 +552,10 @@ export function MirrorFeatureDialog() {
           
           {/* Advanced Options (Collapsible) */}
           {mirrorType === 'feature' && (
-            <div className="border border-cad-border rounded-lg overflow-hidden">
+            <div className="border border-cad-border overflow-hidden">
               <button
                 onClick={() => setAdvancedExpanded(!advancedExpanded)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-cad-darker/50 hover:bg-cad-panel transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 bg-white/50 hover:bg-cad-panel transition-colors"
               >
                 <span className="text-xs font-medium text-cad-text-dim uppercase tracking-wide">
                   Advanced Options
@@ -570,10 +570,10 @@ export function MirrorFeatureDialog() {
                       type="checkbox"
                       checked={reapplyFeatures}
                       onChange={(e) => setReapplyFeatures(e.target.checked)}
-                      className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                      className="w-4 h-4 border-cad-border bg-white"
                     />
                     <span className="text-sm text-cad-text flex items-center gap-2">
-                      <RefreshCw size={14} className={reapplyFeatures ? 'text-indigo-400' : ''} />
+                      <RefreshCw size={14} className={reapplyFeatures ? 'text-cad-accent' : ''} />
                       Reapply Features
                     </span>
                   </label>
@@ -587,13 +587,13 @@ export function MirrorFeatureDialog() {
           )}
           
           {/* Preview Toggle */}
-          <div className="flex items-center justify-between p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center justify-between p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPreview}
                 onChange={(e) => setShowPreview(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text flex items-center gap-2">
                 {showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -601,7 +601,7 @@ export function MirrorFeatureDialog() {
               </span>
             </label>
             {showPreview && !previewValid && (
-              <span className="text-xs text-amber-400 flex items-center gap-1">
+              <span className="text-xs text-cad-accent flex items-center gap-1">
                 <AlertTriangle size={12} />
                 Preview unavailable
               </span>
@@ -609,7 +609,7 @@ export function MirrorFeatureDialog() {
           </div>
           
           {/* Visual Representation */}
-          <div className="p-3 bg-cad-darker rounded-lg border border-cad-border">
+          <div className="p-3 bg-white border border-cad-border">
             <div className="flex items-center justify-center">
               <svg width="200" height="80" viewBox="0 0 200 80">
                 {/* Mirror plane */}
@@ -633,9 +633,9 @@ export function MirrorFeatureDialog() {
                 {/* Mirrored geometry */}
                 <rect 
                   x="120" y="20" width="60" height="40" 
-                  fill="#22c55e" fillOpacity="0.3" stroke="#22c55e" strokeWidth="1"
+                  fill="#1a4d8f" fillOpacity="0.3" stroke="#1a4d8f" strokeWidth="1"
                 />
-                <text x="150" y="45" fill="#22c55e" fontSize="9" textAnchor="middle">
+                <text x="150" y="45" fill="#1a4d8f" fontSize="9" textAnchor="middle">
                   Mirrored
                 </text>
                 
@@ -646,16 +646,16 @@ export function MirrorFeatureDialog() {
                 />
                 <path 
                   d="M 115 40 L 125 35 L 125 45 Z" 
-                  fill="#22c55e"
+                  fill="#1a4d8f"
                 />
               </svg>
             </div>
           </div>
           
           {/* Summary */}
-          <div className="p-3 bg-indigo-500/10 rounded-lg border border-indigo-500/30">
-            <h4 className="text-xs font-medium text-indigo-300 mb-2">Summary</h4>
-            <ul className="text-xs text-indigo-200/70 space-y-1">
+          <div className="p-3 bg-white border border-cad-border">
+            <h4 className="text-xs font-medium text-cad-text mb-2">Summary</h4>
+            <ul className="text-xs text-cad-text space-y-1">
               <li>• Mirror Type: {mirrorType.charAt(0).toUpperCase() + mirrorType.slice(1)}</li>
               <li>• Plane: {availablePlanes.find(p => p.id === selectedPlane)?.name || 'None'}</li>
               <li>• Entities: {selectedEntities.length} selected</li>
@@ -666,10 +666,10 @@ export function MirrorFeatureDialog() {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-white/50">
           <div className="text-xs text-cad-text-dim">
             {!isValid && (
-              <span className="text-amber-400 flex items-center gap-1">
+              <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
                 {validity.message}
               </span>
@@ -678,7 +678,7 @@ export function MirrorFeatureDialog() {
           <div className="flex gap-2">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border transition-colors"
             >
               Cancel
             </button>
@@ -686,9 +686,9 @@ export function MirrorFeatureDialog() {
               onClick={handleCreate}
               disabled={!isValid}
               className={`
-                px-4 py-2 text-sm rounded transition-colors flex items-center gap-2
+                px-4 py-2 text-sm transition-colors flex items-center gap-2
                 ${isValid 
-                  ? 'bg-indigo-500 hover:bg-indigo-600 text-white' 
+                  ? 'bg-cad-accent hover:bg-cad-accent-hover text-white' 
                   : 'bg-cad-border text-cad-text-dim cursor-not-allowed'}
               `}
             >

@@ -1,5 +1,6 @@
 /**
  * Toolbar - Main application toolbar with functional tools
+ * Academic/scholarly theme styling
  */
 
 import React, { useRef } from 'react'
@@ -206,8 +207,12 @@ function ToolButton({ icon, label, active, onClick, disabled }: ToolButtonProps)
   return (
     <button
       className={`
-        flex flex-col items-center justify-center p-2 min-w-[48px] rounded transition-colors
-        ${active ? 'bg-cad-accent text-white' : 'hover:bg-cad-panel text-cad-text-dim hover:text-cad-text'}
+        flex flex-col items-center justify-center p-1.5 min-w-[40px] transition-colors flex-shrink-0
+        font-sans text-xs
+        ${active 
+          ? 'bg-cad-accent text-white' 
+          : 'hover:bg-gray-100 text-cad-text-dim hover:text-cad-text'
+        }
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
       `}
       onClick={disabled ? undefined : onClick}
@@ -215,13 +220,13 @@ function ToolButton({ icon, label, active, onClick, disabled }: ToolButtonProps)
       title={label}
     >
       {icon}
-      <span className="text-[10px] mt-1 font-medium">{label}</span>
+      <span className="text-[9px] mt-0.5 font-medium whitespace-nowrap">{label}</span>
     </button>
   )
 }
 
 function ToolDivider() {
-  return <div className="w-px h-10 bg-cad-border mx-1" />
+  return <div className="w-px h-8 bg-cad-border mx-0.5 flex-shrink-0" />
 }
 
 export function Toolbar() {
@@ -377,35 +382,35 @@ export function Toolbar() {
 
   // Sketch tools
   const sketchTools = [
-    { icon: <Minus size={20} />, label: 'Line', tool: 'line' },
-    { icon: <Square size={20} />, label: 'Rectangle', tool: 'rectangle' },
-    { icon: <Circle size={20} />, label: 'Circle', tool: 'circle' },
-    { icon: <Spline size={20} />, label: 'Arc', tool: 'arc' },
-    { icon: <Spline size={20} />, label: 'Spline', tool: 'spline' },
+    { icon: <Minus size={16} />, label: 'Line', tool: 'line' },
+    { icon: <Square size={16} />, label: 'Rect', tool: 'rectangle' },
+    { icon: <Circle size={16} />, label: 'Circle', tool: 'circle' },
+    { icon: <Spline size={16} />, label: 'Arc', tool: 'arc' },
+    { icon: <Spline size={16} />, label: 'Spline', tool: 'spline' },
   ]
 
   // Model feature tools
   const modelTools = [
-    { icon: <Box size={20} />, label: 'Extrude', action: handleExtrude },
-    { icon: <RotateCcw size={20} />, label: 'Revolve', action: handleRevolve },
-    { icon: <Layers size={20} />, label: 'Loft', action: handleLoft },
-    { icon: <CornerUpRight size={20} />, label: 'Sweep', action: handleSweep },
+    { icon: <Box size={16} />, label: 'Extrude', action: handleExtrude },
+    { icon: <RotateCcw size={16} />, label: 'Revolve', action: handleRevolve },
+    { icon: <Layers size={16} />, label: 'Loft', action: handleLoft },
+    { icon: <CornerUpRight size={16} />, label: 'Sweep', action: handleSweep },
   ]
   
   const modifyTools = [
-    { icon: <Circle size={20} />, label: 'Fillet', action: handleFillet },
-    { icon: <Scissors size={20} />, label: 'Chamfer', action: handleChamfer },
-    { icon: <Shell size={20} />, label: 'Shell', action: handleShell },
+    { icon: <Circle size={16} />, label: 'Fillet', action: handleFillet },
+    { icon: <Scissors size={16} />, label: 'Chamfer', action: handleChamfer },
+    { icon: <Shell size={16} />, label: 'Shell', action: handleShell },
   ]
   
   const patternTools = [
-    { icon: <Grid3x3 size={20} />, label: 'Linear', action: handleLinearPattern },
-    { icon: <RotateCw size={20} />, label: 'Circular', action: handleCircularPattern },
-    { icon: <FlipHorizontal size={20} />, label: 'Mirror', action: handleMirrorFeature },
+    { icon: <Grid3x3 size={16} />, label: 'Linear', action: handleLinearPattern },
+    { icon: <RotateCw size={16} />, label: 'Circular', action: handleCircularPattern },
+    { icon: <FlipHorizontal size={16} />, label: 'Mirror', action: handleMirrorFeature },
   ]
 
   return (
-    <div className="flex items-center h-14 px-2 bg-cad-dark border-b border-cad-border">
+    <div className="bg-cad-panel border-b border-cad-border font-sans overflow-x-auto overflow-y-hidden scrollbar-thin">
       {/* Hidden file input for import */}
       <input
         ref={fileInputRef}
@@ -415,35 +420,37 @@ export function Toolbar() {
         className="hidden"
       />
       
-      {/* Logo */}
-      <div className="flex items-center gap-2 px-3 mr-4">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <span className="text-white font-bold text-sm">F</span>
+      {/* Inner container for buttons - maintains consistent height */}
+      <div className="flex items-center h-12 px-1">
+        {/* Logo - scholarly style */}
+        <div className="flex items-center gap-1.5 px-2 mr-2 flex-shrink-0">
+          <div className="w-7 h-7 flex items-center justify-center bg-cad-accent">
+            <span className="text-white font-serif font-bold text-sm">F</span>
+          </div>
+          <span className="font-serif font-semibold text-cad-text text-sm">FeAI</span>
         </div>
-        <span className="font-semibold text-cad-text">feai</span>
-      </div>
 
       <ToolDivider />
 
       {/* File operations */}
-      <div className="flex items-center gap-1">
-        <ToolButton icon={<Upload size={18} />} label="Import" onClick={handleImport} />
-        <ToolButton icon={<Download size={18} />} label="Export" onClick={handleExport} />
+      <div className="flex items-center flex-shrink-0">
+        <ToolButton icon={<Upload size={16} />} label="Import" onClick={handleImport} />
+        <ToolButton icon={<Download size={16} />} label="Export" onClick={handleExport} />
       </div>
 
       <ToolDivider />
 
       {/* Undo/Redo */}
-      <div className="flex items-center gap-1">
-        <ToolButton icon={<Undo size={18} />} label="Undo" onClick={() => addNotification('info', 'Undo')} />
-        <ToolButton icon={<Redo size={18} />} label="Redo" onClick={() => addNotification('info', 'Redo')} />
+      <div className="flex items-center flex-shrink-0">
+        <ToolButton icon={<Undo size={16} />} label="Undo" onClick={() => addNotification('info', 'Undo')} />
+        <ToolButton icon={<Redo size={16} />} label="Redo" onClick={() => addNotification('info', 'Redo')} />
       </div>
 
       <ToolDivider />
 
       {/* Selection tool */}
       <ToolButton 
-        icon={<MousePointer size={18} />} 
+        icon={<MousePointer size={16} />} 
         label="Select" 
         active={activeTool === null}
         onClick={() => setActiveTool(null)}
@@ -454,7 +461,7 @@ export function Toolbar() {
       {/* Mode-specific tools */}
       {activeMode === 'sketch' ? (
         // Sketch mode tools
-        <div className="flex items-center gap-1">
+        <div className="flex items-center flex-shrink-0">
           {sketchTools.map((tool) => (
             <ToolButton
               key={tool.tool}
@@ -470,7 +477,7 @@ export function Toolbar() {
         <>
           {/* Create sketch */}
           <ToolButton 
-            icon={<Pencil size={18} />} 
+            icon={<Pencil size={16} />} 
             label="Sketch" 
             onClick={handleSketch}
           />
@@ -478,7 +485,7 @@ export function Toolbar() {
           <ToolDivider />
           
           {/* Feature tools */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center flex-shrink-0">
             {modelTools.map((tool, index) => (
               <ToolButton
                 key={index}
@@ -492,7 +499,7 @@ export function Toolbar() {
           <ToolDivider />
 
           {/* Modify tools */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center flex-shrink-0">
             {modifyTools.map((tool, index) => (
               <ToolButton
                 key={index}
@@ -506,7 +513,7 @@ export function Toolbar() {
           <ToolDivider />
           
           {/* Pattern tools */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center flex-shrink-0">
             {patternTools.map((tool, index) => (
               <ToolButton
                 key={index}
@@ -522,9 +529,9 @@ export function Toolbar() {
       <ToolDivider />
 
       {/* Direct editing */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center flex-shrink-0">
         <ToolButton 
-          icon={<Move size={18} />} 
+          icon={<Move size={16} />} 
           label="Move" 
           onClick={() => {
             setActiveTool('move')
@@ -538,30 +545,31 @@ export function Toolbar() {
 
       {/* Simulation / FEA */}
       <ToolButton 
-        icon={<Activity size={18} />} 
+        icon={<Activity size={16} />} 
         label="Simulate" 
         active={isSimulationMode}
         onClick={handleSimulation}
       />
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div className="flex-1 min-w-[8px]" />
 
       {/* View options */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center flex-shrink-0">
         <ToolButton 
-          icon={<Grid3x3 size={18} />} 
+          icon={<Grid3x3 size={16} />} 
           label="Grid" 
           active={viewSettings.showGrid}
           onClick={() => toggleViewSetting('showGrid')}
         />
         <ToolButton 
-          icon={<Eye size={18} />} 
+          icon={<Eye size={16} />} 
           label={viewSettings.displayMode === 'wireframe' ? 'Wire' : 'Shaded'}
           onClick={() => setDisplayMode(
             viewSettings.displayMode === 'shadedEdges' ? 'wireframe' : 'shadedEdges'
           )}
         />
+      </div>
       </div>
     </div>
   )

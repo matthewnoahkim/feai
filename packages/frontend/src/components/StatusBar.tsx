@@ -1,5 +1,6 @@
 /**
  * Status Bar - Mode, selection, tool prompts, and system status display
+ * Academic/scholarly theme styling
  */
 
 import React from 'react'
@@ -28,10 +29,10 @@ export function StatusBar() {
   const { document, isLoading, isDirty, error } = useDocumentStore()
 
   const modeColors = {
-    model: 'bg-cad-panel',
-    sketch: 'bg-blue-600',
-    assembly: 'bg-green-600',
-    drawing: 'bg-purple-600'
+    model: 'bg-cad-panel border border-cad-border',
+    sketch: 'bg-cad-accent text-white',
+    assembly: 'bg-cad-success text-white',
+    drawing: 'bg-purple-600 text-white'
   }
 
   // Get current sketch info
@@ -43,12 +44,12 @@ export function StatusBar() {
   const sketchStatus = currentSketch?.status || 'under-constrained'
 
   return (
-    <div className="flex items-center h-7 px-3 bg-gradient-to-r from-cad-darker to-cad-dark border-t border-cad-border text-xs select-none">
+    <div className="flex items-center h-7 px-3 bg-cad-panel border-t border-cad-border text-xs select-none font-sans">
       {/* Mode indicator */}
       <div className="flex items-center gap-2">
         <span className={`
-          px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide
-          ${modeColors[activeMode]} text-white
+          px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide
+          ${modeColors[activeMode]}
         `}>
           {activeMode}
         </span>
@@ -67,7 +68,7 @@ export function StatusBar() {
       {toolPrompt && (
         <>
           <div className="flex items-center gap-2 text-cad-text">
-            <span className="text-blue-400 font-medium">{toolPrompt.primary}</span>
+            <span className="text-cad-accent font-medium">{toolPrompt.primary}</span>
             {toolPrompt.secondary && (
               <span className="text-cad-text-dim">• {toolPrompt.secondary}</span>
             )}
@@ -80,8 +81,8 @@ export function StatusBar() {
       {drawing.isActive && (
         <>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 text-green-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="flex items-center gap-1 text-cad-success">
+              <span className="w-1.5 h-1.5 bg-cad-success animate-pulse" />
               Drawing
             </span>
             <span className="text-cad-text-dim">
@@ -97,10 +98,10 @@ export function StatusBar() {
         <>
           <div className="flex items-center gap-1">
             {drawing.constraints.includes('horizontal') && (
-              <span className="px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-medium">H</span>
+              <span className="px-1.5 py-0.5 bg-cad-error/10 text-cad-error text-[10px] font-medium">H</span>
             )}
             {drawing.constraints.includes('vertical') && (
-              <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-400 text-[10px] font-medium">V</span>
+              <span className="px-1.5 py-0.5 bg-cad-success/10 text-cad-success text-[10px] font-medium">V</span>
             )}
           </div>
           <div className="w-px h-4 bg-cad-border mx-3" />
@@ -133,15 +134,15 @@ export function StatusBar() {
         <>
           <div className="w-px h-4 bg-cad-border mx-3" />
           <div className={`
-            flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium
-            ${sketchStatus === 'fully-constrained' ? 'bg-green-500/20 text-green-400' :
-              sketchStatus === 'over-constrained' ? 'bg-red-500/20 text-red-400' :
-              'bg-blue-500/20 text-blue-400'}
+            flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium
+            ${sketchStatus === 'fully-constrained' ? 'bg-cad-success/10 text-cad-success' :
+              sketchStatus === 'over-constrained' ? 'bg-cad-error/10 text-cad-error' :
+              'bg-cad-accent/10 text-cad-accent'}
           `}>
-            <span className={`w-1.5 h-1.5 rounded-full ${
-              sketchStatus === 'fully-constrained' ? 'bg-green-400' :
-              sketchStatus === 'over-constrained' ? 'bg-red-400' :
-              'bg-blue-400'
+            <span className={`w-1.5 h-1.5 ${
+              sketchStatus === 'fully-constrained' ? 'bg-cad-success' :
+              sketchStatus === 'over-constrained' ? 'bg-cad-error' :
+              'bg-cad-accent'
             }`} />
             {sketchStatus === 'fully-constrained' ? 'Fully Defined' :
              sketchStatus === 'over-constrained' ? 'Over-Constrained' :
@@ -157,19 +158,19 @@ export function StatusBar() {
       {sketchMode && (
         <div className="flex items-center gap-3 mr-3 text-cad-text-dim">
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-cad-panel rounded text-[10px] font-mono">L</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-50 text-[10px] font-mono border border-cad-border">L</kbd>
             Line
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-cad-panel rounded text-[10px] font-mono">C</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-50 text-[10px] font-mono border border-cad-border">C</kbd>
             Circle
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-cad-panel rounded text-[10px] font-mono">R</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-50 text-[10px] font-mono border border-cad-border">R</kbd>
             Rect
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-cad-panel rounded text-[10px] font-mono">Esc</kbd>
+            <kbd className="px-1.5 py-0.5 bg-gray-50 text-[10px] font-mono border border-cad-border">Esc</kbd>
             Cancel
           </span>
         </div>
@@ -177,7 +178,7 @@ export function StatusBar() {
 
       {/* Error indicator */}
       {error && (
-        <div className="flex items-center gap-1 text-red-400 mr-3">
+        <div className="flex items-center gap-1 text-cad-error mr-3">
           <AlertCircle size={12} />
           <span>{error}</span>
         </div>
@@ -193,7 +194,7 @@ export function StatusBar() {
 
       {/* Dirty indicator */}
       {isDirty && (
-        <div className="flex items-center gap-1 text-yellow-400 mr-3" title="Unsaved changes">
+        <div className="flex items-center gap-1 text-cad-warning mr-3" title="Unsaved changes">
           <Save size={12} />
           <span>Modified</span>
         </div>
@@ -226,7 +227,7 @@ export function StatusBar() {
       <div className="w-px h-4 bg-cad-border mx-3" />
 
       {/* Units */}
-      <div className="px-2 py-0.5 bg-cad-panel rounded text-cad-text-dim font-medium">
+      <div className="px-2 py-0.5 bg-gray-50 text-cad-text-dim font-medium border border-cad-border">
         {document?.units || 'mm'}
       </div>
 
@@ -235,9 +236,9 @@ export function StatusBar() {
         <>
           <div className="w-px h-4 bg-cad-border mx-3" />
           <div className="font-mono text-[11px]">
-            <span className="text-red-400">X</span>
+            <span className="text-cad-error">X</span>
             <span className="text-cad-text ml-1">{drawing.previewPoint.x.toFixed(2)}</span>
-            <span className="text-green-400 ml-2">Y</span>
+            <span className="text-cad-success ml-2">Y</span>
             <span className="text-cad-text ml-1">{drawing.previewPoint.y.toFixed(2)}</span>
           </div>
         </>

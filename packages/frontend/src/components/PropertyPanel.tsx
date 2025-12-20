@@ -1,5 +1,6 @@
 /**
  * Property Panel - Context-sensitive properties display
+ * Academic/scholarly theme styling
  */
 
 import React, { useState } from 'react'
@@ -28,7 +29,7 @@ function PropertySection({ title, icon, children, defaultOpen = true }: Property
   return (
     <div className="border-b border-cad-border">
       <button
-        className="flex items-center gap-2 w-full px-4 py-2 text-left hover:bg-cad-panel/50"
+        className="flex items-center gap-2 w-full px-4 py-2 text-left hover:bg-gray-50 font-sans"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className="text-cad-text-dim">{icon}</span>
@@ -52,7 +53,7 @@ interface PropertyRowProps {
 function PropertyRow({ label, children }: PropertyRowProps) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-xs text-cad-text-dim">{label}</span>
+      <span className="text-xs text-cad-text-dim font-sans">{label}</span>
       {children}
     </div>
   )
@@ -86,9 +87,9 @@ function PropertyInput({
         min={min}
         max={max}
         step={step}
-        className="w-20 px-2 py-1 text-xs bg-cad-darker border border-cad-border rounded focus:border-cad-accent"
+        className="w-20 px-2 py-1 text-xs bg-cad-panel border border-cad-border focus:border-cad-accent font-sans"
       />
-      {unit && <span className="text-xs text-cad-text-dim">{unit}</span>}
+      {unit && <span className="text-xs text-cad-text-dim font-sans">{unit}</span>}
     </div>
   )
 }
@@ -106,7 +107,7 @@ function PropertySelect({
     <select
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
-      className="w-24 px-2 py-1 text-xs bg-cad-darker border border-cad-border rounded focus:border-cad-accent"
+      className="w-24 px-2 py-1 text-xs bg-cad-panel border border-cad-border focus:border-cad-accent font-sans"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -116,14 +117,14 @@ function PropertySelect({
 }
 
 function ColorPicker({ value, onChange }: { value: string; onChange?: (color: string) => void }) {
-  const colors = ['#6b7280', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899']
+  const colors = ['#5c5c5c', '#9e2a2b', '#b86914', '#a08600', '#2d6a4f', '#1a4d8f', '#5a5096', '#8b4d6e']
   
   return (
     <div className="flex gap-1">
       {colors.map(color => (
         <button
           key={color}
-          className={`w-5 h-5 rounded border ${value === color ? 'border-white' : 'border-cad-border'}`}
+          className={`w-5 h-5 border ${value === color ? 'border-cad-text ring-1 ring-cad-accent' : 'border-cad-border'}`}
           style={{ backgroundColor: color }}
           onClick={() => onChange?.(color)}
         />
@@ -149,10 +150,10 @@ export function PropertyPanel() {
     : null
 
   return (
-    <div className="w-80 flex flex-col bg-cad-dark border-l border-cad-border">
+    <div className="w-80 flex flex-col bg-cad-panel border-l border-cad-border">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border">
-        <span className="font-semibold text-sm">Properties</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gray-50">
+        <span className="font-semibold text-sm font-serif">Properties</span>
       </div>
 
       {/* Content */}
@@ -172,10 +173,10 @@ export function PropertyPanel() {
                 />
               </PropertyRow>
               <PropertyRow label="Type">
-                <span className="text-xs capitalize">{selectedFeature.type}</span>
+                <span className="text-xs capitalize font-sans">{selectedFeature.type}</span>
               </PropertyRow>
               <PropertyRow label="Suppressed">
-                <span className="text-xs">{selectedFeature.suppressed ? 'Yes' : 'No'}</span>
+                <span className="text-xs font-sans">{selectedFeature.suppressed ? 'Yes' : 'No'}</span>
               </PropertyRow>
               
               {/* Feature-specific parameters */}
@@ -268,7 +269,7 @@ export function PropertyPanel() {
           <>
             <PropertySection title="Part Properties" icon={<Box size={16} />}>
               <PropertyRow label="Name">
-                <span className="text-xs">{selectedPart.name}</span>
+                <span className="text-xs font-sans">{selectedPart.name}</span>
               </PropertyRow>
               <PropertyRow label="Material">
                 <PropertySelect
@@ -284,7 +285,7 @@ export function PropertyPanel() {
                 />
               </PropertyRow>
               <div className="mt-2">
-                <span className="text-xs text-cad-text-dim block mb-1">Color</span>
+                <span className="text-xs text-cad-text-dim block mb-1 font-sans">Color</span>
                 <ColorPicker 
                   value={selectedPart.color} 
                   onChange={(color) => updatePartColor(selectedPart.id, color)}
@@ -293,7 +294,7 @@ export function PropertyPanel() {
             </PropertySection>
             
             <PropertySection title="Mass Properties" icon={<Ruler size={16} />} defaultOpen={false}>
-              <div className="space-y-1 text-xs">
+              <div className="space-y-1 text-xs font-sans">
                 <div className="flex justify-between">
                   <span className="text-cad-text-dim">Volume:</span>
                   <span>27,000 mm³</span>
@@ -357,13 +358,13 @@ export function PropertyPanel() {
                   onChange={(val) => setDisplayMode(val as any)}
                 />
               </PropertyRow>
-              <div className="space-y-1 mt-2">
+              <div className="space-y-1 mt-2 font-sans">
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
                   <input 
                     type="checkbox" 
                     checked={viewSettings.showGrid}
                     onChange={() => toggleViewSetting('showGrid')}
-                    className="rounded"
+                    className="rounded accent-cad-accent"
                   />
                   Show Grid
                 </label>
@@ -372,7 +373,7 @@ export function PropertyPanel() {
                     type="checkbox" 
                     checked={viewSettings.showOrigin}
                     onChange={() => toggleViewSetting('showOrigin')}
-                    className="rounded"
+                    className="rounded accent-cad-accent"
                   />
                   Show Origin
                 </label>
@@ -381,7 +382,7 @@ export function PropertyPanel() {
                     type="checkbox" 
                     checked={viewSettings.showPlanes}
                     onChange={() => toggleViewSetting('showPlanes')}
-                    className="rounded"
+                    className="rounded accent-cad-accent"
                   />
                   Show Planes
                 </label>
@@ -389,14 +390,14 @@ export function PropertyPanel() {
             </PropertySection>
             
             <PropertySection title="Info" icon={<Info size={16} />} defaultOpen={false}>
-              <div className="text-xs text-cad-text-dim space-y-1">
-                <p>feai v1.0.0</p>
+              <div className="text-xs text-cad-text-dim space-y-1 font-sans">
+                <p className="font-serif">FeAI v1.0.0</p>
                 <p>Select features or parts to view and edit their properties.</p>
                 <p className="mt-2">
                   <strong>Shortcuts:</strong><br />
-                  ESC - Cancel/Exit<br />
-                  Delete - Remove selected<br />
-                  Double-click - Edit feature
+                  ESC — Cancel/Exit<br />
+                  Delete — Remove selected<br />
+                  Double-click — Edit feature
                 </p>
               </div>
             </PropertySection>
@@ -406,10 +407,10 @@ export function PropertyPanel() {
 
       {/* Quick actions */}
       {(selectedFeature || selectedPart) && (
-        <div className="p-3 border-t border-cad-border">
-          <div className="flex gap-2">
+        <div className="p-3 border-t border-cad-border bg-gray-50">
+          <div className="flex gap-2 font-sans">
             <button 
-              className="flex-1 px-3 py-1.5 text-xs bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="flex-1 px-3 py-1.5 text-xs bg-cad-panel border border-cad-border hover:bg-gray-50 transition-colors"
               onClick={() => {
                 // Duplicate feature/part
               }}
@@ -417,7 +418,7 @@ export function PropertyPanel() {
               Duplicate
             </button>
             <button 
-              className="flex-1 px-3 py-1.5 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded transition-colors"
+              className="flex-1 px-3 py-1.5 text-xs bg-cad-error/10 border border-cad-error/30 hover:bg-cad-error/20 text-cad-error transition-colors"
               onClick={() => {
                 if (selectedFeature && activePartStudio) {
                   useDocumentStore.getState().deleteFeature(activePartStudio.id, selectedFeature.id)

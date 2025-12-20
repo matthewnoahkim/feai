@@ -2476,7 +2476,7 @@ export function SketchCanvas() {
       )}
       
       {/* Coordinates display */}
-      <div className="absolute bottom-4 left-4 bg-cad-darker/90 backdrop-blur px-3 py-2 rounded-lg border border-cad-border/50 text-xs font-mono">
+      <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur px-3 py-2 border border-cad-border/50 text-xs font-mono">
         {drawing.previewPoint ? (
           <>
             <span className="text-red-400">X:</span> {drawing.previewPoint.x.toFixed(1)}
@@ -2488,7 +2488,7 @@ export function SketchCanvas() {
       </div>
       
       {/* Zoom indicator */}
-      <div className="absolute bottom-4 right-4 bg-cad-darker/90 backdrop-blur px-3 py-2 rounded-lg border border-cad-border/50 text-xs">
+      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-2 border border-cad-border/50 text-xs">
         <span className="text-cad-text-dim">Zoom:</span> {Math.round(zoom * 100 / 5)}%
       </div>
     </div>
@@ -2555,7 +2555,7 @@ function DimensionInput({ type, value, position, canvas, zoom, pan, onConfirm, o
   
   return (
     <div 
-      className="absolute bg-cad-dark border border-cad-accent rounded-lg shadow-xl overflow-hidden"
+      className="absolute bg-gray-50 border border-cad-accent shadow-xl overflow-hidden"
       style={{ 
         left: screenPos.x + 16, 
         top: screenPos.y - 16,
@@ -2572,7 +2572,7 @@ function DimensionInput({ type, value, position, canvas, zoom, pan, onConfirm, o
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-20 px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text focus:border-cad-accent outline-none"
+          className="w-20 px-2 py-1 bg-white border border-cad-border text-sm text-cad-text focus:border-cad-accent outline-none"
         />
         <span className="text-xs text-cad-text-dim">{units[type] || 'mm'}</span>
       </div>

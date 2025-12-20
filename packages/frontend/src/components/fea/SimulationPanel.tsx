@@ -114,16 +114,16 @@ export function SimulationPanel() {
   };
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-80 bg-cad-dark border-l border-cad-border flex flex-col z-20">
+    <div className="absolute right-0 top-0 bottom-0 w-80 bg-gray-50 border-l border-cad-border flex flex-col z-20">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-cad-darker">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          <div className="w-2 h-2 bg-cad-accent animate-pulse" />
           <span className="text-sm font-medium text-cad-text">FEA Simulation</span>
         </div>
         <button
           onClick={handleClose}
-          className="p-1 hover:bg-cad-border rounded transition-colors"
+          className="p-1 hover:bg-cad-border transition-colors"
           title="Exit Simulation Mode"
         >
           <CloseIcon />
@@ -131,7 +131,7 @@ export function SimulationPanel() {
       </div>
 
       {/* Tab Bar */}
-      <div className="flex border-b border-cad-border bg-cad-darker">
+      <div className="flex border-b border-cad-border bg-white">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -139,20 +139,20 @@ export function SimulationPanel() {
             className={`
               flex-1 flex flex-col items-center gap-1 py-2 px-1 text-xs transition-colors relative
               ${activeFEAPanel === tab.id
-                ? 'text-blue-400 bg-cad-dark'
-                : 'text-cad-text-dim hover:text-cad-text hover:bg-cad-dark/50'
+                ? 'text-cad-accent bg-gray-50'
+                : 'text-cad-text-dim hover:text-cad-text hover:bg-gray-50/50'
               }
             `}
           >
             {tab.icon}
             <span>{tab.label}</span>
             {tab.badge && (
-              <span className="absolute top-1 right-2 w-4 h-4 flex items-center justify-center text-[10px] font-medium bg-green-500/20 text-green-400 rounded-full">
+              <span className="absolute top-1 right-2 w-4 h-4 flex items-center justify-center text-[10px] font-medium bg-green-500/20 text-green-400">
                 {tab.badge}
               </span>
             )}
             {activeFEAPanel === tab.id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cad-accent" />
             )}
           </button>
         ))}
@@ -167,7 +167,7 @@ export function SimulationPanel() {
       </div>
 
       {/* Run Button & Status */}
-      <div className="border-t border-cad-border bg-cad-darker p-3 space-y-3">
+      <div className="border-t border-cad-border bg-white p-3 space-y-3">
         {/* Status */}
         {solverStatus !== 'idle' && (
           <div className="space-y-2">
@@ -175,12 +175,12 @@ export function SimulationPanel() {
               <span className="text-cad-text-dim">{solverMessage || 'Processing...'}</span>
               <span className="text-cad-text">{solverProgress}%</span>
             </div>
-            <div className="h-1.5 bg-cad-dark rounded-full overflow-hidden">
+            <div className="h-1.5 bg-gray-50 overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ${
                   solverStatus === 'error' ? 'bg-red-500' :
                   solverStatus === 'completed' ? 'bg-green-500' :
-                  'bg-blue-500'
+                  'bg-cad-accent'
                 }`}
                 style={{ width: `${solverProgress}%` }}
               />
@@ -193,11 +193,11 @@ export function SimulationPanel() {
           onClick={handleRun}
           disabled={!canRun && !isRunning}
           className={`
-            w-full py-2.5 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-all
+            w-full py-2.5 px-4 font-medium flex items-center justify-center gap-2 transition-all
             ${isRunning
               ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
               : canRun
-                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/20'
+                ? 'bg-cad-accent text-white hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/20'
                 : 'bg-cad-border text-cad-text-dim cursor-not-allowed'
             }
           `}

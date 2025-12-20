@@ -70,9 +70,9 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
       case 'under-constrained':
       default:
         return {
-          bgColor: 'bg-blue-500/20',
+          bgColor: 'bg-cad-accent/20',
           borderColor: 'border-blue-500/50',
-          textColor: 'text-blue-400',
+          textColor: 'text-cad-accent',
           icon: <Unlock size={14} />,
           label: 'Under-Constrained'
         }
@@ -83,7 +83,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
   
   return (
     <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50">
-      <div className="bg-cad-dark/95 border border-cad-accent rounded-lg shadow-2xl backdrop-blur-sm overflow-hidden">
+      <div className="bg-gray-50/95 border border-cad-accent shadow-2xl backdrop-blur-sm overflow-hidden">
         {/* Header with sketch name */}
         <div className="flex items-center gap-2 px-3 py-2 bg-cad-accent/20 border-b border-cad-accent/30">
           <Pencil size={14} className="text-cad-accent" />
@@ -96,7 +96,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
         <div className="flex items-center gap-2 p-2">
           {/* Status indicator */}
           <div className={`
-            flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium
+            flex items-center gap-1.5 px-2.5 py-1.5 border text-xs font-medium
             ${statusStyle.bgColor} ${statusStyle.borderColor} ${statusStyle.textColor}
           `}>
             {statusStyle.icon}
@@ -104,7 +104,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
           </div>
           
           {/* Entity count */}
-          <div className="flex items-center gap-1 px-2 py-1.5 bg-cad-darker rounded text-xs text-cad-text-dim">
+          <div className="flex items-center gap-1 px-2 py-1.5 bg-white text-xs text-cad-text-dim">
             <Square size={12} />
             <span>{entityCount} entities</span>
           </div>
@@ -115,7 +115,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
           {/* View Normal button */}
           <button
             onClick={onViewNormal}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-cad-darker hover:bg-cad-panel rounded text-xs text-cad-text-dim hover:text-cad-text transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-cad-panel text-xs text-cad-text-dim hover:text-cad-text transition-colors"
             title="View Normal to Sketch (N)"
           >
             <Maximize size={14} />
@@ -128,7 +128,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
           {/* Cancel button */}
           <button
             onClick={onCancel}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded text-xs text-red-400 hover:text-red-300 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-xs text-red-400 hover:text-red-300 transition-colors"
             title="Cancel sketch changes (Esc)"
           >
             <X size={14} />
@@ -138,7 +138,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
           {/* Confirm button */}
           <button
             onClick={onConfirm}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 rounded text-xs text-white font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-xs text-white font-medium transition-colors"
             title="Finish sketch (Enter)"
           >
             <Check size={14} />
@@ -147,10 +147,10 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
         </div>
         
         {/* Keyboard shortcuts hint */}
-        <div className="flex items-center justify-center gap-4 px-3 py-1.5 bg-cad-darker/50 border-t border-cad-border text-[10px] text-cad-text-dim">
-          <span><kbd className="px-1 py-0.5 bg-cad-panel rounded text-[9px]">Enter</kbd> Finish</span>
-          <span><kbd className="px-1 py-0.5 bg-cad-panel rounded text-[9px]">Esc</kbd> Cancel</span>
-          <span><kbd className="px-1 py-0.5 bg-cad-panel rounded text-[9px]">N</kbd> Normal View</span>
+        <div className="flex items-center justify-center gap-4 px-3 py-1.5 bg-white/50 border-t border-cad-border text-[10px] text-cad-text-dim">
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Enter</kbd> Finish</span>
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Esc</kbd> Cancel</span>
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">N</kbd> Normal View</span>
         </div>
       </div>
     </div>

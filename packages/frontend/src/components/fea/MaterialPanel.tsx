@@ -13,7 +13,7 @@ const CategoryColors: Record<FEAMaterialCategory, string> = {
   composite: 'bg-green-500',
   ceramic: 'bg-orange-500',
   rubber: 'bg-gray-700',
-  custom: 'bg-blue-500',
+  custom: 'bg-cad-accent',
 };
 
 export function MaterialPanel() {
@@ -96,7 +96,7 @@ export function MaterialPanel() {
         <select
           value={selectedMaterialId}
           onChange={(e) => setSelectedMaterialId(e.target.value)}
-          className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded-lg text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="w-full px-3 py-2 bg-white border border-cad-border text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-cad-accent"
         >
           {availableMaterials.map((mat) => (
             <option key={mat.id} value={mat.id}>
@@ -108,9 +108,9 @@ export function MaterialPanel() {
 
       {/* Material Properties Preview */}
       {selectedMaterial && (
-        <div className="p-3 bg-cad-darker rounded-lg space-y-2">
+        <div className="p-3 bg-white space-y-2">
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded ${CategoryColors[selectedMaterial.category]}`} />
+            <div className={`w-3 h-3 ${CategoryColors[selectedMaterial.category]}`} />
             <span className="text-sm font-medium text-cad-text">{selectedMaterial.name}</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -138,13 +138,13 @@ export function MaterialPanel() {
       <div className="flex gap-2">
         <button
           onClick={handleAssignToAll}
-          className="flex-1 py-2 px-3 bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-medium hover:bg-blue-500/20 transition-colors"
+          className="flex-1 py-2 px-3 bg-cad-accent/10 text-cad-accent border border-blue-500/30 text-xs font-medium hover:bg-cad-accent/20 transition-colors"
         >
           Assign to All Parts
         </button>
         <button
           onClick={() => setShowCustomForm(!showCustomForm)}
-          className="py-2 px-3 bg-cad-border text-cad-text rounded-lg text-xs hover:bg-cad-border/70 transition-colors"
+          className="py-2 px-3 bg-cad-border text-cad-text text-xs hover:bg-cad-border/70 transition-colors"
           title="Add Custom Material"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -155,7 +155,7 @@ export function MaterialPanel() {
 
       {/* Custom Material Form */}
       {showCustomForm && (
-        <div className="p-3 bg-cad-darker border border-cad-border rounded-lg space-y-3">
+        <div className="p-3 bg-white border border-cad-border space-y-3">
           <div className="text-sm font-medium text-cad-text">Add Custom Material</div>
           <div className="space-y-2">
             <input
@@ -163,7 +163,7 @@ export function MaterialPanel() {
               placeholder="Material Name"
               value={customMaterial.name}
               onChange={(e) => setCustomMaterial({ ...customMaterial, name: e.target.value })}
-              className="w-full px-2 py-1.5 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+              className="w-full px-2 py-1.5 bg-gray-50 border border-cad-border text-sm text-cad-text"
             />
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -172,7 +172,7 @@ export function MaterialPanel() {
                   type="number"
                   value={customMaterial.youngsModulus / 1e9}
                   onChange={(e) => setCustomMaterial({ ...customMaterial, youngsModulus: parseFloat(e.target.value) * 1e9 })}
-                  className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                  className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                 />
               </div>
               <div>
@@ -182,7 +182,7 @@ export function MaterialPanel() {
                   step="0.01"
                   value={customMaterial.poissonsRatio}
                   onChange={(e) => setCustomMaterial({ ...customMaterial, poissonsRatio: parseFloat(e.target.value) })}
-                  className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                  className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                 />
               </div>
               <div>
@@ -191,7 +191,7 @@ export function MaterialPanel() {
                   type="number"
                   value={customMaterial.density}
                   onChange={(e) => setCustomMaterial({ ...customMaterial, density: parseFloat(e.target.value) })}
-                  className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                  className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                 />
               </div>
               <div>
@@ -200,7 +200,7 @@ export function MaterialPanel() {
                   type="number"
                   value={customMaterial.yieldStrength / 1e6}
                   onChange={(e) => setCustomMaterial({ ...customMaterial, yieldStrength: parseFloat(e.target.value) * 1e6 })}
-                  className="w-full px-2 py-1 bg-cad-dark border border-cad-border rounded text-sm text-cad-text"
+                  className="w-full px-2 py-1 bg-gray-50 border border-cad-border text-sm text-cad-text"
                 />
               </div>
             </div>
@@ -208,13 +208,13 @@ export function MaterialPanel() {
           <div className="flex gap-2">
             <button
               onClick={handleAddCustomMaterial}
-              className="flex-1 py-1.5 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30"
+              className="flex-1 py-1.5 bg-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/30"
             >
               Add Material
             </button>
             <button
               onClick={() => setShowCustomForm(false)}
-              className="py-1.5 px-3 text-cad-text-dim rounded text-xs hover:bg-cad-border"
+              className="py-1.5 px-3 text-cad-text-dim text-xs hover:bg-cad-border"
             >
               Cancel
             </button>
@@ -241,10 +241,10 @@ export function MaterialPanel() {
               return (
                 <div
                   key={part.id}
-                  className="flex items-center justify-between p-2 bg-cad-darker rounded-lg"
+                  className="flex items-center justify-between p-2 bg-white"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <div className="w-6 h-6 rounded bg-cad-border flex items-center justify-center">
+                    <div className="w-6 h-6 bg-cad-border flex items-center justify-center">
                       <svg className="w-4 h-4 text-cad-text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
@@ -253,7 +253,7 @@ export function MaterialPanel() {
                       <div className="text-xs text-cad-text truncate">{part.name}</div>
                       {mat ? (
                         <div className="flex items-center gap-1 text-xs text-green-400">
-                          <div className={`w-2 h-2 rounded ${CategoryColors[mat.category]}`} />
+                          <div className={`w-2 h-2 ${CategoryColors[mat.category]}`} />
                           {mat.name}
                         </div>
                       ) : (
@@ -264,7 +264,7 @@ export function MaterialPanel() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => assignMaterial(part.id, part.name, selectedMaterialId)}
-                      className="p-1 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
+                      className="p-1 text-cad-accent hover:bg-cad-accent/20 transition-colors"
                       title="Assign selected material"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,7 +274,7 @@ export function MaterialPanel() {
                     {assignment && (
                       <button
                         onClick={() => unassignMaterial(part.id)}
-                        className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                        className="p-1 text-red-400 hover:bg-red-500/20 transition-colors"
                         title="Remove assignment"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,14 +314,14 @@ export function MaterialPanel() {
               key={mat.id}
               onClick={() => setSelectedMaterialId(mat.id)}
               className={`
-                w-full flex items-center gap-2 p-2 rounded text-left text-xs transition-colors
+                w-full flex items-center gap-2 p-2 text-left text-xs transition-colors
                 ${selectedMaterialId === mat.id
-                  ? 'bg-blue-500/20 text-blue-400'
+                  ? 'bg-cad-accent/20 text-cad-accent'
                   : 'hover:bg-cad-border text-cad-text'
                 }
               `}
             >
-              <div className={`w-2 h-2 rounded ${CategoryColors[mat.category]}`} />
+              <div className={`w-2 h-2 ${CategoryColors[mat.category]}`} />
               <span className="flex-1 truncate">{mat.name}</span>
               <span className="text-cad-text-dim">{formatValue(mat.properties.youngsModulus, 'modulus')}</span>
             </button>

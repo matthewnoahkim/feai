@@ -315,18 +315,18 @@ export function SweepDialog() {
   
   return (
     <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 pt-20 overflow-y-auto">
-      <div className="bg-cad-dark border border-cad-border rounded-lg shadow-2xl w-[440px] mb-20">
+      <div className="bg-gray-50 border border-cad-border shadow-2xl w-[440px] mb-20">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gradient-to-r from-green-900/30 to-transparent">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-500/20 rounded flex items-center justify-center">
-              <CornerUpRight size={14} className="text-green-400" />
+            <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
+              <CornerUpRight size={14} className="text-cad-accent" />
             </div>
             <h2 className="font-semibold text-cad-text">Sweep</h2>
           </div>
           <button
             onClick={closeDialog}
-            className="p-1.5 hover:bg-cad-panel rounded transition-colors"
+            className="p-1.5 hover:bg-cad-panel transition-colors"
           >
             <X size={18} />
           </button>
@@ -341,17 +341,17 @@ export function SweepDialog() {
               <Target size={12} />
               Sweep Profile (Section)
               {selectionMode === 'profile' && (
-                <span className="ml-auto text-green-400 text-[10px] normal-case">Active</span>
+                <span className="ml-auto text-cad-accent text-[10px] normal-case">Active</span>
               )}
             </label>
             
             {availableProfiles.length === 0 ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-4 bg-white border border-cad-border">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="text-amber-300 font-medium">No profiles found</p>
-                    <p className="text-amber-400/70 mt-1">
+                    <p className="text-cad-text font-medium">No profiles found</p>
+                    <p className="text-cad-accent/70 mt-1">
                       Create a sketch with closed profiles (rectangles, circles, or polygons) to sweep.
                     </p>
                   </div>
@@ -359,8 +359,8 @@ export function SweepDialog() {
               </div>
             ) : (
               <div 
-                className={`space-y-1 max-h-28 overflow-y-auto bg-cad-darker rounded-lg border p-2 transition-colors cursor-pointer ${
-                  selectionMode === 'profile' ? 'border-green-500/50' : 'border-cad-border'
+                className={`space-y-1 max-h-28 overflow-y-auto bg-white border p-2 transition-colors cursor-pointer ${
+                  selectionMode === 'profile' ? 'border-cad-accent/50' : 'border-cad-border'
                 }`}
                 onClick={() => setSelectionMode('profile')}
               >
@@ -368,9 +368,9 @@ export function SweepDialog() {
                   <label 
                     key={profile.entityId}
                     className={`
-                      flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                      flex items-center gap-3 p-2 cursor-pointer transition-colors
                       ${selectedProfile === profile.entityId 
-                        ? 'bg-green-500/20 border border-green-500/50' 
+                        ? 'bg-cad-accent/20 border border-cad-accent/50' 
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -385,12 +385,12 @@ export function SweepDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                      w-4 h-4 border-2 flex items-center justify-center transition-colors
                       ${selectedProfile === profile.entityId 
-                        ? 'bg-green-500 border-green-500' 
+                        ? 'bg-cad-accent border-cad-accent' 
                         : 'border-cad-border'}
                     `}>
-                      {selectedProfile === profile.entityId && <div className="w-2 h-2 bg-white rounded-full" />}
+                      {selectedProfile === profile.entityId && <div className="w-2 h-2 bg-white" />}
                     </div>
                     <div className="flex items-center gap-2 text-cad-text-dim">
                       {getEntityIcon(profile.entityType)}
@@ -408,17 +408,17 @@ export function SweepDialog() {
               <Route size={12} />
               Sweep Path
               {selectionMode === 'path' && (
-                <span className="ml-auto text-green-400 text-[10px] normal-case">Active</span>
+                <span className="ml-auto text-cad-accent text-[10px] normal-case">Active</span>
               )}
             </label>
             
             {availablePaths.length === 0 ? (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <div className="p-4 bg-white border border-cad-border">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="text-amber-300 font-medium">No paths found</p>
-                    <p className="text-amber-400/70 mt-1">
+                    <p className="text-cad-text font-medium">No paths found</p>
+                    <p className="text-cad-accent/70 mt-1">
                       Create a sketch with lines, arcs, or splines to use as the sweep path.
                     </p>
                   </div>
@@ -426,8 +426,8 @@ export function SweepDialog() {
               </div>
             ) : (
               <div 
-                className={`space-y-1 max-h-28 overflow-y-auto bg-cad-darker rounded-lg border p-2 transition-colors cursor-pointer ${
-                  selectionMode === 'path' ? 'border-green-500/50' : 'border-cad-border'
+                className={`space-y-1 max-h-28 overflow-y-auto bg-white border p-2 transition-colors cursor-pointer ${
+                  selectionMode === 'path' ? 'border-cad-accent/50' : 'border-cad-border'
                 }`}
                 onClick={() => setSelectionMode('path')}
               >
@@ -435,9 +435,9 @@ export function SweepDialog() {
                   <label 
                     key={path.entityId}
                     className={`
-                      flex items-center gap-3 p-2 rounded cursor-pointer transition-colors
+                      flex items-center gap-3 p-2 cursor-pointer transition-colors
                       ${selectedPath === path.entityId 
-                        ? 'bg-green-500/20 border border-green-500/50' 
+                        ? 'bg-cad-accent/20 border border-cad-accent/50' 
                         : 'hover:bg-cad-panel border border-transparent'}
                     `}
                   >
@@ -449,12 +449,12 @@ export function SweepDialog() {
                       className="sr-only"
                     />
                     <div className={`
-                      w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors
+                      w-4 h-4 border-2 flex items-center justify-center transition-colors
                       ${selectedPath === path.entityId 
-                        ? 'bg-green-500 border-green-500' 
+                        ? 'bg-cad-accent border-cad-accent' 
                         : 'border-cad-border'}
                     `}>
-                      {selectedPath === path.entityId && <div className="w-2 h-2 bg-white rounded-full" />}
+                      {selectedPath === path.entityId && <div className="w-2 h-2 bg-white" />}
                     </div>
                     <div className="flex items-center gap-2 text-cad-text-dim">
                       {getEntityIcon(path.entityType)}
@@ -471,18 +471,18 @@ export function SweepDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Operation
             </label>
-            <div className="grid grid-cols-4 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-4 gap-1 bg-white p-1">
               {[
                 { value: 'new', label: 'New', icon: <Plus size={14} /> },
-                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-green-400" /> },
-                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-red-400" /> },
-                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-purple-400" /> },
+                { value: 'add', label: 'Add', icon: <Plus size={14} className="text-cad-accent" /> },
+                { value: 'remove', label: 'Remove', icon: <Minus size={14} className="text-cad-accent" /> },
+                { value: 'intersect', label: 'Intersect', icon: <Maximize2 size={14} className="text-cad-accent" /> },
               ].map((op) => (
                 <button
                   key={op.value}
                   onClick={() => setOperation(op.value as OperationType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${operation === op.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -497,13 +497,13 @@ export function SweepDialog() {
           
           {/* Merge Scope (for add/remove/intersect) */}
           {operation !== 'new' && availableBodies.length > 0 && (
-            <div className="space-y-2 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+            <div className="space-y-2 p-3 bg-white/50 border border-cad-border">
               <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={mergeWithAll}
                   onChange={(e) => setMergeWithAll(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                 />
                 <span className="text-sm text-cad-text">Merge with all intersecting parts</span>
               </label>
@@ -511,13 +511,13 @@ export function SweepDialog() {
           )}
           
           {/* Orientation Options */}
-          <div className="space-y-3 p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+          <div className="space-y-3 p-3 bg-white/50 border border-cad-border">
             <label className="flex items-center gap-2 text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               <RotateCcw size={12} />
               Profile Orientation
             </label>
             
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'follow-path', label: 'Follow Path', icon: <CornerUpRight size={14} /> },
                 { value: 'fixed', label: 'Fixed', icon: <Lock size={14} /> },
@@ -527,9 +527,9 @@ export function SweepDialog() {
                   key={ori.value}
                   onClick={() => setOrientation(ori.value as OrientationType)}
                   className={`
-                    flex flex-col items-center gap-1 p-2 rounded transition-colors text-xs
+                    flex flex-col items-center gap-1 p-2 transition-colors text-xs
                     ${orientation === ori.value 
-                      ? 'bg-green-500 text-white' 
+                      ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
                   `}
                 >
@@ -549,7 +549,7 @@ export function SweepDialog() {
             <label className="block text-xs font-medium text-cad-text-dim uppercase tracking-wide">
               Output Type
             </label>
-            <div className="grid grid-cols-3 gap-1 bg-cad-darker p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-white p-1">
               {[
                 { value: 'solid', label: 'Solid' },
                 { value: 'surface', label: 'Surface' },
@@ -559,7 +559,7 @@ export function SweepDialog() {
                   key={type.value}
                   onClick={() => setSweepType(type.value as SweepType)}
                   className={`
-                    p-2 rounded transition-colors text-xs
+                    p-2 transition-colors text-xs
                     ${sweepType === type.value 
                       ? 'bg-cad-accent text-white' 
                       : 'hover:bg-cad-panel text-cad-text-dim'}
@@ -572,7 +572,7 @@ export function SweepDialog() {
             
             {/* Thin sweep options */}
             {sweepType === 'thin' && (
-              <div className="p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+              <div className="p-3 bg-white/50 border border-cad-border">
                 <label className="block text-xs text-cad-text-dim mb-1">Wall Thickness (mm)</label>
                 <input
                   type="number"
@@ -580,7 +580,7 @@ export function SweepDialog() {
                   onChange={(e) => setWallThickness(parseFloat(e.target.value) || 0)}
                   min={0.1}
                   step={0.5}
-                  className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                  className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                 />
               </div>
             )}
@@ -589,13 +589,13 @@ export function SweepDialog() {
           {/* Advanced Options */}
           <div className="space-y-3">
             {/* Twist along path */}
-            <div className="p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+            <div className="p-3 bg-white/50 border border-cad-border">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={useTwist}
                   onChange={(e) => setUseTwist(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                 />
                 <span className="text-sm text-cad-text">Twist along path</span>
               </label>
@@ -608,7 +608,7 @@ export function SweepDialog() {
                     value={twistAngle}
                     onChange={(e) => setTwistAngle(parseFloat(e.target.value) || 0)}
                     step={15}
-                    className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                    className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                   />
                   <p className="text-xs text-cad-text-dim mt-1">
                     Profile rotates {twistAngle}° over the length of the path
@@ -618,13 +618,13 @@ export function SweepDialog() {
             </div>
             
             {/* Scale along path */}
-            <div className="p-3 bg-cad-darker/50 rounded-lg border border-cad-border">
+            <div className="p-3 bg-white/50 border border-cad-border">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={useScale}
                   onChange={(e) => setUseScale(e.target.checked)}
-                  className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                  className="w-4 h-4 border-cad-border bg-white"
                 />
                 <span className="text-sm text-cad-text">Scale along path</span>
               </label>
@@ -639,7 +639,7 @@ export function SweepDialog() {
                     min={0.1}
                     max={5}
                     step={0.1}
-                    className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded text-sm focus:border-cad-accent"
+                    className="w-full px-3 py-2 bg-white border border-cad-border text-sm focus:border-cad-accent"
                   />
                   <p className="text-xs text-cad-text-dim mt-1">
                     Profile scales from 1.0 to {endScale.toFixed(1)} ({endScale < 1 ? 'tapers' : endScale > 1 ? 'expands' : 'constant'})
@@ -650,22 +650,22 @@ export function SweepDialog() {
           </div>
           
           {/* Preview Toggle */}
-          <div className="flex items-center justify-between p-2 bg-cad-darker/50 rounded-lg">
+          <div className="flex items-center justify-between p-2 bg-white/50">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showPreview}
                 onChange={(e) => setShowPreview(e.target.checked)}
-                className="w-4 h-4 rounded border-cad-border bg-cad-darker"
+                className="w-4 h-4 border-cad-border bg-white"
               />
               <span className="text-sm text-cad-text">Show preview</span>
             </label>
           </div>
           
           {/* Summary */}
-          <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30">
-            <h4 className="text-xs font-medium text-green-300 mb-2">Summary</h4>
-            <ul className="text-xs text-green-200/70 space-y-1">
+          <div className="p-3 bg-white border border-cad-border">
+            <h4 className="text-xs font-medium text-cad-accent mb-2">Summary</h4>
+            <ul className="text-xs text-cad-accent space-y-1">
               <li>• Profile: {selectedProfile ? availableProfiles.find(p => p.entityId === selectedProfile)?.displayName || 'Selected' : 'None'}</li>
               <li>• Path: {selectedPath ? availablePaths.find(p => p.entityId === selectedPath)?.displayName || 'Selected' : 'None'}</li>
               <li>• Operation: {operation.charAt(0).toUpperCase() + operation.slice(1)}</li>
@@ -678,10 +678,10 @@ export function SweepDialog() {
         </div>
         
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-cad-darker/50">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-cad-border bg-white/50">
           <div className="text-xs text-cad-text-dim">
             {!isValid && (
-              <span className="text-amber-400 flex items-center gap-1">
+              <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
                 {!selectedProfile ? 'Select a profile' : 'Select a path'}
               </span>
@@ -690,7 +690,7 @@ export function SweepDialog() {
           <div className="flex gap-2">
             <button
               onClick={closeDialog}
-              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border rounded transition-colors"
+              className="px-4 py-2 text-sm bg-cad-panel hover:bg-cad-border transition-colors"
             >
               Cancel
             </button>
@@ -698,9 +698,9 @@ export function SweepDialog() {
               onClick={handleCreate}
               disabled={!isValid}
               className={`
-                px-4 py-2 text-sm rounded transition-colors flex items-center gap-2
+                px-4 py-2 text-sm transition-colors flex items-center gap-2
                 ${isValid 
-                  ? 'bg-green-500 hover:bg-green-600 text-white' 
+                  ? 'bg-cad-accent hover:bg-cad-accent-hover text-white' 
                   : 'bg-cad-border text-cad-text-dim cursor-not-allowed'}
               `}
             >

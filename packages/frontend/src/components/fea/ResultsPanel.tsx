@@ -100,7 +100,7 @@ export function ResultsPanel() {
   return (
     <div className="p-4 space-y-4">
       {/* Summary Stats */}
-      <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg space-y-2">
+      <div className="p-3 bg-green-500/10 border border-green-500/30 space-y-2">
         <div className="flex items-center gap-2 text-green-400 font-medium text-sm">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -118,13 +118,13 @@ export function ResultsPanel() {
           Key Results
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-2 bg-cad-darker rounded-lg">
+          <div className="p-2 bg-white">
             <div className="text-xs text-cad-text-dim">Max Displacement</div>
             <div className="text-sm font-medium text-cad-text">
               {formatDisplacement(summary.maxDisplacement.magnitude)}
             </div>
           </div>
-          <div className="p-2 bg-cad-darker rounded-lg">
+          <div className="p-2 bg-white">
             <div className="text-xs text-cad-text-dim">Max Stress</div>
             <div className="text-sm font-medium text-cad-text">
               {formatStress(summary.maxVonMisesStress.value)}
@@ -141,7 +141,7 @@ export function ResultsPanel() {
         <select
           value={activeField}
           onChange={(e) => setActiveResultField(e.target.value as ResultField)}
-          className="w-full px-3 py-2 bg-cad-darker border border-cad-border rounded-lg text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          className="w-full px-3 py-2 bg-white border border-cad-border text-sm text-cad-text focus:border-blue-500 focus:ring-1 focus:ring-cad-accent"
         >
           {FieldOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -157,9 +157,9 @@ export function ResultsPanel() {
           <label className="text-xs font-medium text-cad-text-dim uppercase tracking-wide">
             Color Legend
           </label>
-          <div className="bg-cad-darker rounded-lg p-3">
+          <div className="bg-white p-3">
             <div
-              className="h-4 rounded"
+              className="h-4"
               style={{ background: `linear-gradient(to right, ${gradientStops})` }}
             />
             <div className="flex justify-between mt-1 text-xs text-cad-text">
@@ -185,9 +185,9 @@ export function ResultsPanel() {
                 key={opt.value}
                 onClick={() => setColormap(opt.value)}
                 className={`
-                  px-2 py-1 rounded text-xs transition-all
+                  px-2 py-1 text-xs transition-all
                   ${colormap === opt.value
-                    ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-cad-dark'
+                    ? 'ring-2 ring-cad-accent ring-offset-1 ring-offset-white'
                     : 'hover:opacity-80'
                   }
                 `}
@@ -213,7 +213,7 @@ export function ResultsPanel() {
             step="1"
             value={deformationScale}
             onChange={(e) => setDeformationScale(parseInt(e.target.value))}
-            className="flex-1 h-2 bg-cad-border rounded-lg appearance-none cursor-pointer accent-blue-500"
+            className="flex-1 h-2 bg-cad-border appearance-none cursor-pointer accent-cad-accent"
           />
           <input
             type="number"
@@ -221,25 +221,25 @@ export function ResultsPanel() {
             max="1000"
             value={deformationScale}
             onChange={(e) => setDeformationScale(parseInt(e.target.value) || 1)}
-            className="w-16 px-2 py-1 bg-cad-darker border border-cad-border rounded text-sm text-cad-text text-center"
+            className="w-16 px-2 py-1 bg-white border border-cad-border text-sm text-cad-text text-center"
           />
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setDeformationScale(1)}
-            className={`flex-1 py-1 rounded text-xs ${deformationScale === 1 ? 'bg-blue-500/20 text-blue-400' : 'bg-cad-border text-cad-text'}`}
+            className={`flex-1 py-1 text-xs ${deformationScale === 1 ? 'bg-cad-accent/20 text-cad-accent' : 'bg-cad-border text-cad-text'}`}
           >
             1× (True)
           </button>
           <button
             onClick={() => setDeformationScale(10)}
-            className={`flex-1 py-1 rounded text-xs ${deformationScale === 10 ? 'bg-blue-500/20 text-blue-400' : 'bg-cad-border text-cad-text'}`}
+            className={`flex-1 py-1 text-xs ${deformationScale === 10 ? 'bg-cad-accent/20 text-cad-accent' : 'bg-cad-border text-cad-text'}`}
           >
             10×
           </button>
           <button
             onClick={() => setDeformationScale(50)}
-            className={`flex-1 py-1 rounded text-xs ${deformationScale === 50 ? 'bg-blue-500/20 text-blue-400' : 'bg-cad-border text-cad-text'}`}
+            className={`flex-1 py-1 text-xs ${deformationScale === 50 ? 'bg-cad-accent/20 text-cad-accent' : 'bg-cad-border text-cad-text'}`}
           >
             50×
           </button>
@@ -252,30 +252,30 @@ export function ResultsPanel() {
           Display Options
         </label>
         <div className="space-y-1">
-          <label className="flex items-center gap-2 p-2 hover:bg-cad-darker rounded cursor-pointer">
+          <label className="flex items-center gap-2 p-2 hover:bg-white cursor-pointer">
             <input
               type="checkbox"
               checked={showDeformed}
               onChange={toggleDeformed}
-              className="w-4 h-4 rounded border-cad-border text-blue-500 focus:ring-blue-500 focus:ring-offset-cad-dark"
+              className="w-4 h-4 border-cad-border text-cad-accent focus:ring-cad-accent focus:ring-offset-white"
             />
             <span className="text-xs text-cad-text">Show Deformed Shape</span>
           </label>
-          <label className="flex items-center gap-2 p-2 hover:bg-cad-darker rounded cursor-pointer">
+          <label className="flex items-center gap-2 p-2 hover:bg-white cursor-pointer">
             <input
               type="checkbox"
               checked={showMesh}
               onChange={toggleMeshOverlay}
-              className="w-4 h-4 rounded border-cad-border text-blue-500 focus:ring-blue-500 focus:ring-offset-cad-dark"
+              className="w-4 h-4 border-cad-border text-cad-accent focus:ring-cad-accent focus:ring-offset-white"
             />
             <span className="text-xs text-cad-text">Show Mesh Edges</span>
           </label>
-          <label className="flex items-center gap-2 p-2 hover:bg-cad-darker rounded cursor-pointer">
+          <label className="flex items-center gap-2 p-2 hover:bg-white cursor-pointer">
             <input
               type="checkbox"
               checked={showLegend}
               onChange={toggleLegend}
-              className="w-4 h-4 rounded border-cad-border text-blue-500 focus:ring-blue-500 focus:ring-offset-cad-dark"
+              className="w-4 h-4 border-cad-border text-cad-accent focus:ring-cad-accent focus:ring-offset-white"
             />
             <span className="text-xs text-cad-text">Show Legend</span>
           </label>
@@ -284,7 +284,7 @@ export function ResultsPanel() {
 
       {/* Probe Results */}
       {probeLocation && probeValue && (
-        <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg space-y-2">
+        <div className="p-3 bg-purple-500/10 border border-purple-500/30 space-y-2">
           <div className="flex items-center gap-2 text-purple-400 font-medium text-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -308,7 +308,7 @@ export function ResultsPanel() {
       <div className="pt-2 space-y-2">
         <button
           onClick={clearResults}
-          className="w-full py-2 px-4 text-red-400 border border-red-500/30 rounded-lg text-xs hover:bg-red-500/10 transition-colors"
+          className="w-full py-2 px-4 text-red-400 border border-red-500/30 text-xs hover:bg-red-500/10 transition-colors"
         >
           Clear Results
         </button>
