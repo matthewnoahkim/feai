@@ -1,28 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "npm install && npm run build",
+  "buildCommand": "npm run db:generate && npm run build",
+  "installCommand": "npm install",
   "outputDirectory": "packages/frontend/dist",
-  "builds": [
-    {
-      "src": "packages/backend/dist/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30,
-        "includeFiles": [
-          "packages/backend/prisma/**",
-          "packages/backend/node_modules/.prisma/**",
-          "packages/frontend/dist/**"
-        ]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "packages/backend/dist/index.js"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
 }
