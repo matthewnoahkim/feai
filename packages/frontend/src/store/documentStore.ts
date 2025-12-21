@@ -2554,6 +2554,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           // Sketches don't create geometry directly
           break
           
+        case 'import': {
+          // Preserve imported parts - find the corresponding part by part ID stored in feature parameters
+          const partId = feature.parameters.partId
+          const existingPart = partStudio.parts.find(p => p.id === partId)
+          if (existingPart) {
+            parts.push(existingPart)
+            currentBody = existingPart
+          }
+          break
+        }
+          
         case 'extrude': {
           const featureParams = feature.parameters
           const sketchId = featureParams.sketchId
@@ -2947,7 +2958,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             type: 'import',
             name: `Imported: ${name}`,
             suppressed: false,
-            parameters: { filename: name }
+            parameters: { filename: name, partId: partId }
           }],
           parts: [...ps.parts, {
             id: partId,

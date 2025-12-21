@@ -181,7 +181,7 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
       console.error('Error creating geometry:', error)
       return null
     }
-  }, [part.mesh])
+  }, [part.mesh, part.id, part.mesh?.vertices?.length])
   
   // Handle click
   const handleClick = useCallback((e: ThreeEvent<MouseEvent>) => {

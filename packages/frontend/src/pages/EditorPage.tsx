@@ -74,7 +74,8 @@ export function EditorPage() {
     } else if (!document) {
       createNewDocument('New Part')
     }
-  }, [projectId, user, fetchProject, document, createNewDocument, loadDocumentFromData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, user])
 
   // Auto-save project data periodically
   useEffect(() => {

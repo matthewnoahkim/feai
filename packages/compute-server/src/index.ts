@@ -10,7 +10,7 @@ import { spawn } from 'child_process';
 import { writeFileSync, readFileSync, unlinkSync, existsSync, mkdirSync, rmSync } from 'fs';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { CalculiXInputWriter, CalculiXResultParser } from '@feai/kernel';
+import { CalculiXInputWriter, FRDParser } from '@feai/kernel';
 import type { FEMesh, SimulationSetup, FEAResults } from '@feai/shared';
 
 const app = express();
@@ -179,7 +179,8 @@ app.post('/solve', async (req, res) => {
     console.log(`[${jobId}] Parsing results...`);
 
     // Parse results
-    const results: FEAResults = CalculiXResultParser.parseResults(frdContent, datContent);
+    const parsedResults = FRDParser.parse(frdContent, datContent);
+    const results: FEAResults = convertToFEAResults(parsedResults, mesh);
 
     console.log(`[${jobId}] Results parsed successfully`);
 
@@ -234,6 +235,92 @@ function extractWarnings(datContent: string): string[] {
   }
   
   return warnings;
+}
+
+// Convert parsed FRD results to FEAResults format
+function convertToFEAResults(parsed: any, mesh: FEMesh): FEAResults {
+  const displacements: any[] = [];
+  const stresses: any[] = [];
+
+  // Convert displacements
+  for (const [nodeId, values] of parsed.displacements) {
+    displacements.push({
+      nodeId,
+      values: values, // [Ux, Uy, Uz, magnitude]
+    });
+  }
+
+  // Convert von Mises stresses
+  for (const [nodeId, value] of parsed.vonMisesStress) {
+    stresses.push({
+      nodeId,
+      values: [value],
+    });
+  }
+
+  // Calculate min/max
+  const dispMagnitudes = displacements.map(d => d.values[3]);
+  const stressValues = stresses.map(s => s.values[0]);
+
+  const maxDispMagnitude = Math.max(...dispMagnitudes);
+  const maxStressValue = Math.max(...stressValues);
+
+  // Find node with max displacement
+  const maxDispNode = displacements.find(d => d.values[3] === maxDispMagnitude);
+  
+  // Find node with max stress
+  const maxStressNode = stresses.find(s => s.values[0] === maxStressValue);
+
+  return {
+    simulationId: '',
+    analysisType: 'static',
+    timestamp: new Date().toISOString(),
+    solveTime: 0,
+    meshNodeCount: mesh.nodeCount,
+    meshElementCount: mesh.elementCount,
+    staticResults: {
+      displacements: {
+        name: 'Displacement',
+        unit: 'mm',
+        nodeValues: displacements,
+        componentNames: ['Ux', 'Uy', 'Uz', 'Magnitude'],
+        min: Math.min(...dispMagnitudes),
+        max: maxDispMagnitude,
+      },
+      vonMisesStress: {
+        name: 'Von Mises Stress',
+        unit: 'MPa',
+        nodeValues: stresses,
+        componentNames: ['Mises'],
+        min: Math.min(...stressValues),
+        max: maxStressValue,
+      },
+      stresses: {
+        name: 'Stress Tensor',
+        unit: 'MPa',
+        elementValues: [],
+        componentNames: ['Sxx', 'Syy', 'Szz', 'Sxy', 'Syz', 'Szx', 'Mises'],
+        min: Math.min(...stressValues),
+        max: maxStressValue,
+      },
+      summary: {
+        maxDisplacement: {
+          magnitude: maxDispMagnitude,
+          nodeId: maxDispNode?.nodeId || 0,
+          location: { x: 0, y: 0, z: 0 },
+        },
+        maxVonMisesStress: {
+          value: maxStressValue,
+          nodeId: maxStressNode?.nodeId || 0,
+          location: { x: 0, y: 0, z: 0 },
+        },
+        minVonMisesStress: {
+          value: Math.min(...stressValues),
+          nodeId: 0,
+        },
+      },
+    },
+  };
 }
 
 // Graceful shutdown

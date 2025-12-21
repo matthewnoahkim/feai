@@ -2365,8 +2365,8 @@ export function SketchCanvas() {
     if (!ctx) return
     
     const render = () => {
-      // Clear canvas
-      ctx.fillStyle = '#1a1d21'
+      // Clear canvas with white background
+      ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       
       // Draw grid
