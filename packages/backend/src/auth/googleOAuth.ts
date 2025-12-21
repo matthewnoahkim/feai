@@ -115,12 +115,33 @@ class InMemoryTokenStore implements TokenStore {
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 
-  `${process.env.BASE_URL || 'http://localhost:3001'}/auth/google/callback`;
+
+/**
+ * Dynamically determine the redirect URI based on environment
+ * - Production (Vercel): https://feai.vercel.app/auth/google/callback
+ * - Development (Local): http://localhost:3001/auth/google/callback
+ */
+function getRedirectUri(): string {
+  // If explicitly set in env, use that
+  if (process.env.GOOGLE_REDIRECT_URI) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
+  
+  // Auto-detect based on environment
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}`
+    : process.env.BASE_URL || 'http://localhost:3001';
+    
+  return `${baseUrl}/auth/google/callback`;
+}
+
+const GOOGLE_REDIRECT_URI = getRedirectUri();
 
 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
   console.warn('⚠️  WARNING: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET not set');
   console.warn('⚠️  OAuth will not work until these are configured');
+} else {
+  console.log('✅ Google OAuth configured with redirect URI:', GOOGLE_REDIRECT_URI);
 }
 
 /**
