@@ -3,10 +3,12 @@
  * Express.js backend serving both API and frontend static files
  */
 
-// Load environment variables from root .env file
-import { config } from 'dotenv';
-import path from 'path';
-config({ path: path.resolve(__dirname, '../../../.env') });
+// Load environment variables from root .env file (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  const dotenv = require('dotenv');
+  const path = require('path');
+  dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+}
 
 import express from 'express';
 import cors from 'cors';
