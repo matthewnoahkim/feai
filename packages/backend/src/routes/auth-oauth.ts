@@ -5,6 +5,7 @@
  */
 
 import express, { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import {
   getGoogleAuthUrl,
   handleGoogleCallback,
@@ -17,6 +18,14 @@ import { requireAuth } from '../auth/middleware';
 import { db } from '../db';
 
 const router = express.Router();
+
+// JWT Secret from environment
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'change-this-secret-in-production';
+
+if (!JWT_SECRET || JWT_SECRET === 'change-this-secret-in-production') {
+  console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure default.');
+  console.warn('⚠️  Set JWT_SECRET environment variable in production!');
+}
 
 /**
  * GET /auth/google
@@ -32,10 +41,23 @@ router.get('/google', (req: Request, res: Response) => {
   try {
     // Generate and store CSRF state token
     const state = generateState();
-    (req.session as any).oauthState = state;
+    
+    // For serverless: Store state in a signed cookie instead of session
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000, // 10 minutes
+      signed: true,
+    });
+    
+    // Also store in session if available (for local development)
+    if (req.session) {
+      (req.session as any).oauthState = state;
+    }
 
-    // Generate auth URL
-    const authUrl = getGoogleAuthUrl(req);
+    // Generate auth URL using the state directly
+    const authUrl = getGoogleAuthUrl(state);
 
     console.log('🔐 Redirecting to Google OAuth...');
     res.redirect(authUrl);
@@ -62,8 +84,38 @@ router.get('/google', (req: Request, res: Response) => {
  */
 router.get('/google/callback', async (req: Request, res: Response) => {
   try {
+    // Validate state parameter (CSRF protection)
+    const { code, state, error } = req.query;
+
+    if (error) {
+      throw new Error(`OAuth error from Google: ${error}`);
+    }
+
+    if (!code || typeof code !== 'string') {
+      throw new Error('No authorization code provided');
+    }
+
+    if (!state || typeof state !== 'string') {
+      throw new Error('No state parameter provided');
+    }
+
+    // Get state from signed cookie or session
+    const cookieState = req.signedCookies?.oauth_state;
+    const sessionState = (req.session as any)?.oauthState;
+    const storedState = cookieState || sessionState;
+
+    if (!storedState) {
+      throw new Error('No stored state found - session may have expired');
+    }
+
+    // Clear the state
+    res.clearCookie('oauth_state');
+    if (req.session) {
+      delete (req.session as any).oauthState;
+    }
+
     // Handle OAuth callback and get user + tokens
-    const { user: googleUser, tokens } = await handleGoogleCallback(req);
+    const { user: googleUser, tokens } = await handleGoogleCallback(code, storedState, state);
 
     // Find or create user in database
     let dbUser = await db.user.findUnique({
@@ -124,21 +176,33 @@ router.get('/google/callback', async (req: Request, res: Response) => {
     
     await tokenStore.saveTokens(dbUser.id, session);
 
-    // Create secure session
-    (req.session as any).userId = dbUser.id;
-    
-    // Save session before redirect
-    req.session.save((err) => {
-      if (err) {
-        console.error('❌ Session save error:', err);
-        return res.redirect('/login?error=' + encodeURIComponent('Failed to create session'));
+    // Create JWT token (instead of session)
+    const jwtToken = jwt.sign(
+      {
+        userId: dbUser.id,
+        email: dbUser.email,
+        googleId: googleUser.sub,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: '7d', // 7 days
+        issuer: 'feai-backend',
       }
+    );
 
-      console.log(`✅ Authentication successful for: ${googleUser.email}`);
-      
-      // Redirect to dashboard
-      res.redirect('/dashboard');
-    });
+    console.log(`✅ Authentication successful for: ${googleUser.email}`);
+    
+    // Redirect to frontend callback page with user data
+    const callbackUrl = new URL('/auth/callback', `${req.protocol}://${req.get('host')}`);
+    callbackUrl.searchParams.set('token', jwtToken);
+    callbackUrl.searchParams.set('userId', dbUser.id);
+    callbackUrl.searchParams.set('email', dbUser.email);
+    callbackUrl.searchParams.set('name', dbUser.name);
+    if (dbUser.photoURL) {
+      callbackUrl.searchParams.set('photoURL', dbUser.photoURL);
+    }
+    
+    res.redirect(callbackUrl.toString());
 
   } catch (error) {
     console.error('❌ OAuth callback error:', error);

@@ -205,11 +205,16 @@ export function generateState(): string {
  * 
  * This creates the URL to redirect users to Google's consent screen
  * 
- * @param req - Express request (must have session with state)
+ * @param stateOrReq - Either a state string or Express request with session
  * @returns Authorization URL
  * 
  * Usage:
  * ```ts
+ * // With state string (serverless-friendly)
+ * const authUrl = getGoogleAuthUrl(state);
+ * res.redirect(authUrl);
+ * 
+ * // With request (traditional session-based)
  * const authUrl = getGoogleAuthUrl(req);
  * res.redirect(authUrl);
  * ```
@@ -221,14 +226,18 @@ export function generateState(): string {
  *   - Otherwise, use prompt=select_account or omit it
  * - state: CSRF protection token (must be validated on callback)
  */
-export function getGoogleAuthUrl(req: Request): string {
+export function getGoogleAuthUrl(stateOrReq: string | Request): string {
   const oauth2Client = createOAuth2Client();
   
-  // Get state from session (should be set by the route handler)
-  const state = (req.session as any)?.oauthState;
-  
-  if (!state) {
-    throw new Error('OAuth state not found in session. Call generateState() first.');
+  // Get state from either string parameter or request session
+  let state: string;
+  if (typeof stateOrReq === 'string') {
+    state = stateOrReq;
+  } else {
+    state = (stateOrReq.session as any)?.oauthState;
+    if (!state) {
+      throw new Error('OAuth state not found in session. Call generateState() first.');
+    }
   }
 
   const authUrl = oauth2Client.generateAuthUrl({
@@ -268,12 +277,14 @@ export function getGoogleAuthUrl(req: Request): string {
  * This exchanges the authorization code for access/refresh tokens
  * and fetches the user's profile information
  * 
- * @param req - Express request with query params (code, state)
+ * @param code - Authorization code from Google
+ * @param storedState - State stored in cookie/session
+ * @param receivedState - State received from Google callback
  * @returns User profile and tokens
  * 
  * Usage:
  * ```ts
- * const { user, tokens } = await handleGoogleCallback(req);
+ * const { user, tokens } = await handleGoogleCallback(code, storedState, receivedState);
  * ```
  * 
  * Error handling:
@@ -281,30 +292,74 @@ export function getGoogleAuthUrl(req: Request): string {
  * - Throws if code exchange fails
  * - Throws if user profile fetch fails
  */
+export async function handleGoogleCallback(
+  code: string,
+  storedState: string,
+  receivedState: string
+): Promise<{
+  user: GoogleUserProfile;
+  tokens: GoogleTokens;
+}>;
+
+/**
+ * Handle OAuth callback from Google (Request-based, for backward compatibility)
+ * 
+ * @param req - Express request with query params (code, state)
+ * @returns User profile and tokens
+ */
 export async function handleGoogleCallback(req: Request): Promise<{
   user: GoogleUserProfile;
   tokens: GoogleTokens;
+}>;
+
+// Implementation
+export async function handleGoogleCallback(
+  codeOrReq: string | Request,
+  storedState?: string,
+  receivedState?: string
+): Promise<{
+  user: GoogleUserProfile;
+  tokens: GoogleTokens;
 }> {
-  const { code, state, error } = req.query;
+  let code: string;
+  let state: string;
+  let sessionState: string;
 
-  // Handle OAuth errors from Google
-  if (error) {
-    throw new Error(`OAuth error from Google: ${error}`);
-  }
+  // Handle both function signatures
+  if (typeof codeOrReq === 'string') {
+    // New signature: (code, storedState, receivedState)
+    code = codeOrReq;
+    sessionState = storedState!;
+    state = receivedState!;
+  } else {
+    // Old signature: (req)
+    const req = codeOrReq;
+    const { code: queryCode, state: queryState, error } = req.query;
 
-  // Validate authorization code
-  if (!code || typeof code !== 'string') {
-    throw new Error('No authorization code provided');
+    // Handle OAuth errors from Google
+    if (error) {
+      throw new Error(`OAuth error from Google: ${error}`);
+    }
+
+    // Validate authorization code
+    if (!queryCode || typeof queryCode !== 'string') {
+      throw new Error('No authorization code provided');
+    }
+
+    code = queryCode;
+    state = typeof queryState === 'string' ? queryState : '';
+    sessionState = (req.session as any)?.oauthState || '';
+
+    // Clear the state from session (one-time use)
+    if (req.session) {
+      delete (req.session as any).oauthState;
+    }
   }
 
   // Validate state parameter (CSRF protection)
-  const sessionState = (req.session as any)?.oauthState;
   if (!sessionState || sessionState !== state) {
     throw new Error('Invalid state parameter - possible CSRF attack');
   }
-
-  // Clear the state from session (one-time use)
-  delete (req.session as any).oauthState;
 
   const oauth2Client = createOAuth2Client();
 

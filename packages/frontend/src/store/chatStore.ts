@@ -16,7 +16,7 @@ export interface ChatMessage {
 
 export interface CadAction {
   id: string
-  type: 'sketch' | 'extrude' | 'revolve' | 'fillet' | 'chamfer' | 'shell' | 'pattern' | 'mirror' | 'delete' | 'undo' | 'loft' | 'sweep' | 'primitive' | 'linear-pattern' | 'linearPattern' | 'circular-pattern' | 'circularPattern' | 'mirror-feature' | 'import'
+  type: 'sketch' | 'extrude' | 'revolve' | 'fillet' | 'chamfer' | 'shell' | 'pattern' | 'mirror' | 'delete' | 'undo' | 'loft' | 'sweep' | 'primitive' | 'linear-pattern' | 'linearPattern' | 'circular-pattern' | 'circularPattern' | 'mirror-feature' | 'import' | 'feature' | 'document' | 'analysis' | 'export'
   endpoint: string
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: Record<string, any>
@@ -83,31 +83,17 @@ const DEFAULT_CONTEXT: ChatContext = {
   modelDescription: 'Empty model'
 }
 
-// Initial welcome message
+// Initial welcome message - empty to start clean
 const WELCOME_MESSAGE: Omit<ChatMessage, 'id' | 'timestamp'> = {
   role: 'assistant',
-  content: `👋 **Welcome to CAD Assistant!**
-
-I can help you create and modify 3D geometry using natural language commands. Try things like:
-
-• "Create a 50mm cube"
-• "Add a cylinder 30mm diameter and 40mm tall"
-• "Fillet all edges with 3mm radius"
-• "Extrude a circle 25mm on the top face"
-
-**Tips:**
-- Be specific about dimensions and positions
-- Reference faces by name (top, front, right) or by selection
-- Ask me to undo if you don't like a result
-
-What would you like to create today?`,
+  content: `I can help you create and modify 3D geometry using natural language commands.`,
   status: 'success'
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   // Initial state
   messages: [],
-  isOpen: false,
+  isOpen: true, // Open by default (like Cursor)
   isTyping: false,
   isExecuting: false,
   context: DEFAULT_CONTEXT,

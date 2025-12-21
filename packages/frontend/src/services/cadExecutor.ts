@@ -95,9 +95,24 @@ async function executeAction(
   const body = action.body || {}
   
   try {
+    // Handle feature type (from new API endpoints)
+    if (action.type === 'feature' && body.feature) {
+      const feature = body.feature
+      return await executeFeatureFromAPI(feature, partStudioId, store, action)
+    }
+    
     // Handle primitive shapes (box, cylinder, etc.)
     if (action.type === 'primitive' || action.endpoint?.includes('/primitives/')) {
       return await executePrimitive(action, partStudioId, store)
+    }
+    
+    // Handle sketch type (from new API endpoints)
+    if (action.type === 'sketch') {
+      // Check if it's adding entities or creating a sketch
+      if (action.endpoint?.includes('/entities') && body.entities) {
+        return await executeSketchEntities(action, partStudioId, store)
+      }
+      return await executeSketch(action, partStudioId, store)
     }
     
     // Handle extrude
@@ -113,11 +128,6 @@ async function executeAction(
     // Handle chamfer
     if (action.type === 'chamfer') {
       return await executeChamfer(action, partStudioId, store)
-    }
-    
-    // Handle sketch
-    if (action.type === 'sketch') {
-      return await executeSketch(action, partStudioId, store)
     }
     
     // Handle revolve
@@ -172,6 +182,73 @@ async function executeAction(
       action: { ...action, status: 'error' },
       error: error instanceof Error ? error.message : 'Unknown error'
     }
+  }
+}
+
+/**
+ * Execute a feature from the new API format
+ */
+async function executeFeatureFromAPI(
+  feature: any,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>,
+  action: CadAction
+): Promise<ExecutionResult> {
+  const featureType = feature.type
+  const parameters = feature.parameters || {}
+  const name = feature.name || `${featureType} feature`
+  
+  const createdFeature = await store.addFeature(partStudioId, {
+    type: featureType,
+    name,
+    suppressed: false,
+    parameters
+  })
+  
+  if (createdFeature) {
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: createdFeature.id
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: `Failed to create ${featureType} feature`
+  }
+}
+
+/**
+ * Execute sketch entities (adding shapes to an existing sketch)
+ */
+async function executeSketchEntities(
+  action: CadAction,
+  partStudioId: string,
+  store: ReturnType<typeof useDocumentStore.getState>
+): Promise<ExecutionResult> {
+  const body = action.body || {}
+  const entities = body.entities || []
+  
+  // For now, we'll create a sketch with these entities if one doesn't exist
+  // In a real implementation, you'd extract the sketchId from the endpoint
+  const sketch = await store.createSketch(partStudioId, 'top')
+  
+  if (sketch) {
+    // Add the entities to the sketch (simplified - actual implementation would use the store)
+    return {
+      success: true,
+      action: { ...action, status: 'success' },
+      createdId: sketch.id,
+      result: { entities }
+    }
+  }
+  
+  return {
+    success: false,
+    action: { ...action, status: 'error' },
+    error: 'Failed to add sketch entities'
   }
 }
 

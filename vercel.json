@@ -1,20 +1,28 @@
 {
   "version": 2,
   "buildCommand": "npm install && npm run build",
-  "installCommand": "npm install",
+  "outputDirectory": "packages/frontend/dist",
   "builds": [
     {
-      "src": "packages/backend/src/index.ts",
+      "src": "packages/backend/dist/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["packages/backend/prisma/**", "packages/frontend/dist/**"]
+        "maxDuration": 30,
+        "includeFiles": [
+          "packages/backend/prisma/**",
+          "packages/backend/node_modules/.prisma/**",
+          "packages/frontend/dist/**"
+        ]
       }
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "packages/backend/src/index.ts"
+      "dest": "packages/backend/dist/index.js"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

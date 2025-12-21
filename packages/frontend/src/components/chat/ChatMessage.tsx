@@ -5,7 +5,6 @@
 
 import React from 'react'
 import {
-  Bot,
   User,
   CheckCircle,
   XCircle,
@@ -123,7 +122,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
     <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-assistant'}`}>
       {/* Avatar */}
       <div className={`chat-avatar ${isUser ? 'chat-avatar-user' : 'chat-avatar-assistant'}`}>
-        {isUser ? <User size={16} /> : <Bot size={16} />}
+        {isUser ? <User size={16} /> : <span className="text-xs font-bold">AI</span>}
       </div>
       
       {/* Content */}
@@ -131,7 +130,7 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
         {/* Header */}
         <div className="flex items-center gap-2 mb-1 font-sans">
           <span className="text-xs font-medium">
-            {isUser ? 'You' : 'CAD Assistant'}
+            {isUser ? 'You' : 'AI Assistant'}
           </span>
           <span className="text-[10px] text-cad-text-dim">
             {formatTime(message.timestamp)}

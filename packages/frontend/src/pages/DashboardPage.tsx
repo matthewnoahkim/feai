@@ -6,8 +6,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { useProjectStore, Project } from '../store/projectStore'
-import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock } from 'lucide-react'
+import { useProjectStore } from '../store/projectStore'
+import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, Book } from 'lucide-react'
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -93,11 +93,11 @@ export function DashboardPage() {
                 {user.name?.charAt(0) || 'U'}
               </div>
             )}
-            <span className="font-sans text-sm text-cad-text">{user.name}</span>
+            <span className="font-sans text-sm text-cad-text leading-none">{user.name}</span>
           </div>
           <button
             onClick={signOut}
-            className="px-4 py-2 text-sm font-sans text-cad-text border border-cad-border hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-sm font-sans text-cad-text border border-cad-border hover:bg-gray-50 transition-colors leading-none"
           >
             Sign Out
           </button>
@@ -273,6 +273,19 @@ export function DashboardPage() {
           onClick={() => setActiveMenu(null)}
         />
       )}
+
+      {/* Footer with API Docs link */}
+      <footer className="border-t border-cad-border py-4 px-8 bg-white">
+        <div className="max-w-5xl mx-auto flex justify-center">
+          <button
+            onClick={() => navigate('/api-docs')}
+            className="flex items-center gap-2 text-xs font-sans text-gray-500 hover:text-cad-accent transition-colors"
+          >
+            <Book size={14} />
+            API Documentation
+          </button>
+        </div>
+      </footer>
     </div>
   )
 }

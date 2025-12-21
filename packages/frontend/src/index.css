@@ -21,15 +21,17 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html, body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
   background: var(--cad-bg);
   color: var(--cad-text);
   font-family: Georgia, serif;
+}
+
+#root {
+  width: 100%;
 }
 
 /* Scrollbar */
@@ -239,7 +241,7 @@ kbd {
    ============================================================================ */
 
 .chat-panel {
-  @apply fixed right-0 top-0 bottom-0 w-96 flex flex-col z-50;
+  @apply absolute right-0 top-0 bottom-0 flex flex-col z-50;
   background: var(--cad-panel);
   border-left: 1px solid var(--cad-border);
 }

@@ -28,8 +28,9 @@ import { LinearPatternDialog } from '../components/dialogs/LinearPatternDialog'
 import { CircularPatternDialog } from '../components/dialogs/CircularPatternDialog'
 import { SketchDialog } from '../components/dialogs/SketchDialog'
 import { Notifications } from '../components/Notifications'
-import { ChatPanel, ChatToggleButton } from '../components/chat'
+import { ChatPanel } from '../components/chat'
 import { SimulationPanel } from '../components/fea'
+import { ResizablePanel } from '../components/ResizablePanel'
 import { useDocumentStore } from '../store/documentStore'
 import { useUIStore } from '../store/uiStore'
 import { useProjectStore } from '../store/projectStore'
@@ -47,6 +48,10 @@ export function EditorPage() {
     activeDialog, 
     leftPanelOpen, 
     rightPanelOpen,
+    leftPanelWidth,
+    rightPanelWidth,
+    setLeftPanelWidth,
+    setRightPanelWidth,
     exitSketchMode,
     setActiveTool,
     clearSelection,
@@ -167,9 +172,20 @@ export function EditorPage() {
       {isSketchMode ? <SketchToolbar /> : <Toolbar />}
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Left Panel - Feature Tree */}
-        {leftPanelOpen && <FeatureTree />}
+        {leftPanelOpen && (
+          <ResizablePanel
+            direction="horizontal"
+            side="left"
+            initialSize={leftPanelWidth}
+            minSize={200}
+            maxSize={600}
+            onResize={setLeftPanelWidth}
+          >
+            <FeatureTree />
+          </ResizablePanel>
+        )}
 
         {/* 3D Viewport / Sketch Canvas */}
         <div 
@@ -216,7 +232,21 @@ export function EditorPage() {
         </div>
 
         {/* Right Panel - Properties */}
-        {rightPanelOpen && <PropertyPanel />}
+        {rightPanelOpen && (
+          <ResizablePanel
+            direction="horizontal"
+            side="right"
+            initialSize={rightPanelWidth}
+            minSize={250}
+            maxSize={600}
+            onResize={setRightPanelWidth}
+          >
+            <PropertyPanel />
+          </ResizablePanel>
+        )}
+        
+        {/* AI Chat Assistant */}
+        <ChatPanel />
       </div>
 
       {/* Status Bar */}
@@ -240,10 +270,6 @@ export function EditorPage() {
       
       {/* FEA Simulation Panel */}
       <SimulationPanel />
-      
-      {/* AI Chat Assistant */}
-      <ChatPanel />
-      <ChatToggleButton />
     </Layout>
   )
 }

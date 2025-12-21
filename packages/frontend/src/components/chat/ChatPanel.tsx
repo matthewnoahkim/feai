@@ -5,18 +5,16 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  Bot,
   Send,
-  X,
   Trash2,
   Undo2,
   Loader2,
-  Sparkles,
-  MessageSquare
+  GripVertical
 } from 'lucide-react'
 import { useChatAssistant } from '../../hooks/useChatAssistant'
 import { ChatMessage } from './ChatMessage'
 import { useChatStore } from '../../store/chatStore'
+import { useUIStore } from '../../store/uiStore'
 
 interface QuickActionsProps {
   onSelect: (text: string) => void
@@ -61,9 +59,14 @@ export function ChatPanel() {
     undoLastAction
   } = useChatAssistant()
   
+  const { chatPanelWidth, setChatPanelWidth } = useUIStore()
+  
   const [input, setInput] = useState('')
+  const [isResizing, setIsResizing] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(0)
   
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -94,25 +97,58 @@ export function ChatPanel() {
     }
   }, [handleSubmit])
   
-  const handleQuickAction = useCallback((text: string) => {
-    if (text.toLowerCase().includes('undo')) {
-      undoLastAction()
-    } else {
-      sendMessage(text)
+  // Resize handlers
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+    startXRef.current = e.clientX
+    startWidthRef.current = chatPanelWidth
+  }, [chatPanelWidth])
+  
+  useEffect(() => {
+    if (!isResizing) return
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = startXRef.current - e.clientX
+      const newWidth = Math.max(300, Math.min(800, startWidthRef.current + delta))
+      setChatPanelWidth(newWidth)
     }
-  }, [sendMessage, undoLastAction])
+    
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing, setChatPanelWidth])
   
   if (!isOpen) return null
   
   return (
-    <div className="chat-panel">
+    <div 
+      className="chat-panel"
+      style={{ width: `${chatPanelWidth}px` }}
+    >
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        className={`
+          absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-50
+          hover:bg-cad-accent/30 transition-colors
+          ${isResizing ? 'bg-cad-accent/50' : ''}
+        `}
+        style={{ left: '-2px' }}
+      />
+      
       {/* Header */}
       <div className="chat-panel-header">
         <div className="flex items-center gap-2">
-          <div className="chat-panel-icon">
-            <Sparkles size={16} />
-          </div>
-          <span className="font-serif font-semibold text-sm">CAD Assistant</span>
+          <span className="font-serif font-semibold text-sm">AI Assistant</span>
           {isExecuting && (
             <span className="flex items-center gap-1 text-[10px] text-cad-accent font-sans">
               <Loader2 size={10} className="animate-spin" />
@@ -139,13 +175,6 @@ export function ChatPanel() {
           >
             <Trash2 size={14} />
           </button>
-          <button
-            onClick={toggleOpen}
-            className="p-1.5 hover:bg-cad-panel border border-transparent hover:border-cad-border transition-colors"
-            title="Close"
-          >
-            <X size={14} />
-          </button>
         </div>
       </div>
       
@@ -153,10 +182,7 @@ export function ChatPanel() {
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-6">
-            <div className="w-16 h-16 bg-cad-accent flex items-center justify-center mb-4 shadow-md">
-              <Bot size={32} className="text-white" />
-            </div>
-            <h3 className="text-lg font-serif font-semibold mb-2">CAD Assistant</h3>
+            <h3 className="text-lg font-serif font-semibold mb-2">AI Assistant</h3>
             <p className="text-sm text-cad-text-dim font-sans">
               Describe what you want to create and I'll help you build it.
             </p>
@@ -175,7 +201,7 @@ export function ChatPanel() {
         {isTyping && (
           <div className="chat-message chat-message-assistant">
             <div className="chat-avatar chat-avatar-assistant">
-              <Bot size={16} />
+              <span className="text-xs font-bold">AI</span>
             </div>
             <div className="flex-1">
               <div className="chat-bubble chat-bubble-assistant">
@@ -192,12 +218,6 @@ export function ChatPanel() {
         <div ref={messagesEndRef} />
       </div>
       
-      {/* Quick Actions */}
-      <QuickActions
-        onSelect={handleQuickAction}
-        disabled={isTyping || isExecuting}
-      />
-      
       {/* Input */}
       <form onSubmit={handleSubmit} className="chat-input-area">
         <textarea
@@ -205,7 +225,7 @@ export function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe what you want to create..."
+          placeholder={hasApiKey ? "Describe what you want to create..." : "Add VITE_OPENAI_API_KEY to .env file"}
           disabled={!hasApiKey || isTyping || isExecuting}
           rows={1}
           className="chat-input"
@@ -214,6 +234,7 @@ export function ChatPanel() {
           type="submit"
           disabled={!input.trim() || !hasApiKey || isTyping || isExecuting}
           className="chat-send-btn"
+          title={!hasApiKey ? "API key required" : "Send message"}
         >
           {isTyping ? (
             <Loader2 size={18} className="animate-spin" />
@@ -223,31 +244,5 @@ export function ChatPanel() {
         </button>
       </form>
     </div>
-  )
-}
-
-/**
- * Chat Toggle Button - Floating button to open chat panel
- */
-export function ChatToggleButton() {
-  const { isOpen, toggleOpen } = useChatAssistant()
-  const { messages } = useChatStore()
-  
-  if (isOpen) return null
-  
-  return (
-    <button
-      onClick={toggleOpen}
-      className="chat-toggle-btn"
-      title="Open CAD Assistant"
-    >
-      <div className="relative">
-        <MessageSquare size={22} />
-        {messages.length > 0 && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 bg-white" />
-        )}
-      </div>
-      <span className="chat-toggle-label">AI Assistant</span>
-    </button>
   )
 }

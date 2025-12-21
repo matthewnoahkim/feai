@@ -185,6 +185,12 @@ interface UIState {
   rightPanelOpen: boolean
   bottomPanelOpen: boolean
   
+  // Panel sizes
+  leftPanelWidth: number
+  rightPanelWidth: number
+  bottomPanelHeight: number
+  chatPanelWidth: number
+  
   // Dialogs
   activeDialog: string | null
   dialogData: any
@@ -247,6 +253,11 @@ interface UIState {
   toggleLeftPanel: () => void
   toggleRightPanel: () => void
   toggleBottomPanel: () => void
+  
+  setLeftPanelWidth: (width: number) => void
+  setRightPanelWidth: (width: number) => void
+  setBottomPanelHeight: (height: number) => void
+  setChatPanelWidth: (width: number) => void
   
   openDialog: (dialogId: string, data?: any) => void
   closeDialog: () => void
@@ -567,8 +578,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   cursorStyle: 'default',
   
   leftPanelOpen: true,
-  rightPanelOpen: true,
+  rightPanelOpen: false, // Closed by default
   bottomPanelOpen: false,
+  
+  // Panel sizes (in pixels)
+  leftPanelWidth: 280,
+  rightPanelWidth: 380,
+  bottomPanelHeight: 250,
+  chatPanelWidth: 380,
   
   activeDialog: null,
   dialogData: null,
@@ -879,6 +896,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   toggleRightPanel: () => set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
   
   toggleBottomPanel: () => set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
+  
+  setLeftPanelWidth: (width) => set({ leftPanelWidth: width }),
+  
+  setRightPanelWidth: (width) => set({ rightPanelWidth: width }),
+  
+  setBottomPanelHeight: (height) => set({ bottomPanelHeight: height }),
+  
+  setChatPanelWidth: (width) => set({ chatPanelWidth: width }),
   
   openDialog: (dialogId, data) => set({ activeDialog: dialogId, dialogData: data }),
   

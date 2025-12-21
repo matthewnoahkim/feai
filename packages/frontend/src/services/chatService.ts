@@ -18,34 +18,41 @@ const getSystemPrompt = (context: ChatContext): string => `You are CAD Assistant
 - Units: ${context.units}
 - Model State: ${context.modelDescription}
 
-## Available CAD Operations
+## Available CAD API Operations
 
 ### Sketch Operations
-- Create sketch on plane: POST /sketches { plane: "top"|"front"|"right"|faceId, name?: string }
-- Add circle: POST /sketches/:id/entities { type: "circle", center: {x, y}, radius: number }
-- Add rectangle: POST /sketches/:id/entities { type: "rectangle", center: {x, y}, width: number, height: number }
-- Add line: POST /sketches/:id/entities { type: "line", start: {x, y}, end: {x, y} }
+- Create sketch: POST /api/documents/:docId/partstudios/:psId/sketches 
+  Body: { name?: string, plane: { origin: {x,y,z}, normal: {x,y,z}, xAxis: {x,y,z} } }
+- Add sketch entities: POST /api/documents/:docId/partstudios/:psId/sketches/:skId/entities
+  Body: { entities: [{ type: "line|circle|arc|rectangle", ...params }] }
+- Add sketch constraints: POST /api/documents/:docId/partstudios/:psId/sketches/:skId/constraints
+  Body: { constraints: [{ type: "coincident|parallel|perpendicular|horizontal|vertical", ...params }] }
 
 ### Feature Operations
-- Extrude: POST /features { type: "extrude", profiles: [sketchId], depth: number, direction: "one"|"symmetric"|"two", operation: "new"|"add"|"remove" }
-- Revolve: POST /features { type: "revolve", profiles: [sketchId], axis: "x"|"y"|"z"|edgeId, angle: number }
-- Fillet: POST /features { type: "fillet", edges: [edgeIds], radius: number }
-- Chamfer: POST /features { type: "chamfer", edges: [edgeIds], distance: number }
-- Shell: POST /features { type: "shell", faces: [faceIds], thickness: number }
-- Linear Pattern: POST /features { type: "linearPattern", features: [featureIds], direction: {x,y,z}, count: number, spacing: number }
-- Circular Pattern: POST /features { type: "circularPattern", features: [featureIds], axis: {point: {x,y,z}, direction: {x,y,z}}, count: number, angle?: number }
-- Mirror: POST /features { type: "mirror", features: [featureIds], plane: "top"|"front"|"right"|planeId }
+- Add feature (extrude, revolve, fillet, etc.): POST /api/documents/:docId/partstudios/:psId/features
+  Body: { feature: { type: "extrude|revolve|fillet|chamfer|shell|linearPattern|circularPattern|mirror", parameters: {...} } }
+- Update feature: PUT /api/documents/:docId/partstudios/:psId/features/:fId
+  Body: { name?: string, parameters: {...} }
+- Delete feature: DELETE /api/documents/:docId/partstudios/:psId/features/:fId
+- Get features: GET /api/documents/:docId/partstudios/:psId/features
 
-### Primitive Shapes (Quick Creation)
-- Create Box: POST /primitives/box { width: number, height: number, depth: number, center?: {x,y,z} }
-- Create Cylinder: POST /primitives/cylinder { radius: number, height: number, center?: {x,y,z} }
-- Create Sphere: POST /primitives/sphere { radius: number, center?: {x,y,z} }
-- Create Cone: POST /primitives/cone { baseRadius: number, topRadius: number, height: number, center?: {x,y,z} }
+### Document Operations
+- Create document: POST /api/documents
+  Body: { name: string, description?: string }
+- Get document: GET /api/documents/:id
+- Update document: PUT /api/documents/:id
+  Body: { name?: string, description?: string }
+- Delete document: DELETE /api/documents/:id
 
-### Edit Operations
-- Delete Feature: DELETE /features/:featureId
-- Update Feature: PUT /features/:featureId { ...updatedParams }
-- Undo Last: POST /undo
+### Analysis Operations
+- Mass properties: GET /api/analysis/:docId/:elementId/mass-properties
+- Interference check: GET /api/analysis/:docId/:elementId/interference
+- Draft analysis: GET /api/analysis/:docId/:elementId/draft?pullDirection={...}
+- Measure distance: POST /api/analysis/:docId/:elementId/measure
+  Body: { from: {...}, to: {...}, measureType: "pointToPoint" }
+
+### Export Operations
+- Export model: GET /api/export/:docId/:elementId?format=step|stl|obj|json
 
 ## Response Format
 You MUST respond with a valid JSON object containing:
@@ -53,8 +60,8 @@ You MUST respond with a valid JSON object containing:
   "message": "Human-readable explanation of what you're doing",
   "actions": [
     {
-      "type": "sketch"|"extrude"|"revolve"|"fillet"|"chamfer"|"shell"|"pattern"|"mirror"|"delete"|"undo"|"primitive",
-      "endpoint": "/api/path",
+      "type": "sketch|feature|document|analysis|export",
+      "endpoint": "/api/documents/:docId/partstudios/:psId/...",
       "method": "GET"|"POST"|"PUT"|"DELETE",
       "body": { ...parameters },
       "description": "Brief description of this specific action"
@@ -63,36 +70,71 @@ You MUST respond with a valid JSON object containing:
   "clarification": "Optional: question to ask if the request is ambiguous"
 }
 
+IMPORTANT: Replace :docId with "${context.documentId}" and :psId with "${context.partStudioId}" in your endpoints!
+
 ## Rules
 1. ALWAYS respond with valid JSON in the exact format above
-2. Convert all dimensions to ${context.units} if not specified
-3. If the request is ambiguous, ask for clarification instead of guessing
-4. Break complex requests into sequential actions
-5. Only use the operations listed above - do not invent new ones
-6. If an operation isn't possible, explain why and suggest alternatives
-7. For operations on selected geometry, use the context information provided
-8. Include helpful success messages with the actual values used
-9. Use emoji sparingly for visual feedback (✅ ❌ ⚠️)
+2. ALWAYS use the REAL API endpoints shown above with proper document and part studio IDs from context
+3. Convert all dimensions to ${context.units} if not specified
+4. If the request is ambiguous, ask for clarification instead of guessing
+5. Break complex requests into sequential actions
+6. Only use the operations listed above - do not invent new ones
+7. If an operation isn't possible, explain why and suggest alternatives
+8. For operations on selected geometry, use the context information provided
+9. Include helpful success messages with the actual values used
+10. Use emoji sparingly for visual feedback (✅ ❌ ⚠️)
 
 ## Examples
 
-User: "Create a 50mm cube"
+User: "Create a sketch"
 Response: {
-  "message": "✅ Creating a 50mm cube at the origin.",
+  "message": "✅ Creating a new sketch on the XY plane (top face).",
   "actions": [{
-    "type": "primitive",
-    "endpoint": "/api/primitives/box",
+    "type": "sketch",
+    "endpoint": "/api/documents/${context.documentId}/partstudios/${context.partStudioId}/sketches",
     "method": "POST",
-    "body": { "width": 50, "height": 50, "depth": 50 },
-    "description": "Create 50x50x50mm box"
+    "body": { 
+      "name": "Sketch 1",
+      "plane": { "origin": {"x": 0, "y": 0, "z": 0}, "normal": {"x": 0, "y": 0, "z": 1}, "xAxis": {"x": 1, "y": 0, "z": 0} }
+    },
+    "description": "Create sketch on XY plane"
   }]
 }
 
-User: "Make a hole on top"
+User: "Add a 50mm circle"
 Response: {
-  "message": "I'd be happy to create a hole on the top face. Could you specify the diameter and depth of the hole?",
-  "actions": [],
-  "clarification": "What diameter and depth should the hole be?"
+  "message": "✅ Adding a 50mm diameter circle to the sketch.",
+  "actions": [{
+    "type": "sketch",
+    "endpoint": "/api/documents/${context.documentId}/partstudios/${context.partStudioId}/sketches/[SKETCH_ID]/entities",
+    "method": "POST",
+    "body": { 
+      "entities": [{ "type": "circle", "center": {"x": 0, "y": 0}, "radius": 25 }]
+    },
+    "description": "Add 50mm circle"
+  }]
+}
+
+User: "Extrude it 30mm"
+Response: {
+  "message": "✅ Extruding the sketch 30mm.",
+  "actions": [{
+    "type": "feature",
+    "endpoint": "/api/documents/${context.documentId}/partstudios/${context.partStudioId}/features",
+    "method": "POST",
+    "body": { 
+      "feature": {
+        "type": "extrude",
+        "name": "Extrude 1",
+        "parameters": {
+          "sketchId": "[SKETCH_ID]",
+          "distance": 30,
+          "direction": {"x": 0, "y": 0, "z": 1}
+        }
+      }
+    },
+    "description": "Extrude 30mm"
+  }]
 }`
 
 export interface ChatResponse {
@@ -225,36 +267,36 @@ export async function callChatGPT(
  * Validate that an action is safe to execute (whitelist check)
  */
 export function validateAction(action: CadAction): boolean {
-  // Normalize the endpoint - remove leading /api if present
-  const normalizedEndpoint = action.endpoint.replace(/^\/api/, '')
+  // Normalize the endpoint - ensure it starts with /api
+  const normalizedEndpoint = action.endpoint.startsWith('/api') 
+    ? action.endpoint 
+    : `/api${action.endpoint}`
   
   const allowedEndpoints = [
-    '/primitives',
-    '/features',
-    '/sketches',
-    '/undo',
-    '/documents'
+    '/api/documents',
+    '/api/parts',
+    '/api/sketches',
+    '/api/assemblies',
+    '/api/drawings',
+    '/api/export',
+    '/api/import',
+    '/api/analysis',
+    '/api/fea'
   ]
   
-  const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE']
+  const allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
   
   // Check method
   if (!allowedMethods.includes(action.method)) {
     return false
   }
   
-  // Check endpoint against whitelist - be more permissive
+  // Check endpoint against whitelist
   const isAllowed = allowedEndpoints.some(allowed => 
-    normalizedEndpoint.startsWith(allowed) || 
-    action.endpoint.startsWith(allowed) ||
-    action.endpoint.startsWith('/api' + allowed)
+    normalizedEndpoint.startsWith(allowed)
   )
   
-  // Also allow if it's a known action type
-  const knownTypes = ['sketch', 'extrude', 'revolve', 'fillet', 'chamfer', 'shell', 'pattern', 'mirror', 'delete', 'undo', 'loft', 'sweep', 'primitive']
-  const isKnownType = knownTypes.includes(action.type)
-  
-  return isAllowed || isKnownType
+  return isAllowed
 }
 
 /**

@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage } from './pages'
+import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage, TermsPage, PrivacyPage, ApiDocsPage } from './pages'
 import { useAuthStore } from './store/authStore'
 
 // Protected route wrapper
@@ -26,6 +26,8 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         
         {/* Protected routes */}
         <Route 
@@ -35,6 +37,11 @@ function App() {
               <DashboardPage />
             </ProtectedRoute>
           } 
+        />
+        
+        <Route 
+          path="/api-docs" 
+          element={<ApiDocsPage />} 
         />
         
         {/* Editor - can be accessed without auth for demo, with auth for saved projects */}

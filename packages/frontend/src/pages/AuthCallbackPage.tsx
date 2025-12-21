@@ -69,10 +69,10 @@ export function AuthCallbackPage() {
         // Clean up URL to remove sensitive data
         window.history.replaceState({}, '', '/auth/callback');
 
-        // Redirect to dashboard
+        // Redirect to dashboard with longer delay
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
-        }, 1000);
+        }, 2000); // Increased from 1000ms to 2000ms
         
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
@@ -124,7 +124,7 @@ export function AuthCallbackPage() {
                 </svg>
               </div>
               <h2 className="font-serif text-xl text-cad-text mb-2">
-                Welcome Back!
+                Welcome!
               </h2>
               <p className="font-sans text-sm text-gray-600">{message}</p>
             </div>

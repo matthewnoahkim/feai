@@ -4,6 +4,7 @@
  */
 
 import React, { useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useFEAStore } from '../store/feaStore'
@@ -29,7 +30,8 @@ import {
   CornerUpRight,
   Shell,
   FlipHorizontal,
-  Activity
+  Activity,
+  PanelRight
 } from 'lucide-react'
 
 // Helper to convert mesh to STL format (ASCII)
@@ -230,6 +232,7 @@ function ToolDivider() {
 }
 
 export function Toolbar() {
+  const navigate = useNavigate()
   const { 
     activeMode, 
     activeTool, 
@@ -238,7 +241,9 @@ export function Toolbar() {
     toggleViewSetting, 
     setDisplayMode,
     openDialog,
-    addNotification
+    addNotification,
+    rightPanelOpen,
+    toggleRightPanel
   } = useUIStore()
   
   const { document, createNewDocument, importSTLPart } = useDocumentStore()
@@ -422,13 +427,17 @@ export function Toolbar() {
       
       {/* Inner container for buttons - maintains consistent height */}
       <div className="flex items-center h-12 px-1">
-        {/* Logo - scholarly style */}
-        <div className="flex items-center gap-1.5 px-2 mr-2 flex-shrink-0">
+        {/* Logo - scholarly style - clicking returns to dashboard */}
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-1.5 px-2 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity"
+          title="Back to Dashboard"
+        >
           <div className="w-7 h-7 flex items-center justify-center bg-cad-accent">
             <span className="text-white font-serif font-bold text-sm">F</span>
           </div>
           <span className="font-serif font-semibold text-cad-text text-sm">FeAI</span>
-        </div>
+        </button>
 
       <ToolDivider />
 
@@ -568,6 +577,12 @@ export function Toolbar() {
           onClick={() => setDisplayMode(
             viewSettings.displayMode === 'shadedEdges' ? 'wireframe' : 'shadedEdges'
           )}
+        />
+        <ToolButton 
+          icon={<PanelRight size={16} />} 
+          label="Properties" 
+          active={rightPanelOpen}
+          onClick={toggleRightPanel}
         />
       </div>
       </div>

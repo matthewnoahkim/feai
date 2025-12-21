@@ -38,22 +38,28 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Cookie parser (required for sessions)
-app.use(cookieParser());
+// Cookie parser (required for OAuth state management)
+app.use(cookieParser(process.env.SESSION_SECRET || 'change-this-secret-in-production'));
 
-// Session middleware (required for OAuth)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
-  resave: false,
-  saveUninitialized: false,
-  name: 'feai.sid',
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  },
-}));
+// Session middleware (optional - used for local development)
+// In production/Vercel, we use JWT tokens instead
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
+    resave: false,
+    saveUninitialized: false,
+    name: 'feai.sid',
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    },
+  }));
+  console.log('📝 Session middleware enabled (local development)');
+} else {
+  console.log('🔐 Using JWT authentication (serverless/production)');
+}
 
 // Request logging
 app.use((req, res, next) => {

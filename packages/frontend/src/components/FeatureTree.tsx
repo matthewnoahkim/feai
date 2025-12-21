@@ -619,7 +619,7 @@ export function FeatureTree() {
   }, [selection, features, activePartStudio, renamingId])
 
   return (
-    <div className="w-72 flex flex-col bg-cad-panel border-r border-cad-border">
+    <div className="h-full flex flex-col bg-cad-panel border-r border-cad-border">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gray-50">
         <span className="font-semibold text-sm font-serif">Feature Tree</span>

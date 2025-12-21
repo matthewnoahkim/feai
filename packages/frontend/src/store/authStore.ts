@@ -67,10 +67,10 @@ export const useAuthStore = create<AuthState>()(
         if (token) {
           try {
             // Notify backend of sign out
-            await fetch('/auth/signout', {
+            await fetch('/auth/logout', {
               method: 'POST',
+              credentials: 'include', // Include session cookie
               headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
               },
             });
