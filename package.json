@@ -21,11 +21,15 @@
     "clean": "node ./node_modules/rimraf/dist/esm/bin.mjs packages/*/dist packages/*/.turbo node_modules/.cache",
     "vercel-build": "npm run db:generate && npm run build:frontend && npm run build:server"
   },
+  "dependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "ts-node-dev": "^2.0.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "dotenv-cli": "^11.0.0",
-    "rimraf": "^5.0.5",
-    "typescript": "^5.3.3"
+    "rimraf": "^5.0.5"
   },
   "engines": {
     "node": ">=18.0.0"
