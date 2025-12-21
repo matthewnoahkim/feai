@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+**/node_modules/
+packages/*/node_modules/
 .pnp/
 .pnp.js
 
@@ -7,6 +9,13 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+**/dist/
+packages/*/dist/
+
+# Vite cache
+.vite/
+**/.vite/
+packages/*/.vite/
 
 # Environment variables
 .env
@@ -14,6 +23,8 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
 
 # IDE and editor files
 .idea/

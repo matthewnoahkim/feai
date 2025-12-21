@@ -11,6 +11,7 @@
     "dev:frontend": "npm run dev -w @feai/frontend",
     "dev:backend": "npm run dev -w @feai/backend",
     "build": "npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/backend && npm run build -w @feai/frontend",
+    "build:web": "npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
     "build:shared": "npm run build -w @feai/shared",
     "build:kernel": "npm run build -w @feai/kernel",
     "build:backend": "npm run build -w @feai/backend",
