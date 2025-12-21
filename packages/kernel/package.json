@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "test": "jest"
+    "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "test": "npx jest"
   },
   "dependencies": {
     "@feai/shared": "^1.0.0"
