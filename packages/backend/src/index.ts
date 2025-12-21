@@ -14,6 +14,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 import { documentsRouter } from './routes/documents';
 import { partsRouter } from './routes/parts';
 import { sketchesRouter } from './routes/sketches';
