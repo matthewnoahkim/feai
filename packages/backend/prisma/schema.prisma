@@ -1,6 +1,3 @@
-// Prisma Schema for FeAI
-// Database: PostgreSQL (Neon.tech)
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,42 +5,33 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // For migrations with Neon pooled connections
+  directUrl = env("DIRECT_URL")
 }
 
-// User model - stores account information
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   name      String
   photoURL  String?
-  googleId  String?  @unique
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
+  googleId  String?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   projects  Project[]
-  
+
   @@map("users")
 }
 
-// Project model - CAD projects
 model Project {
   id          String   @id @default(cuid())
   name        String
   description String?
-  thumbnail   String?  // Base64 or URL of project thumbnail
-  data        Json?    // CAD document data (JSON)
-  
+  thumbnail   String?
+  data        Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relations
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@map("projects")
 }
-

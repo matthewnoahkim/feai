@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { HomePage, LoginPage, DashboardPage, EditorPage } from './pages'
+import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage } from './pages'
 import { useAuthStore } from './store/authStore'
 
 // Protected route wrapper
@@ -25,6 +25,7 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
         
         {/* Protected routes */}
         <Route 

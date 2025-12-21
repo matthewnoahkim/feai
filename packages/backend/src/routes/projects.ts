@@ -3,13 +3,13 @@
  */
 
 import express from 'express';
-import { authMiddleware } from './auth';
+import { requireAuth } from '../auth/middleware';
 import { db } from '../db';
 
 const router = express.Router();
 
 // All project routes require authentication
-router.use(authMiddleware);
+router.use(requireAuth);
 
 /**
  * GET /api/projects - List user's projects
@@ -17,7 +17,7 @@ router.use(authMiddleware);
 router.get('/', async (req, res) => {
   try {
     const projects = await db.project.findMany({
-      where: { userId: (req as any).userId },
+      where: { userId: req.user!.userId },
       orderBy: { updatedAt: 'desc' },
       select: {
         id: true,
@@ -48,7 +48,7 @@ router.get('/:id', async (req, res) => {
     const project = await db.project.findFirst({
       where: {
         id: req.params.id,
-        userId: (req as any).userId
+        userId: req.user!.userId
       }
     });
     
@@ -88,7 +88,7 @@ router.post('/', async (req, res) => {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        userId: (req as any).userId,
+        userId: req.user!.userId,
       }
     });
     
@@ -164,7 +164,7 @@ router.put('/:id/data', async (req, res) => {
     const existing = await db.project.findFirst({
       where: {
         id: req.params.id,
-        userId: (req as any).userId
+        userId: req.user!.userId
       }
     });
     
@@ -203,7 +203,7 @@ router.delete('/:id', async (req, res) => {
     const existing = await db.project.findFirst({
       where: {
         id: req.params.id,
-        userId: (req as any).userId
+        userId: req.user!.userId
       }
     });
     

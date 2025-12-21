@@ -1,10 +1,17 @@
 /**
- * feai REST API Server
- * Express.js backend for web-based CAD operations
+ * feai Unified Server
+ * Express.js backend serving both API and frontend static files
  */
+
+// Load environment variables from root .env file
+import { config } from 'dotenv';
+import path from 'path';
+config({ path: path.resolve(__dirname, '../../../.env') });
 
 import express from 'express';
 import cors from 'cors';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
 import { documentsRouter } from './routes/documents';
 import { partsRouter } from './routes/parts';
 import { sketchesRouter } from './routes/sketches';
@@ -14,19 +21,36 @@ import { exportRouter } from './routes/export';
 import { importRouter } from './routes/import';
 import { analysisRouter } from './routes/analysis';
 import { feaRouter } from './routes/fea';
-import { authRouter } from './routes/auth';
+import { authRouter } from './routes/auth-oauth';
 import { projectsRouter } from './routes/projects';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
+app.use(cors({ 
+  origin: process.env.CLIENT_URL || `http://localhost:${PORT}`,
+  credentials: true 
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Cookie parser (required for sessions)
+app.use(cookieParser());
+
+// Session middleware (required for OAuth)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
+  resave: false,
+  saveUninitialized: false,
+  name: 'feai.sid',
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+}));
 
 // Request logging
 app.use((req, res, next) => {
@@ -71,7 +95,8 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Auth Routes (not under /api prefix for OAuth redirects)
+// Auth Routes (BEFORE static files - OAuth needs to work)
+// New OAuth 2.0 implementation with refresh tokens
 app.use('/auth', authRouter);
 
 // API Routes
@@ -85,6 +110,23 @@ app.use('/api/export', exportRouter);
 app.use('/api/import', importRouter);
 app.use('/api/analysis', analysisRouter);
 app.use('/api/fea', feaRouter);
+
+// Serve frontend static files (built React app)
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath, {
+  // Set proper headers for SharedArrayBuffer support (WASM threading)
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+      res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+    }
+  }
+}));
+
+// Serve index.html for all other routes (SPA routing)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
+});
 
 // Error handling
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -118,11 +160,19 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║                 feai REST API Server v1.0.0                  ║
+║              feai Unified Server v1.0.0                      ║
 ╠══════════════════════════════════════════════════════════════╣
+║  Application:  http://localhost:${PORT}                         ║
 ║  REST API:     http://localhost:${PORT}/api                     ║
 ║  Health:       http://localhost:${PORT}/api/health              ║
 ║  API Docs:     http://localhost:${PORT}/api                     ║
+╠══════════════════════════════════════════════════════════════╣
+║  Features:                                                   ║
+║    ✅ Frontend & Backend combined on one port                ║
+║    ✅ Google OAuth 2.0 with refresh tokens                   ║
+║    ✅ Secure session management                              ║
+║    ✅ CAD operations & FEA analysis                          ║
+║    ✅ WebAssembly FEA solver support                         ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Available Endpoints:                                        ║
 ║    Documents:    GET|POST /api/documents                     ║
@@ -134,6 +184,8 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 ║    Import:       POST /api/import/:docId                     ║
 ║    Analysis:     GET /api/analysis/:docId/:elementId/...     ║
 ║    FEA:          POST /api/fea/mesh, /api/fea/run            ║
+║    Auth:         GET /auth/google, /auth/google/callback     ║
+║    Projects:     GET|POST /api/projects                      ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
   });

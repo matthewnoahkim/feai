@@ -1,132 +1,167 @@
-# feai
+# FeAI - Professional 3D CAD Powered by AI
 
-AI-assisted and web-based CAD/Finite Element software with **WebAssembly FEA Solver** ✨
+AI-assisted Finite Element Analysis software with integrated CAD modeling, structural analysis, and real-time collaboration.
 
-**[Launch feai](https://feai.vercel.app)**
-
-## ✨ New: WebAssembly FEA Integration
-
-FEAI now includes a complete **CalculiX FEA solver compiled to WebAssembly**, enabling:
-- ✅ **In-Browser Analysis**: No server required for FEA solving
-- ✅ **Multiple Analysis Types**: Static, Modal, Buckling, Thermal
-- ✅ **Full Material Library**: 8+ materials with custom properties
-- ✅ **Memory Management**: Automatic checks prevent browser crashes
-- ✅ **Performance Optimized**: Multi-threading support, lazy loading
-
-See **[Implementation Complete](docs/IMPLEMENTATION-COMPLETE.md)** for details.
-
-## Features
-
-### CAD Capabilities
-- **Sketching** — Lines, arcs, circles, rectangles, splines with geometric constraints and dimensions
-- **Solid Modeling** — Extrude, revolve, sweep, loft, fillet, chamfer, shell, boolean operations
-- **Direct Editing** — Push-pull face manipulation without history
-- **Patterns** — Linear, circular, and mirror patterns
-- **Assembly** — Component mates (fastened, revolute, slider, planar) with interference detection
-- **Drawings** — Orthographic views, dimensions, GD&T annotations
-- **Import/Export** — STEP, STL, OBJ, DXF formats
-- **Analysis** — Mass properties, draft analysis, interference checking
-- **AI Assistant** — Natural language CAD commands
-
-### FEA Capabilities (NEW!)
-- **Static Structural** — Stress, strain, displacement under loads
-- **Modal Analysis** — Natural frequencies and mode shapes
-- **Buckling Analysis** — Critical loads and buckling modes
-- **Thermal Analysis** — Steady-state heat transfer
-- **Multiple Materials** — Steel, aluminum, titanium, copper, plastics, and more
-- **All Boundary Conditions** — Fixed, displacement, force, pressure, gravity, temperature
-- **WebAssembly Solver** — CalculiX runs entirely in browser (no server needed!)
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/matthewnoahkim/feai.git
-cd feai
+# Install dependencies
 npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your credentials
+
+# Generate Prisma client and push schema to database
+npm run db:generate
+npm run db:push
+
+# Start the unified server (builds frontend + starts backend)
 npm run dev
 ```
 
-- Frontend: http://localhost:3000
-- API: http://localhost:3001
+The application will be available at **`http://localhost:3001`**
 
-### Enable WebAssembly FEA (Optional)
+## 🏗️ Architecture
 
-1. **Get WASM files** (compile yourself or get pre-built)
+**Unified Server Setup** - Single Express server serving both frontend and API:
+- Frontend: React + Vite (built and served as static files)
+- Backend: Express.js REST API + Google OAuth
+- Database: PostgreSQL (Neon.tech) via Prisma ORM
+- FEA Solver: CalculiX (WebAssembly)
+
+```
+┌─────────────────────────────────────┐
+│   Unified Server (Port 3001)        │
+├─────────────────────────────────────┤
+│  Static Frontend (React/Vite)       │
+│  ├─ / (Home Page)                   │
+│  ├─ /login (Authentication)         │
+│  ├─ /dashboard (Projects)           │
+│  └─ /editor (CAD + FEA)             │
+├─────────────────────────────────────┤
+│  REST API                            │
+│  ├─ /api/projects                   │
+│  ├─ /api/documents                  │
+│  ├─ /api/fea                        │
+│  └─ /auth/google (OAuth)            │
+├─────────────────────────────────────┤
+│  Database (Prisma + PostgreSQL)     │
+└─────────────────────────────────────┘
+```
+
+## 📁 Project Structure
+
+```
+feai/
+├── .env                          # Environment variables (root)
+├── package.json                  # Root workspace config
+├── packages/
+│   ├── shared/                   # Shared TypeScript types
+│   ├── kernel/                   # CAD kernel logic
+│   ├── frontend/                 # React application
+│   │   ├── src/
+│   │   │   ├── pages/           # Route pages
+│   │   │   ├── components/      # Reusable components
+│   │   │   ├── store/           # Zustand state management
+│   │   │   └── App.tsx          # Main app component
+│   │   └── dist/                # Built frontend (served by backend)
+│   └── backend/                  # Express server
+│       ├── src/
+│       │   ├── routes/          # API routes
+│       │   ├── db/              # Prisma client
+│       │   └── index.ts         # Server entry point
+│       └── prisma/
+│           └── schema.prisma    # Database schema
+```
+
+## 🔧 Environment Variables
+
+Create `.env` in the root directory:
+
+```env
+# Database (Neon.tech PostgreSQL)
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# Google OAuth
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-client-secret"
+
+# JWT Secret (generate a random string)
+JWT_SECRET="your-super-secret-random-string-here"
+
+# OpenAI API Key (for AI chat)
+VITE_OPENAI_API_KEY="sk-..."
+
+# Server Config
+PORT=3001
+NODE_ENV=development
+```
+
+## 📜 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Build frontend + start development server |
+| `npm run build` | Build frontend and backend for production |
+| `npm start` | Start production server |
+| `npm run db:generate` | Generate Prisma client |
+| `npm run db:push` | Push schema changes to database |
+| `npm run db:studio` | Open Prisma Studio (database GUI) |
+| `npm run clean` | Clean all build artifacts |
+
+## 🔐 Google OAuth Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Google+ API
+4. Create OAuth 2.0 credentials:
+   - **Authorized JavaScript origins**: `http://localhost:3001`
+   - **Authorized redirect URIs**: `http://localhost:3001/auth/google/callback`
+5. Copy Client ID and Secret to `.env`
+
+## 🗄️ Database Setup
+
+1. Create a [Neon.tech](https://neon.tech/) account
+2. Create a new PostgreSQL database
+3. Copy the connection strings to `.env`:
+   - `DATABASE_URL` - Pooled connection (for queries)
+   - `DIRECT_URL` - Direct connection (for migrations)
+4. Run migrations:
    ```bash
-   # See docs/WASM-COMPLETE.md for compilation instructions
-   # Or place pre-built files:
-   cp /path/to/calculix.{js,wasm} packages/frontend/public/wasm/
+   npm run db:generate
+   npm run db:push
    ```
 
-2. **Enable solver**
-   ```typescript
-   // Edit packages/frontend/src/store/feaStore.ts
-   const USE_WASM_SOLVER = true; // Change to true
-   ```
+## 🎨 Tech Stack
 
-3. **Run FEA** in the app!
+**Frontend:**
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Three.js (@react-three/fiber)
+- Zustand (state management)
+- React Router
 
-## 📚 Documentation
+**Backend:**
+- Node.js
+- Express.js
+- Prisma ORM
+- PostgreSQL
+- Google OAuth 2.0
+- JWT authentication
 
-- **[WASM-FEA-GUIDE.md](docs/WASM-FEA-GUIDE.md)** - Complete guide for WebAssembly FEA implementation, building, testing, and usage
+**FEA:**
+- CalculiX (WebAssembly)
+- Custom mesh generator
+- Structural analysis engine
 
-## Tech Stack
+## 📝 License
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React, TypeScript, Three.js, Tailwind CSS |
-| Backend | Node.js, Express |
-| FEA Solver | CalculiX (WebAssembly), Emscripten |
-| State | Zustand |
-| Build | Vite |
+MIT License - Open source under MIT license.
 
-## Project Structure
+## 🤝 Contributing
 
-```
-packages/
-├── frontend/        # React UI with FEA components
-│   ├── services/    # FEA services (inpGenerator, frdParser, optimization)
-│   └── public/wasm/ # CalculiX WASM files (after build)
-├── backend/         # Express API
-├── kernel/          # CAD geometry kernel
-├── shared/          # Shared types (including FEA types)
-├── calculix-wasm/   # WASM build scripts
-└── compute-server/  # Optional compute server
-
-docs/                # Complete documentation
-├── IMPLEMENTATION-COMPLETE.md
-├── IMPLEMENTATION-SUMMARY.md
-├── TESTING-GUIDE.md
-└── WASM-COMPLETE.md
-```
-
-## FEA Performance
-
-| Mesh Size | Nodes | Elements | Solve Time | Memory |
-|-----------|-------|----------|------------|--------|
-| Small     | 1,000 | 5,000    | 2-5 sec    | 50 MB  |
-| Medium    | 3,000 | 15,000   | 8-15 sec   | 200 MB |
-| Large     | 5,000 | 25,000   | 20-40 sec  | 400 MB |
-| XLarge    | 10,000| 50,000   | 60-120 sec | 800 MB |
-
-*Single-threaded WASM. Enable pthread for 2-3x speedup.*
-
-## Status
-
-- **CAD System**: ✅ Production Ready
-- **FEA System**: ✅ Production Ready (v1.0)
-- **WebAssembly Solver**: ✅ Implementation Complete
-- **Documentation**: ✅ Comprehensive
-- **Testing**: ✅ Full test suite available
-
-## License
-
-MIT License — see [LICENSE](LICENSE)
-
-## Contributing
-
-Contributions welcome! See documentation in `docs/` folder.
-
----
-
-**Star ⭐ this repo if you find it useful!**
+Contributions welcome! Please read our contributing guidelines before submitting PRs.
