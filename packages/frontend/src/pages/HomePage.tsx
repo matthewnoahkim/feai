@@ -42,7 +42,7 @@ export function HomePage() {
       <section className="px-8 py-20">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="font-serif text-5xl text-cad-text mb-6 leading-tight">
-            CAD + FEA Analysis
+            CAD + FE Analysis
             <br />
             <span className="text-cad-accent">Powered by AI</span>
           </h1>
@@ -120,7 +120,7 @@ export function HomePage() {
             FeAI is an open-source engineering platform that combines parametric CAD modeling with 
             finite element analysis. Designed for mechanical engineers, product designers, and students, 
             it provides professional-grade simulation and design tools directly in your browser. 
-            With integrated CalculiX FEA solver and AI-powered assistance, FeAI makes structural analysis 
+            With integrated CalculiX FE solver and AI-powered assistance, FeAI makes structural analysis 
             and optimization accessible to everyone.
           </p>
         </div>
