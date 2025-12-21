@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npx --package vite vite",
-    "build": "npx --package typescript tsc && npx --package vite vite build",
-    "preview": "npx --package vite vite preview"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@feai/shared": "^1.0.0",

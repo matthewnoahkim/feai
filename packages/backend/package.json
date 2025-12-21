@@ -4,8 +4,8 @@
   "description": "feai Unified Server - REST API + Static Frontend",
   "main": "dist/index.js",
   "scripts": {
-    "build": "prisma generate && npx --package typescript tsc",
-    "dev": "npx --package ts-node-dev ts-node-dev --respawn src/index.ts",
+    "build": "prisma generate && tsc",
+    "dev": "ts-node-dev --respawn src/index.ts",
     "start": "node dist/index.js",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
