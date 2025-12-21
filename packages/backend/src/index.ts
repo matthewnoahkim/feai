@@ -14,12 +14,17 @@ import { exportRouter } from './routes/export';
 import { importRouter } from './routes/import';
 import { analysisRouter } from './routes/analysis';
 import { feaRouter } from './routes/fea';
+import { authRouter } from './routes/auth';
+import { projectsRouter } from './routes/projects';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -66,7 +71,11 @@ app.get('/api', (req, res) => {
   });
 });
 
+// Auth Routes (not under /api prefix for OAuth redirects)
+app.use('/auth', authRouter);
+
 // API Routes
+app.use('/api/projects', projectsRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/parts', partsRouter);
 app.use('/api/sketches', sketchesRouter);
