@@ -323,7 +323,7 @@ function FeatureContextMenu({
 }) {
   const { toggleFeatureSuppression, deleteFeature, reorderFeature, renameFeature, copyFeature } = useDocumentStore()
   const { document } = useDocumentStore()
-  const { openDialog, addNotification, enterSketchMode, openFeatureForEdit } = useUIStore()
+  const { openDialog, addNotification, enterSketchMode, openFeatureForEdit, rollToFeature } = useUIStore()
   
   const partStudio = document?.partStudios.find(ps => ps.id === partStudioId)
   const featureIndex = partStudio?.features.findIndex(f => f.id === feature.id) ?? -1

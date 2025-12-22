@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Check, X, Lock, LockOpen } from 'lucide-react'
+import { Check, X, Lock, Unlock } from 'lucide-react'
 import { useUIStore } from '../store/uiStore'
 
 interface DimensionInputProps {
@@ -72,7 +72,7 @@ export function DimensionInput({
           }`}
           title={localIsDriving ? 'Driving (controls geometry)' : 'Reference (reports value)'}
         >
-          {localIsDriving ? <Lock size={14} /> : <LockOpen size={14} />}
+          {localIsDriving ? <Lock size={14} /> : <Unlock size={14} />}
         </button>
         
         {/* Value input */}
@@ -115,7 +115,7 @@ export function DimensionInput({
           </span>
         ) : (
           <span className="text-gray-600">
-            <LockOpen size={10} className="inline" /> Reference: Reports current value
+            <Unlock size={10} className="inline" /> Reference: Reports current value
           </span>
         )}
       </div>

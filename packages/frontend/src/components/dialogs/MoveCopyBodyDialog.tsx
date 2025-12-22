@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { useUIStore } from '../store/uiStore'
+import { useUIStore } from '../../store/uiStore'
 import { 
   X, 
   Move, 

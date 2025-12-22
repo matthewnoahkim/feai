@@ -378,7 +378,7 @@ interface UIState {
   exitDimensionTool: () => void
   selectDimensionEntity: (entityId: string) => void
   placeDimensionLabel: (position: { x: number; y: number }) => void
-  setDimensionValue: (value: number, sketchId: string) => Promise<void>
+  applyDimensionValue: (value: number, sketchId: string) => void
   toggleDimensionDriving: () => void
   
   // Tool prompt
@@ -487,6 +487,26 @@ const DEFAULT_TRANSFORM: TransformState = {
   gizmoMode: 'translate',
   coordinateSpace: 'world',
   previewTransform: null
+}
+
+const DEFAULT_CONSTRAINT_TOOL: ConstraintToolState = {
+  isActive: false,
+  constraintType: null,
+  step: 'select-first',
+  firstEntityId: null,
+  hoverEntityId: null,
+  pendingConstraint: null,
+}
+
+const DEFAULT_DIMENSION_TOOL: DimensionToolState = {
+  isActive: false,
+  dimensionType: null,
+  step: 'select-entity',
+  selectedEntityIds: [],
+  labelPosition: null,
+  currentValue: null,
+  isDriving: true,
+  pendingDimension: null,
 }
 
 // Tool prompts
@@ -1420,21 +1440,20 @@ export const useUIStore = create<UIState>((set, get) => ({
     }
   })),
   
-  setDimensionValue: async (value, sketchId) => {
+  applyDimensionValue: (value, sketchId) => {
     const { dimensionTool } = get()
     if (!dimensionTool.dimensionType || dimensionTool.selectedEntityIds.length === 0) return
     
-    // Add dimension constraint to the sketch
-    const { addSketchConstraint } = await import('./documentStore').then(m => m.useDocumentStore.getState())
-    
-    // Create a dimensional constraint
-    // For now, we'll use 'distance' type constraint with a value
-    addSketchConstraint(sketchId, {
-      type: 'horizontal',  // This would be replaced with proper dimension constraint type
-      entityIds: dimensionTool.selectedEntityIds,
-      value,
-      status: 'satisfied',
-      driven: !dimensionTool.isDriving
+    // Add dimension constraint to the sketch (async, but fire-and-forget)
+    import('./documentStore').then(m => {
+      const { addSketchConstraint } = m.useDocumentStore.getState()
+      addSketchConstraint(sketchId, {
+        type: 'horizontal',  // This would be replaced with proper dimension constraint type
+        entityIds: dimensionTool.selectedEntityIds,
+        value,
+        status: 'satisfied',
+        driven: !dimensionTool.isDriving
+      })
     })
     
     // Reset for next dimension
@@ -1584,31 +1603,40 @@ export const useUIStore = create<UIState>((set, get) => ({
     )
     
     // Temporarily suppress features after the rollback point
-    set(state => {
-      if (!state.document) return state
-      
-      const partStudios = state.document.partStudios.map(ps => {
-        if (ps.id !== partStudioId) return ps
-        
-        return {
-          ...ps,
-          features: ps.features.map(f => {
-            if (featuresToSuppress.includes(f.id)) {
-              return { ...f, suppressed: true, rollbackSuppressed: true }
-            }
-            return f
-          })
-        }
-      })
+    // Update documentStore directly
+    const documentStoreModule = await import('./documentStore')
+    const documentState = documentStoreModule.useDocumentStore.getState()
+    
+    if (!documentState.document) return
+    
+    const updatedPartStudios = documentState.document.partStudios.map(ps => {
+      if (ps.id !== partStudioId) return ps
       
       return {
-        ...state,
-        rollbackState: {
-          ...state.rollbackState,
-          originalSuppressionStates
-        }
+        ...ps,
+        features: ps.features.map(f => {
+          if (featuresToSuppress.includes(f.id)) {
+            return { ...f, suppressed: true, rollbackSuppressed: true }
+          }
+          return f
+        })
       }
     })
+    
+    documentStoreModule.useDocumentStore.setState({
+      document: {
+        ...documentState.document,
+        partStudios: updatedPartStudios
+      }
+    })
+    
+    // Update UIStore rollback state
+    set(state => ({
+      rollbackState: {
+        ...state.rollbackState,
+        originalSuppressionStates
+      }
+    }))
     
     // Regenerate model up to rollback point
     await documentStore.regenerateModel(partStudioId)
@@ -1628,27 +1656,33 @@ export const useUIStore = create<UIState>((set, get) => ({
     const { originalSuppressionStates } = get().rollbackState as any
     
     // Restore original suppression states
-    set(state => {
-      if (!state.document) return state
+    const documentStoreModule = await import('./documentStore')
+    const documentState = documentStoreModule.useDocumentStore.getState()
+    
+    if (!documentState.document) return
+    
+    const updatedPartStudios = documentState.document.partStudios.map(ps => {
+      if (ps.id !== partStudioId) return ps
       
-      const partStudios = state.document.partStudios.map(ps => {
-        if (ps.id !== partStudioId) return ps
-        
-        return {
-          ...ps,
-          features: ps.features.map(f => {
-            if (f.rollbackSuppressed) {
-              // Restore original state
-              const originalSuppressed = originalSuppressionStates?.get(f.id) || false
-              const { rollbackSuppressed, ...rest } = f
-              return { ...rest, suppressed: originalSuppressed }
-            }
-            return f
-          })
-        }
-      })
-      
-      return { ...state, document: { ...state.document, partStudios } }
+      return {
+        ...ps,
+        features: ps.features.map(f => {
+          if (f.rollbackSuppressed) {
+            // Restore original state
+            const originalSuppressed = originalSuppressionStates?.get(f.id) || false
+            const { rollbackSuppressed, ...rest } = f
+            return { ...rest, suppressed: originalSuppressed }
+          }
+          return f
+        })
+      }
+    })
+    
+    documentStoreModule.useDocumentStore.setState({
+      document: {
+        ...documentState.document,
+        partStudios: updatedPartStudios
+      }
     })
     
     // Exit rollback mode

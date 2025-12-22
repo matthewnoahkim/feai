@@ -129,7 +129,7 @@ interface DocumentState {
   canRedo: boolean
   
   // Transform/Move operations
-  transformBody: (bodyId: string, translation: { x: number; y: number; z: number }, rotation: { axis: 'x' | 'y' | 'z'; angle: number }, createCopy: boolean) => void
+  transformBody: (bodyId: string, translation: { x: number; y: number; z: number }, rotation: { axis: 'x' | 'y' | 'z' | 'custom'; angle: number; customAxis?: { x: number; y: number; z: number } }, createCopy: boolean) => void
   
   // Visibility operations
   toggleBodyVisibility: (bodyId: string) => void
@@ -144,6 +144,7 @@ interface DocumentState {
   // Undo/Redo operations
   undo: () => Promise<void>
   redo: () => Promise<void>
+  pushUndoState: () => void
   
   // Part Studio operations
   setActiveElement: (id: string, type: 'partStudio' | 'assembly') => void
@@ -1916,7 +1917,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       // Convert sketches from plain object to Map if needed
       const partStudios = data.partStudios.map(ps => ({
         ...ps,
-        sketches: ps.sketches instanceof Map ? ps.sketches : new Map(Object.entries(ps.sketches || {}))
+        sketches: ps.sketches instanceof Map ? ps.sketches : new Map<string, Sketch>(Object.entries(ps.sketches || {}))
       }))
       
       const normalizedData = {
@@ -1937,6 +1938,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       console.error('Error loading document from data:', error)
       set({ error: (error as Error).message, isLoading: false })
     }
+  },
+  
+  pushUndoState: () => {
+    const { document, undoStack } = get()
+    if (!document) return
+    
+    // Clone current state
+    const stateSnapshot = cloneDocument(document)
+    
+    // Add to undo stack (max 50 states)
+    set({
+      undoStack: [...undoStack, stateSnapshot].slice(-50),
+      redoStack: [], // Clear redo stack on new action
+      canUndo: true,
+      canRedo: false
+    })
   },
   
   undo: async () => {

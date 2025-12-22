@@ -27,7 +27,7 @@ import { MirrorFeatureDialog } from '../components/dialogs/MirrorFeatureDialog'
 import { LinearPatternDialog } from '../components/dialogs/LinearPatternDialog'
 import { CircularPatternDialog } from '../components/dialogs/CircularPatternDialog'
 import { SketchDialog } from '../components/dialogs/SketchDialog'
-import { FEAConfigDialog } from '../components/dialogs/FEAConfigDialog'
+// import { FEAConfigDialog } from '../components/dialogs/FEAConfigDialog' // TODO: Create FEA config dialog
 import { MoveCopyBodyDialog } from '../components/dialogs/MoveCopyBodyDialog'
 import { Notifications } from '../components/Notifications'
 import { ChatPanel } from '../components/chat'
@@ -58,7 +58,10 @@ export function EditorPage() {
     exitSketchMode,
     setActiveTool,
     clearSelection,
-    addNotification
+    addNotification,
+    transformState,
+    exitTransformMode,
+    cancelTransform
   } = useUIStore()
   
   // Context menu state
@@ -132,10 +135,10 @@ export function EditorPage() {
       }
       
       if (e.key === 'Escape') {
-        if (transformState.isActive) {
-          exitTransformMode()
-        } else if (sketchMode) {
+        if (sketchMode) {
           handleCancelSketch()
+        } else if (transformState.isActive) {
+          cancelTransform()
         } else {
           setActiveTool(null)
           clearSelection()
@@ -301,7 +304,7 @@ export function EditorPage() {
       {activeDialog === 'linear-pattern' && <LinearPatternDialog />}
       {activeDialog === 'circular-pattern' && <CircularPatternDialog />}
       {activeDialog === 'sketch' && <SketchDialog />}
-      {activeDialog === 'fea-config' && <FEAConfigDialog />}
+      {/* activeDialog === 'fea-config' && <FEAConfigDialog /> */}
       {activeDialog === 'move-copy-body' && <MoveCopyBodyDialog />}
       
       {/* Notifications */}
