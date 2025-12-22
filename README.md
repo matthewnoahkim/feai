@@ -79,10 +79,10 @@ feai/
 - Custom mesh generator
 - Structural analysis engine
 
-## 📝 License
+## License
 
 MIT License - Open source under MIT license.
 
-## 🤝 Contributing
+## Contributing
 
-Contributions welcome! Please read our contributing guidelines before submitting PRs.
+Contributions welcome! Please contact mattnoahkim@gmail.com.

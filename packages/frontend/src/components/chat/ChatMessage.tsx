@@ -1,6 +1,6 @@
 /**
  * ChatMessage Component - Displays a single chat message with optional actions
- * Academic/scholarly theme styling
+ * Clean design (no bubbles)
  */
 
 import React from 'react'
@@ -115,48 +115,52 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
   const isAssistant = message.role === 'assistant'
   
   const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const d = new Date(date)
+    let hours = d.getHours()
+    const minutes = d.getMinutes()
+    const ampm = hours >= 12 ? 'pm' : 'am'
+    hours = hours % 12
+    hours = hours ? hours : 12 // 0 should be 12
+    const minutesStr = minutes < 10 ? '0' + minutes : minutes
+    return `${hours}:${minutesStr}${ampm}`
   }
   
   return (
-    <div className={`chat-message ${isUser ? 'chat-message-user' : 'chat-message-assistant'}`}>
-      {/* Avatar */}
-      <div className={`chat-avatar ${isUser ? 'chat-avatar-user' : 'chat-avatar-assistant'}`}>
-        {isUser ? <User size={16} /> : <span className="text-xs font-bold">AI</span>}
+    <div className={`message ${isAssistant ? 'message-assistant' : ''}`}>
+      {/* Time stamp only */}
+      <div className="flex items-center gap-2 px-4 py-1.5 font-sans">
+        <span className="text-[10px] text-cad-text-dim">
+          {formatTime(message.timestamp)}
+        </span>
+        {message.status === 'error' && (
+          <span className="text-[10px] text-cad-error ml-auto">Failed</span>
+        )}
       </div>
       
       {/* Content */}
-      <div className="flex-1 min-w-0">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-1 font-sans">
-          <span className="text-xs font-medium">
-            {isUser ? 'You' : 'AI Assistant'}
-          </span>
-          <span className="text-[10px] text-cad-text-dim">
-            {formatTime(message.timestamp)}
-          </span>
-          {message.status === 'error' && (
-            <span className="text-[10px] text-cad-error ml-auto">Failed</span>
-          )}
-        </div>
-        
-        {/* Message body */}
-        <div className={`chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}`}>
-          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+      <div className="px-4 pb-3">
+        {isUser ? (
+          <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 inline-block max-w-full">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans text-cad-text">
+              {message.content}
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
             {formatMessageContent(message.content)}
           </div>
-          
-          {/* Actions */}
-          {isAssistant && message.actions && (
-            <ActionsDisplay actions={message.actions} />
-          )}
-        </div>
+        )}
+        
+        {/* Actions */}
+        {isAssistant && message.actions && (
+          <ActionsDisplay actions={message.actions} />
+        )}
         
         {/* Retry button for errors */}
         {message.status === 'error' && onRetry && (
           <button
             onClick={onRetry}
-            className="mt-1 text-xs text-cad-accent hover:text-cad-accent-hover underline transition-colors font-sans"
+            className="mt-2 text-xs text-cad-accent hover:text-cad-accent-hover underline transition-colors font-sans"
           >
             Try again
           </button>

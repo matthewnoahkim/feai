@@ -324,6 +324,7 @@ interface UIState {
   
   setSelection: (selection: Selection) => void
   clearSelection: () => void
+  selectAll: () => void
   addToSelection: (type: SelectionType, id: string) => void
   removeFromSelection: (id: string) => void
   setHovered: (id: string | null) => void
@@ -850,6 +851,32 @@ export const useUIStore = create<UIState>((set, get) => ({
   setSelection: (selection) => set({ selection }),
   
   clearSelection: () => set({ selection: { type: 'none', ids: [] } }),
+  
+  selectAll: () => {
+    // Import documentStore dynamically to avoid circular dependency
+    import('./documentStore').then(({ useDocumentStore }) => {
+      const { document } = useDocumentStore.getState()
+      if (!document) return
+      
+      const activePartStudio = document.partStudios.find(
+        ps => ps.id === document.activeElementId
+      )
+      
+      if (!activePartStudio) return
+      
+      // In model mode, select all bodies (parts)
+      const bodyIds = activePartStudio.parts.map(p => p.id)
+      
+      if (bodyIds.length > 0) {
+        set({ 
+          selection: { 
+            type: 'body', 
+            ids: bodyIds 
+          } 
+        })
+      }
+    })
+  },
   
   addToSelection: (type, id) => set((state) => ({
     selection: {

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react'
 import { useUIStore, Measurement } from '../store/uiStore'
+import { useChatStore } from '../store/chatStore'
 import { formatMeasurement, formatDelta } from '../utils/measurement-utils'
 import { 
   Ruler, 
@@ -170,13 +171,58 @@ export function MeasurementsPanel() {
     toggleMeasurementsPanel,
     clearMeasurements,
     removeMeasurement,
-    measurementMode
+    measurementMode,
+    leftPanelOpen,
+    leftPanelWidth,
+    chatPanelWidth
   } = useUIStore()
+  const { isOpen: isChatOpen } = useChatStore()
   
   if (!showMeasurementsPanel) return null
   
+  const leftOffset = leftPanelOpen ? leftPanelWidth : 0
+  const rightOffset = isChatOpen ? chatPanelWidth : 0
+  
   return (
-    <div className="absolute top-16 right-4 w-80 bg-white border border-cad-border shadow-lg z-30 max-h-[calc(100vh-120px)] flex flex-col">
+    <div 
+      className="fixed h-80 bg-white border-t border-cad-border shadow-lg z-30 flex flex-col"
+      style={{ 
+        left: `${leftOffset}px`,
+        right: `${rightOffset}px`,
+        bottom: '28px' // Height of status bar
+      }}
+    >
+      {/* Resize Handle */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-cad-accent/50 transition-colors"
+        onMouseDown={(e) => {
+          e.preventDefault()
+          const startY = e.clientY
+          const startHeight = 320 // h-80 = 20rem = 320px
+          
+          const handleMouseMove = (moveEvent: MouseEvent) => {
+            const delta = startY - moveEvent.clientY
+            const newHeight = Math.max(150, Math.min(600, startHeight + delta))
+            const container = window.document.querySelector('.fixed.bottom-0.z-30') as HTMLElement
+            if (container) {
+              container.style.height = `${newHeight}px`
+            }
+          }
+          
+          const handleMouseUp = () => {
+            window.document.removeEventListener('mousemove', handleMouseMove)
+            window.document.removeEventListener('mouseup', handleMouseUp)
+            window.document.body.style.cursor = ''
+            window.document.body.style.userSelect = ''
+          }
+          
+          window.document.addEventListener('mousemove', handleMouseMove)
+          window.document.addEventListener('mouseup', handleMouseUp)
+          window.document.body.style.cursor = 'ns-resize'
+          window.document.body.style.userSelect = 'none'
+        }}
+      />
+      
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-cad-border bg-cad-panel">
         <div className="flex items-center gap-2">

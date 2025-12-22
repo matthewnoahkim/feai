@@ -2262,8 +2262,8 @@ function CameraController() {
   useEffect(() => {
     const handleResetView = () => {
       if (controls) {
-        // Reset camera to default position
-        camera.position.set(200, 150, 200)
+        // Reset camera to default position (slightly offset to account for side panels)
+        camera.position.set(120, 80, 120)
         camera.lookAt(0, 0, 0)
         // @ts-ignore - controls is OrbitControls
         controls.target.set(0, 0, 0)
@@ -2476,7 +2476,7 @@ function Scene() {
       />
 
       {/* View cube with XYZ labels */}
-      <GizmoHelper alignment="top-right" margin={[80, 80]}>
+      <GizmoHelper alignment="top-right" margin={[60, 100]}>
         <GizmoViewport 
           axisColors={['#ef4444', '#22c55e', '#3b82f6']} 
           labelColor="black"
@@ -2710,7 +2710,7 @@ export function Viewport3D() {
           alpha: false,
           powerPreference: 'high-performance'
         }}
-        camera={{ position: [100, 80, 100], fov: 45, near: 0.1, far: 5000 }}
+        camera={{ position: [120, 80, 120], fov: 45, near: 0.1, far: 5000 }}
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => {
           gl.setClearColor('#ffffff')

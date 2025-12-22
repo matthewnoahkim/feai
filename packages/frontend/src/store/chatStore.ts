@@ -4,6 +4,14 @@
 
 import { create } from 'zustand'
 
+export interface ChatSession {
+  id: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+  messages: ChatMessage[]
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant' | 'system'
@@ -36,8 +44,12 @@ export interface ChatContext {
 }
 
 interface ChatState {
-  // Chat state
-  messages: ChatMessage[]
+  // Current project ID (for scoping chats)
+  currentProjectId: string | null
+  
+  // Chat sessions
+  sessions: ChatSession[]
+  activeSessionId: string | null
   isOpen: boolean
   isTyping: boolean
   isExecuting: boolean
@@ -50,10 +62,22 @@ interface ChatState {
   // Undo stack
   lastActionIds: string[]
   
-  // Actions
+  // Project management
+  loadProjectChats: (projectId: string) => void
+  
+  // Session actions
+  createSession: (name?: string) => string
+  deleteSession: (sessionId: string) => void
+  renameSession: (sessionId: string, name: string) => void
+  setActiveSession: (sessionId: string) => void
+  
+  // Message actions
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => ChatMessage
   updateMessage: (id: string, updates: Partial<ChatMessage>) => void
   clearMessages: () => void
+  
+  // Helper to get current messages
+  getMessages: () => ChatMessage[]
   
   setIsOpen: (isOpen: boolean) => void
   toggleOpen: () => void
@@ -83,96 +107,258 @@ const DEFAULT_CONTEXT: ChatContext = {
   modelDescription: 'Empty model'
 }
 
-// Initial welcome message - empty to start clean
-const WELCOME_MESSAGE: Omit<ChatMessage, 'id' | 'timestamp'> = {
-  role: 'assistant',
-  content: `I can help you create and modify 3D geometry using natural language commands.`,
-  status: 'success'
+// Create a new session
+function createNewSession(name?: string): ChatSession {
+  const now = new Date()
+  const defaultName = name || now.toLocaleString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  })
+  
+  return {
+    id: generateId(),
+    name: defaultName,
+    createdAt: now,
+    updatedAt: now,
+    messages: []
+  }
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
-  // Initial state
-  messages: [],
-  isOpen: true, // Open by default (like Cursor)
-  isTyping: false,
-  isExecuting: false,
-  context: DEFAULT_CONTEXT,
-  apiKey: OPENAI_API_KEY,
-  model: 'gpt-4',
-  lastActionIds: [],
-  
-  // Actions
-  addMessage: (message) => {
-    const newMessage: ChatMessage = {
-      ...message,
-      id: generateId(),
-      timestamp: new Date()
+// Load sessions from localStorage for a specific project
+function loadSessions(projectId?: string): ChatSession[] {
+  try {
+    const key = projectId ? `chat-sessions-${projectId}` : 'chat-sessions'
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return parsed.map((s: any) => ({
+        ...s,
+        createdAt: new Date(s.createdAt),
+        updatedAt: new Date(s.updatedAt),
+        messages: s.messages.map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.timestamp)
+        }))
+      }))
     }
-    set((state) => ({
-      messages: [...state.messages, newMessage]
-    }))
-    return newMessage
-  },
+  } catch (error) {
+    console.error('Failed to load chat sessions:', error)
+  }
+  return [createNewSession()]
+}
+
+// Save sessions to localStorage for a specific project
+function saveSessions(sessions: ChatSession[], projectId?: string) {
+  try {
+    const key = projectId ? `chat-sessions-${projectId}` : 'chat-sessions'
+    localStorage.setItem(key, JSON.stringify(sessions))
+  } catch (error) {
+    console.error('Failed to save chat sessions:', error)
+  }
+}
+
+export const useChatStore = create<ChatState>((set, get) => {
+  // Load initial sessions (will be empty until project is loaded)
+  const initialSessions = [createNewSession()]
+  const initialSessionId = initialSessions[0]?.id || null
   
-  updateMessage: (id, updates) => {
-    set((state) => ({
-      messages: state.messages.map((msg) =>
-        msg.id === id ? { ...msg, ...updates } : msg
-      )
-    }))
-  },
-  
-  clearMessages: () => {
-    // Keep welcome message
-    const welcome = {
-      ...WELCOME_MESSAGE,
-      id: generateId(),
-      timestamp: new Date()
-    }
-    set({ messages: [welcome], lastActionIds: [] })
-  },
-  
-  setIsOpen: (isOpen) => {
-    set({ isOpen })
-    // Add welcome message if opening for first time
-    if (isOpen && get().messages.length === 0) {
-      get().addMessage(WELCOME_MESSAGE)
-    }
-  },
-  
-  toggleOpen: () => {
-    const newIsOpen = !get().isOpen
-    get().setIsOpen(newIsOpen)
-  },
-  
-  setIsTyping: (isTyping) => set({ isTyping }),
-  
-  setIsExecuting: (isExecuting) => set({ isExecuting }),
-  
-  updateContext: (context) => {
-    set((state) => ({
-      context: { ...state.context, ...context }
-    }))
-  },
-  
-  setApiKey: (apiKey) => set({ apiKey }),
-  
-  setModel: (model) => set({ model }),
-  
-  addToUndoStack: (actionId) => {
-    set((state) => ({
-      lastActionIds: [...state.lastActionIds, actionId].slice(-10) // Keep last 10
-    }))
-  },
-  
-  popUndoStack: () => {
-    const stack = get().lastActionIds
-    if (stack.length === 0) return undefined
-    const lastId = stack[stack.length - 1]
-    set({ lastActionIds: stack.slice(0, -1) })
-    return lastId
-  },
-  
-  clearUndoStack: () => set({ lastActionIds: [] })
-}))
+  return {
+    // Initial state
+    currentProjectId: null,
+    sessions: initialSessions,
+    activeSessionId: initialSessionId,
+    isOpen: true, // Open by default (like Cursor)
+    isTyping: false,
+    isExecuting: false,
+    context: DEFAULT_CONTEXT,
+    apiKey: OPENAI_API_KEY,
+    model: 'gpt-4',
+    lastActionIds: [],
+    
+    // Load chats for a specific project
+    loadProjectChats: (projectId) => {
+      const sessions = loadSessions(projectId)
+      set({
+        currentProjectId: projectId,
+        sessions,
+        activeSessionId: sessions[0]?.id || null
+      })
+    },
+    
+    // Helper to get current messages
+    getMessages: () => {
+      const { sessions, activeSessionId } = get()
+      const activeSession = sessions.find(s => s.id === activeSessionId)
+      return activeSession?.messages || []
+    },
+    
+    // Session actions
+    createSession: (name) => {
+      const newSession = createNewSession(name)
+      set((state) => {
+        const newSessions = [...state.sessions, newSession]
+        saveSessions(newSessions, state.currentProjectId || undefined)
+        return {
+          sessions: newSessions,
+          activeSessionId: newSession.id
+        }
+      })
+      return newSession.id
+    },
+    
+    deleteSession: (sessionId) => {
+      set((state) => {
+        const newSessions = state.sessions.filter(s => s.id !== sessionId)
+        // If deleting active session, switch to first available
+        const newActiveId = state.activeSessionId === sessionId 
+          ? (newSessions[0]?.id || null)
+          : state.activeSessionId
+        
+        // If no sessions left, create a new one
+        if (newSessions.length === 0) {
+          const defaultSession = createNewSession()
+          newSessions.push(defaultSession)
+          saveSessions(newSessions, state.currentProjectId || undefined)
+          return {
+            sessions: newSessions,
+            activeSessionId: defaultSession.id
+          }
+        }
+        
+        saveSessions(newSessions, state.currentProjectId || undefined)
+        return {
+          sessions: newSessions,
+          activeSessionId: newActiveId
+        }
+      })
+    },
+    
+    renameSession: (sessionId, name) => {
+      set((state) => {
+        const newSessions = state.sessions.map(s => 
+          s.id === sessionId 
+            ? { ...s, name, updatedAt: new Date() }
+            : s
+        )
+        saveSessions(newSessions, state.currentProjectId || undefined)
+        return { sessions: newSessions }
+      })
+    },
+    
+    setActiveSession: (sessionId) => {
+      set({ activeSessionId: sessionId })
+    },
+    
+    // Message actions
+    addMessage: (message) => {
+      const newMessage: ChatMessage = {
+        ...message,
+        id: generateId(),
+        timestamp: new Date()
+      }
+      
+      set((state) => {
+        const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
+        if (!activeSession) return state
+        
+        const newSessions = state.sessions.map(s => 
+          s.id === state.activeSessionId 
+            ? { 
+                ...s, 
+                messages: [...s.messages, newMessage],
+                updatedAt: new Date()
+              }
+            : s
+        )
+        
+        saveSessions(newSessions, state.currentProjectId || undefined)
+        return { sessions: newSessions }
+      })
+      
+      return newMessage
+    },
+    
+    updateMessage: (id, updates) => {
+      set((state) => {
+        const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
+        if (!activeSession) return state
+        
+        const newSessions = state.sessions.map(s => 
+          s.id === state.activeSessionId 
+            ? { 
+                ...s,
+                messages: s.messages.map((msg) =>
+                  msg.id === id ? { ...msg, ...updates } : msg
+                ),
+                updatedAt: new Date()
+              }
+            : s
+        )
+        
+        saveSessions(newSessions, state.currentProjectId || undefined)
+        return { sessions: newSessions }
+      })
+    },
+    
+    clearMessages: () => {
+      set((state) => {
+        const activeSession = state.sessions.find(s => s.id === state.activeSessionId)
+        if (!activeSession) return state
+        
+        const newSessions = state.sessions.map(s => 
+          s.id === state.activeSessionId 
+            ? { ...s, messages: [], updatedAt: new Date() }
+            : s
+        )
+        
+        saveSessions(newSessions, state.currentProjectId || undefined)
+        return {
+          sessions: newSessions,
+          lastActionIds: []
+        }
+      })
+    },
+    
+    setIsOpen: (isOpen) => {
+      set({ isOpen })
+    },
+    
+    toggleOpen: () => {
+      set((state) => ({ isOpen: !state.isOpen }))
+    },
+    
+    setIsTyping: (isTyping) => set({ isTyping }),
+    
+    setIsExecuting: (isExecuting) => set({ isExecuting }),
+    
+    updateContext: (context) => {
+      set((state) => ({
+        context: { ...state.context, ...context }
+      }))
+    },
+    
+    setApiKey: (apiKey) => set({ apiKey }),
+    
+    setModel: (model) => set({ model }),
+    
+    addToUndoStack: (actionId) => {
+      set((state) => ({
+        lastActionIds: [...state.lastActionIds, actionId].slice(-10) // Keep last 10
+      }))
+    },
+    
+    popUndoStack: () => {
+      const stack = get().lastActionIds
+      if (stack.length === 0) return undefined
+      const lastId = stack[stack.length - 1]
+      set({ lastActionIds: stack.slice(0, -1) })
+      return lastId
+    },
+    
+    clearUndoStack: () => set({ lastActionIds: [] })
+  }
+})
 

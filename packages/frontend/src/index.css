@@ -262,6 +262,19 @@ kbd {
   @apply flex-1 overflow-y-auto px-4 py-4 space-y-4;
 }
 
+/* Linear message layout (no bubbles) */
+.chat-messages-linear {
+  @apply flex-1 overflow-y-auto;
+}
+
+.message-assistant {
+  @apply border-b border-cad-border/30;
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
 .chat-message {
   @apply flex gap-3;
 }

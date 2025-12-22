@@ -54,7 +54,7 @@ interface SelectionContextMenuProps {
 }
 
 export function SelectionContextMenu({ position, onClose }: SelectionContextMenuProps) {
-  const { selection, clearSelection, openDialog, addNotification, enterMeasurementMode, enterTransformMode, openFeatureForEdit, enterConstraintTool, enterDimensionTool } = useUIStore()
+  const { selection, clearSelection, selectAll, openDialog, addNotification, enterMeasurementMode, enterTransformMode, openFeatureForEdit, enterConstraintTool, enterDimensionTool } = useUIStore()
   const { document: cadDocument, toggleBodyVisibility, toggleFeatureSuppression } = useDocumentStore()
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState<{featureId: string, partStudioId: string} | null>(null)
   const [deleteSketchEntityDialogOpen, setDeleteSketchEntityDialogOpen] = React.useState<{sketchId: string, entityIds: string[]} | null>(null)
@@ -98,9 +98,7 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
           label: 'Select All',
           icon: <Square size={14} />,
           action: () => { 
-            // TODO: Implement select all functionality
-            // For now, just show a notification
-            addNotification('info', 'Select all feature coming soon')
+            selectAll()
             onClose()
           },
           shortcut: 'Ctrl+A',

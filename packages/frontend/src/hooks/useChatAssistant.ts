@@ -11,7 +11,7 @@ import { executeActions, undoActions } from '../services/cadExecutor'
 
 export function useChatAssistant() {
   const {
-    messages,
+    getMessages,
     isOpen,
     isTyping,
     isExecuting,
@@ -30,6 +30,9 @@ export function useChatAssistant() {
     addToUndoStack,
     popUndoStack
   } = useChatStore()
+  
+  // Get current messages
+  const messages = getMessages()
   
   const { document, regenerateModel } = useDocumentStore()
   const { selection, addNotification } = useUIStore()
@@ -169,7 +172,7 @@ export function useChatAssistant() {
         currentContext.partStudioId,
         (action, index) => {
           // Update action status in the message
-          const currentMessage = useChatStore.getState().messages.find(m => m.id === messageId)
+          const currentMessage = useChatStore.getState().getMessages().find(m => m.id === messageId)
           if (currentMessage?.actions) {
             const updatedActions = [...currentMessage.actions]
             updatedActions[index] = action
@@ -181,7 +184,7 @@ export function useChatAssistant() {
       // Update message with final status
       updateMessage(messageId, {
         status: summary.success ? 'success' : 'error',
-        content: useChatStore.getState().messages.find(m => m.id === messageId)?.content + `\n\n${summary.message}`
+        content: useChatStore.getState().getMessages().find(m => m.id === messageId)?.content + `\n\n${summary.message}`
       })
       
       // Add created feature IDs to undo stack

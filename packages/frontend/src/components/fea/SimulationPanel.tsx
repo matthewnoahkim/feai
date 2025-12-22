@@ -6,6 +6,8 @@
 import React from 'react';
 import { useFEAStore } from '../../store/feaStore';
 import { useDocumentStore } from '../../store/documentStore';
+import { useUIStore } from '../../store/uiStore';
+import { useChatStore } from '../../store/chatStore';
 import { MeshPanel } from './MeshPanel';
 import { MaterialPanel } from './MaterialPanel';
 import { BoundaryConditionsPanel } from './BoundaryConditionsPanel';
@@ -66,6 +68,8 @@ const CloseIcon = () => (
 
 export function SimulationPanel() {
   const { document } = useDocumentStore();
+  const { leftPanelOpen, leftPanelWidth, chatPanelWidth } = useUIStore();
+  const { isOpen: isChatOpen } = useChatStore();
   const {
     isSimulationMode,
     activeFEAPanel,
@@ -112,9 +116,50 @@ export function SimulationPanel() {
     resetFEA();
     exitSimulationMode();
   };
+  
+  const leftOffset = leftPanelOpen ? leftPanelWidth : 0;
+  const rightOffset = isChatOpen ? chatPanelWidth : 0;
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-80 bg-gray-50 border-l border-cad-border flex flex-col z-20">
+    <div 
+      className="fixed bottom-0 h-96 bg-gray-50 border-t border-cad-border flex flex-col z-20"
+      style={{ 
+        left: `${leftOffset}px`,
+        right: `${rightOffset}px`,
+        bottom: '28px' // Height of status bar
+      }}
+    >
+      {/* Resize Handle */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-cad-accent/50 transition-colors"
+        onMouseDown={(e) => {
+          e.preventDefault()
+          const startY = e.clientY
+          const startHeight = 384 // h-96 = 24rem = 384px
+          
+          const handleMouseMove = (moveEvent: MouseEvent) => {
+            const delta = startY - moveEvent.clientY
+            const newHeight = Math.max(200, Math.min(800, startHeight + delta))
+            const container = window.document.querySelector('.fixed.bottom-0.z-20') as HTMLElement
+            if (container) {
+              container.style.height = `${newHeight}px`
+            }
+          }
+          
+          const handleMouseUp = () => {
+            window.document.removeEventListener('mousemove', handleMouseMove)
+            window.document.removeEventListener('mouseup', handleMouseUp)
+            window.document.body.style.cursor = ''
+            window.document.body.style.userSelect = ''
+          }
+          
+          window.document.addEventListener('mousemove', handleMouseMove)
+          window.document.addEventListener('mouseup', handleMouseUp)
+          window.document.body.style.cursor = 'ns-resize'
+          window.document.body.style.userSelect = 'none'
+        }}
+      />
+      
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-white">
         <div className="flex items-center gap-2">

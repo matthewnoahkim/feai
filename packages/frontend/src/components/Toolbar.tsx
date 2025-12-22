@@ -486,8 +486,6 @@ export function Toolbar() {
           <span className="font-serif font-semibold text-cad-text text-sm">FeAI</span>
         </button>
 
-      <ToolDivider />
-
       {/* Project/Document Name */}
       <div className="flex items-center px-2 flex-shrink-0">
         {isEditingName ? (
@@ -533,8 +531,6 @@ export function Toolbar() {
           </button>
         </div>
       )}
-
-      <ToolDivider />
 
       {/* File operations */}
       <div className="flex items-center flex-shrink-0">

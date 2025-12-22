@@ -38,6 +38,7 @@ import { useDocumentStore } from '../store/documentStore'
 import { useUIStore } from '../store/uiStore'
 import { useProjectStore } from '../store/projectStore'
 import { useAuthStore } from '../store/authStore'
+import { useChatStore } from '../store/chatStore'
 
 export function EditorPage() {
   const { projectId } = useParams<{ projectId?: string }>()
@@ -53,8 +54,11 @@ export function EditorPage() {
     rightPanelOpen,
     leftPanelWidth,
     rightPanelWidth,
+    bottomPanelHeight,
+    chatPanelWidth,
     setLeftPanelWidth,
     setRightPanelWidth,
+    setBottomPanelHeight,
     exitSketchMode,
     setActiveTool,
     clearSelection,
@@ -64,12 +68,18 @@ export function EditorPage() {
     cancelTransform
   } = useUIStore()
   
+  // Chat state
+  const { isOpen: isChatOpen, loadProjectChats } = useChatStore()
+  
   // Context menu state
   const { contextMenu, openContextMenu, closeContextMenu } = useContextMenu()
 
   // Load project if projectId is provided
   useEffect(() => {
     if (projectId && user) {
+      // Load project-specific chats
+      loadProjectChats(projectId)
+      
       fetchProject(projectId).then((project) => {
         if (project?.data) {
           loadDocumentFromData(project.data)
@@ -145,6 +155,13 @@ export function EditorPage() {
         }
       }
       
+      if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault()
+        const { selectAll } = useUIStore.getState()
+        selectAll()
+        return
+      }
+      
       if (e.ctrlKey && e.key === 'z') {
         e.preventDefault()
         console.log('Undo')
@@ -211,86 +228,70 @@ export function EditorPage() {
       {/* Top Toolbar */}
       {isSketchMode ? <SketchToolbar /> : <Toolbar />}
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Panel - Feature Tree */}
-        {leftPanelOpen && (
-          <ResizablePanel
-            direction="horizontal"
-            side="left"
-            initialSize={leftPanelWidth}
-            minSize={200}
-            maxSize={600}
-            onResize={setLeftPanelWidth}
-          >
-            <FeatureTree />
-          </ResizablePanel>
-        )}
+      {/* Main Content Area - Flex Column */}
+      <div className="flex flex-col flex-1 overflow-hidden relative">
+        {/* Top Section - Feature Tree, Viewport, AI Chat */}
+        <div className="flex flex-1 overflow-hidden relative">
+          {/* Left Panel - Feature Tree */}
+          {leftPanelOpen && (
+            <ResizablePanel
+              direction="horizontal"
+              side="left"
+              initialSize={leftPanelWidth}
+              minSize={200}
+              maxSize={600}
+              onResize={setLeftPanelWidth}
+            >
+              <FeatureTree />
+            </ResizablePanel>
+          )}
 
-        {/* 3D Viewport / Sketch Canvas */}
-        <div 
-          className="flex-1 relative bg-white min-h-0 min-w-0"
-          onContextMenu={!isSketchMode ? openContextMenu : undefined}
-        >
-          <SelectionManager>
-            {/* 3D view */}
-            <div className={`absolute inset-0 ${isSketchMode ? 'opacity-0 pointer-events-none' : ''}`}>
-              <Viewport3D />
-            </div>
+          {/* Center - 3D Viewport / Sketch Canvas */}
+          <div 
+            className="flex-1 relative bg-white min-h-0 min-w-0"
+            style={{ 
+              marginRight: isChatOpen ? `${chatPanelWidth}px` : 0 
+            }}
+            onContextMenu={!isSketchMode ? openContextMenu : undefined}
+          >
+            <SelectionManager>
+              {/* 3D view */}
+              <div className={`absolute inset-0 ${isSketchMode ? 'opacity-0 pointer-events-none' : ''}`}>
+                <Viewport3D />
+              </div>
+              
+              {/* Sketch Canvas */}
+              {isSketchMode && <SketchCanvas />}
+              
+              {/* Sketch Mode Bar */}
+              {isSketchMode && (
+                <SketchModeBar
+                  onConfirm={handleConfirmSketch}
+                  onCancel={handleCancelSketch}
+                  onViewNormal={handleViewNormal}
+                />
+              )}
+            </SelectionManager>
             
-            {/* Sketch Canvas */}
-            {isSketchMode && <SketchCanvas />}
-            
-            {/* Sketch Mode Bar */}
-            {isSketchMode && (
-              <SketchModeBar
-                onConfirm={handleConfirmSketch}
-                onCancel={handleCancelSketch}
-                onViewNormal={handleViewNormal}
+            {/* Selection Context Menu */}
+            {contextMenu.isOpen && (
+              <SelectionContextMenu
+                position={contextMenu.position}
+                onClose={closeContextMenu}
               />
             )}
-            
-            {/* View controls hint */}
-            {!isSketchMode && (
-              <div className="absolute bottom-4 left-4 text-xs text-cad-text-dim bg-cad-panel/90 backdrop-blur px-3 py-2 border border-cad-border z-10 font-sans">
-                <div className="flex items-center gap-4">
-                  <span>Left: Rotate</span>
-                  <span>Middle: Pan</span>
-                  <span>Scroll: Zoom</span>
-                </div>
-              </div>
-            )}
-          </SelectionManager>
+          </div>
           
-          {/* Selection Context Menu */}
-          {contextMenu.isOpen && (
-            <SelectionContextMenu
-              position={contextMenu.position}
-              onClose={closeContextMenu}
-            />
-          )}
+          {/* AI Chat Assistant - Right */}
+          <ChatPanel />
         </div>
 
-        {/* Right Panel - Properties */}
-        {rightPanelOpen && (
-          <ResizablePanel
-            direction="horizontal"
-            side="right"
-            initialSize={rightPanelWidth}
-            minSize={250}
-            maxSize={600}
-            onResize={setRightPanelWidth}
-          >
-            <PropertyPanel />
-          </ResizablePanel>
-        )}
-        
-        {/* AI Chat Assistant */}
-        <ChatPanel />
-      </div>
+        {/* Bottom Panel - Properties (like terminal) */}
+        {rightPanelOpen && <PropertyPanel />}
 
-      {/* Status Bar */}
-      <StatusBar />
+        {/* Status Bar */}
+        <StatusBar />
+      </div>
       
       {/* Dialogs */}
       {activeDialog === 'extrude' && <ExtrudeDialog />}

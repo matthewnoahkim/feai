@@ -33,7 +33,22 @@ export async function executeActions(
   const createdFeatureIds: string[] = []
   let allSuccess = true
   
-  const store = useDocumentStore.getState()
+  // Safety check: ensure store is available
+  let store
+  try {
+    store = useDocumentStore.getState()
+    if (!store) {
+      throw new Error('Store not initialized')
+    }
+  } catch (error) {
+    console.error('Failed to get document store:', error)
+    return {
+      success: false,
+      results: [],
+      message: 'System not ready. Please try again or refresh the page.',
+      createdFeatureIds: []
+    }
+  }
   
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i]
@@ -53,6 +68,7 @@ export async function executeActions(
       }
       
       if (!result.success) {
+        console.error('Action failed:', result.error, 'Action:', action)
         allSuccess = false
         break
       }
@@ -61,6 +77,7 @@ export async function executeActions(
         createdFeatureIds.push(result.createdId)
       }
     } catch (error) {
+      console.error('Caught error executing action:', error, 'Action:', action)
       const errorAction = { ...action, status: 'error' as const }
       results.push({
         success: false,
@@ -687,7 +704,20 @@ export async function undoActions(
   documentId: string,
   partStudioId: string
 ): Promise<{ success: boolean; message: string }> {
-  const store = useDocumentStore.getState()
+  // Safety check: ensure store is available
+  let store
+  try {
+    store = useDocumentStore.getState()
+    if (!store) {
+      throw new Error('Store not initialized')
+    }
+  } catch (error) {
+    console.error('Failed to get document store:', error)
+    return {
+      success: false,
+      message: 'System not ready. Please try again or refresh the page.'
+    }
+  }
   
   try {
     for (const featureId of featureIds.reverse()) {

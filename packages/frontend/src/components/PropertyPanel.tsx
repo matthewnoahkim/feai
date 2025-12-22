@@ -6,6 +6,7 @@
 import React, { useState } from 'react'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
+import { useChatStore } from '../store/chatStore'
 import {
   Box,
   Palette,
@@ -134,8 +135,9 @@ function ColorPicker({ value, onChange }: { value: string; onChange?: (color: st
 }
 
 export function PropertyPanel() {
-  const { selection, viewSettings, setDisplayMode, toggleViewSetting } = useUIStore()
+  const { selection, viewSettings, setDisplayMode, toggleViewSetting, leftPanelOpen, leftPanelWidth, chatPanelWidth } = useUIStore()
   const { document, updatePartColor, updatePartMaterial, updateFeature, updateDocumentName, updateDocumentUnits, renameFeature } = useDocumentStore()
+  const { isOpen: isChatOpen } = useChatStore()
   
   const activePartStudio = document?.partStudios.find(ps => ps.id === document.activeElementId)
   
@@ -148,9 +150,19 @@ export function PropertyPanel() {
   const selectedPart = selection.type === 'body' && selection.ids.length > 0
     ? activePartStudio?.parts.find(p => p.id === selection.ids[0])
     : null
+  
+  const leftOffset = leftPanelOpen ? leftPanelWidth : 0
+  const rightOffset = isChatOpen ? chatPanelWidth : 0
 
   return (
-    <div className="w-80 flex flex-col bg-cad-panel border-l border-cad-border">
+    <div 
+      className="fixed h-96 bg-cad-panel border-t border-cad-border flex flex-col z-20"
+      style={{ 
+        left: `${leftOffset}px`,
+        right: `${rightOffset}px`,
+        bottom: '28px' // Height of status bar
+      }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-cad-border bg-gray-50">
         <span className="font-semibold text-sm font-serif">Properties</span>
