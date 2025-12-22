@@ -20,7 +20,7 @@ AI-assisted Finite Element Analysis software with integrated CAD modeling, struc
 │  ├─ /dashboard (Projects)           │
 │  └─ /editor (CAD + FEA)             │
 ├─────────────────────────────────────┤
-│  REST API                            │
+│  REST API                           │
 │  ├─ /api/projects                   │
 │  ├─ /api/documents                  │
 │  ├─ /api/fea                        │
