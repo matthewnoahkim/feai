@@ -99,7 +99,7 @@ function OriginAxes() {
       <Line points={[[0, 0, 0], [length, 0, 0]]} color="#ef4444" lineWidth={2} />
       {/* Y axis - Green */}
       <Line points={[[0, 0, 0], [0, length, 0]]} color="#22c55e" lineWidth={2} />
-      {/* Z axis - Blue */}
+      {/* Z axis - Regular Blue */}
       <Line points={[[0, 0, 0], [0, 0, length]]} color="#3b82f6" lineWidth={2} />
     </group>
   )
@@ -319,7 +319,7 @@ function SketchVisualization() {
                 [entity.data.start.x, entity.data.start.y, entity.data.start.z || 0],
                 [entity.data.end.x, entity.data.end.y, entity.data.end.z || 0]
               ]}
-              color={entity.construction ? '#f59e0b' : '#3b82f6'}
+              color={entity.construction ? '#f59e0b' : '#1a4d8f'}
               lineWidth={2}
             />
           )
@@ -342,7 +342,7 @@ function SketchVisualization() {
             <Line
               key={entity.id}
               points={points}
-              color={entity.construction ? '#f59e0b' : '#3b82f6'}
+              color={entity.construction ? '#f59e0b' : '#1a4d8f'}
               lineWidth={2}
             />
           )
@@ -363,7 +363,7 @@ function SketchVisualization() {
                 [c1.x, c2.y, 0],
                 [c1.x, c1.y, 0]
               ]}
-              color={entity.construction ? '#f59e0b' : '#3b82f6'}
+              color={entity.construction ? '#f59e0b' : '#1a4d8f'}
               lineWidth={2}
             />
           )
@@ -2121,7 +2121,7 @@ function CompletedSketchesVisualization() {
             rotation={rotation}
           >
             {sketch.entities.map((entity) => {
-              const color = entity.construction ? '#f59e0b' : '#22c55e'
+              const color = entity.construction ? '#f59e0b' : '#1a4d8f'
               const opacity = 0.7
               
               switch (entity.type) {

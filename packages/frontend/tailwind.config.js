@@ -15,9 +15,9 @@ export default {
           'text-dim': '#1a4d8f',
           'accent': '#1a4d8f',
           'accent-hover': '#0d2a4d',
-          'success': '#1a4d8f',
-          'warning': '#1a4d8f',
-          'error': '#1a4d8f',
+          'success': '#22c55e',
+          'warning': '#f59e0b',
+          'error': '#ef4444',
         }
       },
       fontFamily: {

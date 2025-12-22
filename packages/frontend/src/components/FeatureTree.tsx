@@ -234,17 +234,17 @@ function FeatureIcon({ type, state }: { type: string; state?: FeatureState }) {
     if (state === 'suppressed') return 'text-cad-text-dim'
     
     switch (type) {
-      case 'sketch': return 'text-cad-warning'
-      case 'extrude': return 'text-cad-accent'
-      case 'revolve': return 'text-cad-success'
-      case 'sweep': return 'text-cyan-600'
-      case 'loft': return 'text-purple-600'
-      case 'fillet': return 'text-orange-600'
-      case 'chamfer': return 'text-orange-600'
-      case 'shell': return 'text-pink-600'
-      case 'mirror': return 'text-indigo-600'
-      case 'linearPattern': return 'text-teal-600'
-      case 'circularPattern': return 'text-teal-600'
+      case 'sketch': return 'text-cad-accent' // Navy blue
+      case 'extrude': return 'text-cad-accent' // Navy blue
+      case 'revolve': return 'text-cad-accent' // Navy blue
+      case 'sweep': return 'text-cad-accent' // Navy blue
+      case 'loft': return 'text-cad-accent' // Navy blue
+      case 'fillet': return 'text-cad-accent' // Navy blue
+      case 'chamfer': return 'text-cad-accent' // Navy blue
+      case 'shell': return 'text-cad-accent' // Navy blue
+      case 'mirror': return 'text-cad-accent' // Navy blue
+      case 'linearPattern': return 'text-cad-accent' // Navy blue
+      case 'circularPattern': return 'text-cad-accent' // Navy blue
       case 'plane': return 'text-cad-text-dim'
       default: return 'text-cad-text-dim'
     }

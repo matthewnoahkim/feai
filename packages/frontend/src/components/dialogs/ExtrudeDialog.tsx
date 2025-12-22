@@ -243,18 +243,23 @@ export function ExtrudeDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'extrude').length + 1
     const name = `Extrude ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
-      type: 'extrude',
-      name,
-      suppressed: false,
-      parameters: params
-    })
-    
-    if (feature) {
-      addNotification('success', `Created ${name}`)
-      closeDialog()
-    } else {
-      addNotification('error', 'Failed to create extrude feature')
+    try {
+      const feature = await addFeature(activePartStudio.id, {
+        type: 'extrude',
+        name,
+        suppressed: false,
+        parameters: params
+      })
+      
+      if (feature) {
+        addNotification('success', `Created ${name}`)
+        closeDialog()
+      } else {
+        addNotification('error', 'Failed to create extrude feature')
+      }
+    } catch (error) {
+      console.error('Error creating extrude:', error)
+      addNotification('error', `Error creating extrude: ${error}`)
     }
   }
   
@@ -635,7 +640,11 @@ export function ExtrudeDialog() {
             {!isValid && (
               <span className="text-cad-accent flex items-center gap-1">
                 <AlertCircle size={12} />
-                {selectedProfiles.length === 0 ? 'Select a profile' : 'Enter valid depth'}
+                {availableProfiles.length === 0 
+                  ? 'No extrudable profiles found' 
+                  : selectedProfiles.length === 0 
+                    ? 'Select a profile' 
+                    : 'Enter valid depth'}
               </span>
             )}
           </div>
