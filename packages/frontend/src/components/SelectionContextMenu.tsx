@@ -11,6 +11,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useUIStore, SelectionType } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
+import { DeleteFeatureDialog } from './dialogs/DeleteFeatureDialog'
+import { DeleteSketchEntityDialog } from './dialogs/DeleteSketchEntityDialog'
 import {
   Box,
   Circle,
@@ -52,8 +54,10 @@ interface SelectionContextMenuProps {
 }
 
 export function SelectionContextMenu({ position, onClose }: SelectionContextMenuProps) {
-  const { selection, clearSelection, openDialog } = useUIStore()
-  const { document: cadDocument } = useDocumentStore()
+  const { selection, clearSelection, openDialog, addNotification, enterMeasurementMode, enterTransformMode, openFeatureForEdit, enterConstraintTool, enterDimensionTool } = useUIStore()
+  const { document: cadDocument, toggleBodyVisibility, toggleFeatureSuppression } = useDocumentStore()
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState<{featureId: string, partStudioId: string} | null>(null)
+  const [deleteSketchEntityDialogOpen, setDeleteSketchEntityDialogOpen] = React.useState<{sketchId: string, entityIds: string[]} | null>(null)
   
   const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
   
@@ -93,7 +97,12 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
           id: 'select-all',
           label: 'Select All',
           icon: <Square size={14} />,
-          action: () => { /* TODO */ },
+          action: () => { 
+            // TODO: Implement select all functionality
+            // For now, just show a notification
+            addNotification('info', 'Select all feature coming soon')
+            onClose()
+          },
           shortcut: 'Ctrl+A',
         },
         {
@@ -105,9 +114,14 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
         },
         {
           id: 'zoom-fit',
-          label: 'Zoom to Fit',
+          label: 'Reset View',
           icon: <Maximize2 size={14} />,
-          action: () => { /* TODO */ },
+          action: () => { 
+            // Dispatch a custom event that the Viewport3D can listen to
+            window.dispatchEvent(new CustomEvent('resetCameraView'))
+            addNotification('info', 'View reset')
+            onClose()
+          },
           shortcut: 'Home',
         },
       )
@@ -179,7 +193,11 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
             id: 'measure',
             label: 'Measure',
             icon: <Ruler size={14} />,
-            action: () => { /* TODO */ },
+            action: () => { 
+              enterMeasurementMode()
+              addNotification('info', 'Measurement mode activated')
+              onClose()
+            },
           },
         )
         break
@@ -190,7 +208,11 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
             id: 'move',
             label: 'Move/Copy',
             icon: <Move size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              if (selection.ids.length > 0) {
+                enterTransformMode(selection.ids[0], 'move')
+              }
+            },
             shortcut: 'M',
           },
           {
@@ -230,26 +252,47 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
             id: 'hide',
             label: 'Hide',
             icon: <EyeOff size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              if (selection.ids.length > 0) {
+                toggleBodyVisibility(selection.ids[0])
+                onClose()
+              }
+            },
             shortcut: 'H',
           },
         )
         break
         
       case 'feature':
+        // Get the feature and part studio for this selection
+        const featurePartStudio = cadDocument?.partStudios.find(ps => 
+          ps.features.some(f => f.id === selection.ids[0])
+        )
+        const selectedFeature = featurePartStudio?.features.find(f => f.id === selection.ids[0])
+        
         items.push(
           {
             id: 'edit',
             label: 'Edit Feature',
             icon: <Edit size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              if (featurePartStudio && selectedFeature) {
+                openFeatureForEdit(selectedFeature.id, featurePartStudio.id)
+                onClose()
+              }
+            },
             shortcut: 'Enter',
           },
           {
             id: 'suppress',
-            label: 'Suppress',
+            label: selectedFeature?.suppressed ? 'Unsuppress' : 'Suppress',
             icon: <EyeOff size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              if (featurePartStudio && selectedFeature) {
+                toggleFeatureSuppression(featurePartStudio.id, selectedFeature.id)
+                onClose()
+              }
+            },
           },
           {
             id: 'divider-1',
@@ -262,7 +305,12 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
             id: 'delete',
             label: 'Delete',
             icon: <Trash2 size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              if (featurePartStudio && selectedFeature) {
+                setDeleteDialogOpen({ featureId: selectedFeature.id, partStudioId: featurePartStudio.id })
+                onClose()
+              }
+            },
             shortcut: 'Del',
           },
         )
@@ -308,7 +356,10 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
             id: 'dimension',
             label: 'Add Dimension',
             icon: <Ruler size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              enterDimensionTool()
+              onClose()
+            },
             shortcut: 'D',
           },
           {
@@ -322,7 +373,19 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
             id: 'delete',
             label: 'Delete',
             icon: <Trash2 size={14} />,
-            action: () => { /* TODO */ },
+            action: () => {
+              // Get the current sketch context
+              const sketchMode = useUIStore.getState().sketchMode
+              if (sketchMode?.sketchId) {
+                setDeleteSketchEntityDialogOpen({
+                  sketchId: sketchMode.sketchId,
+                  entityIds: selection.ids
+                })
+                onClose()
+              } else {
+                addNotification('error', 'No active sketch')
+              }
+            },
             shortcut: 'Del',
           },
         )
@@ -353,7 +416,7 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
     }
     
     return items
-  }, [selection, clearSelection, openDialog, onClose])
+  }, [selection, clearSelection, openDialog, onClose, addNotification, enterMeasurementMode])
   
   const menuItems = getMenuItems()
   
@@ -430,6 +493,24 @@ export function SelectionContextMenu({ position, onClose }: SelectionContextMenu
       <div className="py-1">
         {menuItems.map(item => renderMenuItem(item))}
       </div>
+      
+      {/* Delete confirmation dialog */}
+      {deleteDialogOpen && (
+        <DeleteFeatureDialog
+          featureId={deleteDialogOpen.featureId}
+          partStudioId={deleteDialogOpen.partStudioId}
+          onClose={() => setDeleteDialogOpen(null)}
+        />
+      )}
+      
+      {/* Delete sketch entity dialog */}
+      {deleteSketchEntityDialogOpen && (
+        <DeleteSketchEntityDialog
+          sketchId={deleteSketchEntityDialogOpen.sketchId}
+          entityIds={deleteSketchEntityDialogOpen.entityIds}
+          onClose={() => setDeleteSketchEntityDialogOpen(null)}
+        />
+      )}
     </div>
   )
 }

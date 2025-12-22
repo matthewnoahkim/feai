@@ -321,9 +321,9 @@ function FeatureContextMenu({
   position: { x: number; y: number }
   onClose: () => void 
 }) {
-  const { toggleFeatureSuppression, deleteFeature, reorderFeature, renameFeature } = useDocumentStore()
+  const { toggleFeatureSuppression, deleteFeature, reorderFeature, renameFeature, copyFeature } = useDocumentStore()
   const { document } = useDocumentStore()
-  const { openDialog, addNotification, enterSketchMode } = useUIStore()
+  const { openDialog, addNotification, enterSketchMode, openFeatureForEdit } = useUIStore()
   
   const partStudio = document?.partStudios.find(ps => ps.id === partStudioId)
   const featureIndex = partStudio?.features.findIndex(f => f.id === feature.id) ?? -1
@@ -373,15 +373,34 @@ function FeatureContextMenu({
     onClose()
   }
   
-  const handleCopy = () => {
-    // TODO: Implement feature copy
-    addNotification('info', `Copied ${feature.name}`)
+  const handleCopy = async () => {
+    try {
+      const copiedFeature = await copyFeature(partStudioId, feature.id)
+      if (copiedFeature) {
+        addNotification('success', `Copied ${feature.name}`)
+        
+        // Auto-open the feature for editing (optional but recommended)
+        // This allows the user to modify the copy immediately
+        setTimeout(() => {
+          openFeatureForEdit(copiedFeature.id, partStudioId)
+        }, 100)
+      } else {
+        addNotification('error', 'Failed to copy feature')
+      }
+    } catch (error) {
+      console.error('Copy feature error:', error)
+      addNotification('error', 'Failed to copy feature')
+    }
     onClose()
   }
   
-  const handleRollTo = () => {
-    // TODO: Implement roll to feature
-    addNotification('info', `Rolled to ${feature.name}`)
+  const handleRollTo = async () => {
+    try {
+      await rollToFeature(partStudioId, feature.id)
+    } catch (error) {
+      console.error('Roll to feature error:', error)
+      addNotification('error', 'Failed to roll to feature')
+    }
     onClose()
   }
   
@@ -483,8 +502,8 @@ function RollbackBar({
 
 export function FeatureTree() {
   const { document } = useDocumentStore()
-  const { renameFeature, toggleFeatureSuppression, deleteFeature, reorderFeature } = useDocumentStore()
-  const { selection, setSelection, enterSketchMode, openDialog, addNotification, activeDialog } = useUIStore()
+  const { renameFeature, toggleFeatureSuppression, deleteFeature, reorderFeature, toggleBodyVisibility } = useDocumentStore()
+  const { selection, setSelection, enterSketchMode, openDialog, addNotification, activeDialog, rollbackState, rollToFeature, rollToEnd } = useUIStore()
   
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['root', 'origin']))
   const [contextMenu, setContextMenu] = useState<{ feature: Feature; partStudioId: string; position: { x: number; y: number } } | null>(null)
@@ -704,6 +723,17 @@ export function FeatureTree() {
                 const sketchId = isSketch ? feature.parameters.sketchId : null
                 const isSketchHidden = sketchId && hiddenSketches.has(sketchId)
                 
+                // Check if this is the rollback position
+                const isRollbackPosition = rollbackState.isActive && 
+                  rollbackState.partStudioId === activePartStudio?.id && 
+                  rollbackState.featureId === feature.id
+                
+                // Check if this feature is after the rollback point (should be grayed out)
+                const rollbackIndex = rollbackState.isActive && rollbackState.featureId
+                  ? features.findIndex(f => f.id === rollbackState.featureId)
+                  : -1
+                const isAfterRollback = rollbackIndex >= 0 && index > rollbackIndex
+                
                 return (
                   <React.Fragment key={feature.id}>
                     <TreeItem
@@ -711,7 +741,7 @@ export function FeatureTree() {
                       icon={<FeatureIcon type={feature.type} state={featureState} />}
                       level={1}
                       selected={selection.ids.includes(feature.id)}
-                      state={featureState}
+                      state={isAfterRollback ? 'suppressed' : featureState}
                       draggable
                       onClick={() => handleFeatureClick(feature)}
                       onDoubleClick={() => handleFeatureDoubleClick(feature, activePartStudio!.id)}
@@ -726,6 +756,12 @@ export function FeatureTree() {
                       errorMessage={feature.error || feature.warning}
                       actions={
                         <div className="flex items-center gap-1">
+                          {/* Rollback indicator for this feature */}
+                          {isAfterRollback && (
+                            <div className="text-xs text-cad-text-dim" title="Feature suppressed by rollback">
+                              <Lock size={12} />
+                            </div>
+                          )}
                           {/* Visibility toggle for sketches */}
                           {isSketch && (
                             <button 
@@ -767,13 +803,26 @@ export function FeatureTree() {
                       }
                     />
                     
-                    {/* Rollback bar after this feature if rolled back */}
-                    {rollbackPosition !== null && rollbackPosition === index + 1 && (
-                      <RollbackBar 
-                        position={rollbackPosition}
-                        totalFeatures={features.length}
-                        onDrag={setRollbackPosition}
-                      />
+                    {/* Rollback bar indicator - shows where history is rolled back to */}
+                    {isRollbackPosition && (
+                      <div className="mx-4 my-1 flex items-center gap-2 group">
+                        <div className="flex-1 h-0.5 bg-cad-accent relative">
+                          <div className="absolute -right-1 -top-1 w-2 h-2 bg-cad-accent rounded-full" />
+                        </div>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (activePartStudio) {
+                              await rollToEnd(activePartStudio.id)
+                            }
+                          }}
+                          className="text-xs font-sans text-cad-accent hover:text-cad-accent-hover transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100"
+                          title="Roll to end"
+                        >
+                          <RotateCcw size={12} />
+                          Roll to End
+                        </button>
+                      </div>
                     )}
                   </React.Fragment>
                 )
@@ -793,28 +842,60 @@ export function FeatureTree() {
                   onToggle={() => toggleExpand('parts')}
                 />
                 
-                {expandedItems.has('parts') && activePartStudio.parts.map((part) => (
-                  <TreeItem
-                    key={part.id}
-                    label={part.name}
-                    icon={<Box size={16} className="text-cad-text-dim" />}
-                    level={2}
-                    selected={selection.ids.includes(part.id)}
-                    onClick={() => setSelection({ type: 'body', ids: [part.id] })}
-                    actions={
-                      <button 
-                        className="p-1 hover:bg-gray-50"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          // TODO: Toggle part visibility
-                        }}
-                        title="Toggle visibility"
-                      >
-                        <Eye size={14} />
-                      </button>
-                    }
-                  />
-                ))}
+                {expandedItems.has('parts') && activePartStudio.parts.map((part) => {
+                  const isHidden = part.visible === false
+                  const isSelected = selection.ids.includes(part.id)
+                  
+                  return (
+                    <TreeItem
+                      key={part.id}
+                      label={part.name}
+                      icon={<Box size={16} className={isHidden ? "text-cad-text-dim opacity-50" : "text-cad-text-dim"} />}
+                      level={2}
+                      selected={isSelected}
+                      onClick={() => {
+                        setSelection({ type: 'body', ids: [part.id] })
+                        // If selecting a hidden part, show notification with hint
+                        if (isHidden) {
+                          addNotification('info', `${part.name} is hidden. Click the eye icon to show it.`)
+                        }
+                      }}
+                      state={isHidden ? 'suppressed' : 'normal'}
+                      actions={
+                        <div className="flex items-center gap-1">
+                          {/* Visibility toggle with better feedback */}
+                          <button 
+                            className="p-1 hover:bg-gray-50 rounded transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleBodyVisibility(part.id)
+                            }}
+                            title={isHidden ? `Show ${part.name}` : `Hide ${part.name}`}
+                          >
+                            {isHidden ? (
+                              <EyeOff size={14} className="text-cad-text-dim" />
+                            ) : (
+                              <Eye size={14} className="text-cad-text" />
+                            )}
+                          </button>
+                          
+                          {/* Part context menu */}
+                          <button 
+                            className="p-1 hover:bg-gray-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // Future: Open part-specific context menu
+                              addNotification('info', 'Part options coming soon')
+                            }}
+                            title="Part options"
+                          >
+                            <MoreVertical size={14} className="text-cad-text-dim" />
+                          </button>
+                        </div>
+                      }
+                    />
+                  )
+                })}
               </>
             )}
           </>
@@ -826,7 +907,17 @@ export function FeatureTree() {
         <div className="px-4 py-2 text-xs text-cad-text-dim font-sans">
           {features.length} feature{features.length !== 1 ? 's' : ''}
           {activePartStudio && activePartStudio.parts.length > 0 && (
-            <> • {activePartStudio.parts.length} part{activePartStudio.parts.length !== 1 ? 's' : ''}</>
+            <>
+              {' • '}
+              {activePartStudio.parts.length} part{activePartStudio.parts.length !== 1 ? 's' : ''}
+              {(() => {
+                const hiddenCount = activePartStudio.parts.filter(p => p.visible === false).length
+                if (hiddenCount > 0) {
+                  return <span className="text-cad-warning"> ({hiddenCount} hidden)</span>
+                }
+                return null
+              })()}
+            </>
           )}
         </div>
         
@@ -843,6 +934,10 @@ export function FeatureTree() {
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 bg-cad-text-dim" />
             Suppressed
+          </span>
+          <span className="flex items-center gap-1">
+            <EyeOff size={10} className="text-cad-text-dim" />
+            Hidden
           </span>
         </div>
       </div>

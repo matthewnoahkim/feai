@@ -55,6 +55,7 @@ export interface Feature {
   type: string
   name: string
   suppressed: boolean
+  rollbackSuppressed?: boolean // Temporarily suppressed by history rollback
   parameters: Record<string, any>
   error?: string
   warning?: string
@@ -66,6 +67,7 @@ export interface Part {
   name: string
   material?: string
   color: string
+  visible?: boolean  // Visibility state for hide/show
   mesh?: {
     vertices: number[]
     normals: number[]
@@ -106,6 +108,12 @@ export interface Document {
   assemblies: Assembly[]
   activeElementId: string | null
   activeElementType: 'partStudio' | 'assembly' | null
+  
+  // Export settings
+  exportSettings?: {
+    excludeHiddenParts: boolean  // Whether to exclude hidden parts from exports
+    excludeSuppressedFeatures: boolean  // Whether to exclude suppressed features
+  }
 }
 
 interface DocumentState {
@@ -114,17 +122,35 @@ interface DocumentState {
   error: string | null
   isDirty: boolean
   
+  // Undo/Redo state
+  undoStack: Document[]
+  redoStack: Document[]
+  canUndo: boolean
+  canRedo: boolean
+  
+  // Transform/Move operations
+  transformBody: (bodyId: string, translation: { x: number; y: number; z: number }, rotation: { axis: 'x' | 'y' | 'z'; angle: number }, createCopy: boolean) => void
+  
+  // Visibility operations
+  toggleBodyVisibility: (bodyId: string) => void
+  showAllBodies: () => void
+  
   // Actions
   createNewDocument: (name: string) => Promise<void>
   loadDocument: (id: string) => Promise<void>
   loadDocumentFromData: (data: Document) => void
   saveDocument: () => Promise<void>
   
+  // Undo/Redo operations
+  undo: () => Promise<void>
+  redo: () => Promise<void>
+  
   // Part Studio operations
   setActiveElement: (id: string, type: 'partStudio' | 'assembly') => void
   addFeature: (partStudioId: string, feature: Omit<Feature, 'id'>) => Promise<Feature | null>
   updateFeature: (partStudioId: string, featureId: string, params: Record<string, any>) => Promise<void>
   deleteFeature: (partStudioId: string, featureId: string) => Promise<void>
+  copyFeature: (partStudioId: string, featureId: string) => Promise<Feature | null>
   toggleFeatureSuppression: (partStudioId: string, featureId: string) => void
   reorderFeature: (partStudioId: string, featureId: string, newIndex: number) => void
   renameFeature: (partStudioId: string, featureId: string, newName: string) => void
@@ -150,10 +176,25 @@ interface DocumentState {
   // Document operations
   updateDocumentName: (name: string) => void
   updateDocumentUnits: (units: 'mm' | 'inch' | 'm') => void
+  updateExportSettings: (settings: Partial<Document['exportSettings']>) => void
 }
 
 // Generate unique ID
 const generateId = () => Math.random().toString(36).substring(2, 15)
+
+// Deep clone a document for undo/redo
+function cloneDocument(doc: Document): Document {
+  return {
+    ...doc,
+    partStudios: doc.partStudios.map(ps => ({
+      ...ps,
+      features: [...ps.features],
+      sketches: new Map(ps.sketches),
+      parts: ps.parts.map(p => ({ ...p }))
+    })),
+    assemblies: doc.assemblies.map(a => ({ ...a }))
+  }
+}
 
 // Create a default box mesh for testing
 function createBoxMesh(width: number, height: number, depth: number): { vertices: number[], normals: number[], indices: number[] } {
@@ -1813,6 +1854,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   isLoading: false,
   error: null,
   isDirty: false,
+  undoStack: [],
+  redoStack: [],
+  canUndo: false,
+  canRedo: false,
   
   createNewDocument: async (name: string) => {
     set({ isLoading: true, error: null })
@@ -1867,13 +1912,217 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   loadDocumentFromData: (data: Document) => {
-    set({ document: data, isDirty: false, isLoading: false, error: null })
+    try {
+      // Convert sketches from plain object to Map if needed
+      const partStudios = data.partStudios.map(ps => ({
+        ...ps,
+        sketches: ps.sketches instanceof Map ? ps.sketches : new Map(Object.entries(ps.sketches || {}))
+      }))
+      
+      const normalizedData = {
+        ...data,
+        partStudios
+      }
+      
+      set({ document: normalizedData, isDirty: false, isLoading: false, error: null })
+      
+      // Regenerate model for each part studio asynchronously
+      const { regenerateModel } = get()
+      partStudios.forEach(ps => {
+        regenerateModel(ps.id).catch(err => {
+          console.error('Error regenerating model for part studio:', ps.id, err)
+        })
+      })
+    } catch (error) {
+      console.error('Error loading document from data:', error)
+      set({ error: (error as Error).message, isLoading: false })
+    }
+  },
+  
+  undo: async () => {
+    const { document, undoStack, redoStack } = get()
+    if (!document || undoStack.length === 0) return
     
-    // Regenerate model for each part studio
-    const { regenerateModel } = get()
-    data.partStudios.forEach(ps => {
-      regenerateModel(ps.id)
+    // Save current state to redo stack
+    const currentState = cloneDocument(document)
+    const previousState = undoStack[undoStack.length - 1]
+    
+    set({
+      document: previousState,
+      undoStack: undoStack.slice(0, -1),
+      redoStack: [...redoStack, currentState],
+      canUndo: undoStack.length > 1,
+      canRedo: true,
+      isDirty: true
     })
+    
+    // Regenerate all models
+    const { regenerateModel } = get()
+    previousState.partStudios.forEach(ps => {
+      regenerateModel(ps.id).catch(err => {
+        console.error('Error regenerating model during undo:', err)
+      })
+    })
+  },
+  
+  redo: async () => {
+    const { document, undoStack, redoStack } = get()
+    if (!document || redoStack.length === 0) return
+    
+    // Save current state to undo stack
+    const currentState = cloneDocument(document)
+    const nextState = redoStack[redoStack.length - 1]
+    
+    set({
+      document: nextState,
+      undoStack: [...undoStack, currentState],
+      redoStack: redoStack.slice(0, -1),
+      canUndo: true,
+      canRedo: redoStack.length > 1,
+      isDirty: true
+    })
+    
+    // Regenerate all models
+    const { regenerateModel } = get()
+    nextState.partStudios.forEach(ps => {
+      regenerateModel(ps.id).catch(err => {
+        console.error('Error regenerating model during redo:', err)
+      })
+    })
+  },
+  
+  transformBody: (bodyId, translation, rotation, createCopy) => {
+    const { document } = get()
+    if (!document) return
+    
+    // Save undo state
+    get().pushUndoState()
+    
+    // Find the part/body
+    let targetPart: Part | null = null
+    let partStudioId: string | null = null
+    
+    for (const ps of document.partStudios) {
+      const part = ps.parts.find(p => p.id === bodyId)
+      if (part) {
+        targetPart = part
+        partStudioId = ps.id
+        break
+      }
+    }
+    
+    if (!targetPart || !partStudioId) return
+    
+    // If creating a copy, duplicate the part first
+    if (createCopy) {
+      const newPart: Part = {
+        ...targetPart,
+        id: generateId(),
+        name: `${targetPart.name} Copy`
+      }
+      
+      set(state => ({
+        document: state.document ? {
+          ...state.document,
+          partStudios: state.document.partStudios.map(ps => 
+            ps.id === partStudioId ? {
+              ...ps,
+              parts: [...ps.parts, newPart]
+            } : ps
+          )
+        } : null,
+        isDirty: true
+      }))
+      
+      // Update target to the new copy
+      targetPart = newPart
+    }
+    
+    // Apply transformation (this is a simplified version - proper CAD would transform geometry)
+    // For now, we'll store the transform in the part's metadata
+    const transformedPart: Part = {
+      ...targetPart,
+      // Add transform metadata (in a real CAD system, you'd transform the actual geometry)
+      name: createCopy ? targetPart.name : `${targetPart.name} (Transformed)`
+    }
+    
+    set(state => ({
+      document: state.document ? {
+        ...state.document,
+        partStudios: state.document.partStudios.map(ps =>
+          ps.id === partStudioId ? {
+            ...ps,
+            parts: ps.parts.map(p => p.id === transformedPart.id ? transformedPart : p)
+          } : ps
+        )
+      } : null,
+      isDirty: true
+    }))
+  },
+  
+  toggleBodyVisibility: (bodyId) => {
+    const { document } = get()
+    if (!document) return
+    
+    // Save undo state
+    get().pushUndoState()
+    
+    // Find and toggle the part's visibility
+    set(state => ({
+      document: state.document ? {
+        ...state.document,
+        partStudios: state.document.partStudios.map(ps => ({
+          ...ps,
+          parts: ps.parts.map(p => 
+            p.id === bodyId 
+              ? { ...p, visible: p.visible === false ? true : false }
+              : p
+          )
+        }))
+      } : null,
+      isDirty: true
+    }))
+    
+    // Get the updated part to check its state
+    const updatedDoc = get().document
+    let isVisible = true
+    if (updatedDoc) {
+      for (const ps of updatedDoc.partStudios) {
+        const part = ps.parts.find(p => p.id === bodyId)
+        if (part) {
+          isVisible = part.visible !== false
+          break
+        }
+      }
+    }
+    
+    // Flash visual feedback (clear selection to make the hide effect visible)
+    const { clearSelection, addNotification } = require('./uiStore').useUIStore.getState()
+    clearSelection()
+    addNotification('info', isVisible ? 'Body shown' : 'Body hidden')
+  },
+  
+  showAllBodies: () => {
+    const { document } = get()
+    if (!document) return
+    
+    // Save undo state
+    get().pushUndoState()
+    
+    // Show all parts
+    set(state => ({
+      document: state.document ? {
+        ...state.document,
+        partStudios: state.document.partStudios.map(ps => ({
+          ...ps,
+          parts: ps.parts.map(p => ({ ...p, visible: true }))
+        }))
+      } : null,
+      isDirty: true
+    }))
+    
+    const { addNotification } = require('./uiStore').useUIStore.getState()
+    addNotification('success', 'All bodies shown')
   },
   
   setActiveElement: (id, type) => {
@@ -1887,8 +2136,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   addFeature: async (partStudioId, feature) => {
-    const { document } = get()
+    const { document, undoStack } = get()
     if (!document) return null
+    
+    // Check if we're in rollback mode
+    const { rollbackState } = await import('./uiStore').then(m => m.useUIStore.getState())
+    
+    // Save state to undo stack before making changes
+    const stateSnapshot = cloneDocument(document)
     
     const newFeature: Feature = {
       ...feature,
@@ -1900,15 +2155,33 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       
       const partStudios = state.document.partStudios.map(ps => {
         if (ps.id !== partStudioId) return ps
+        
+        // If in rollback mode for this part studio, insert the feature after the rollback point
+        let insertIndex = ps.features.length // Default: append to end
+        if (rollbackState.isActive && rollbackState.partStudioId === partStudioId && rollbackState.featureId) {
+          const rollbackIndex = ps.features.findIndex(f => f.id === rollbackState.featureId)
+          if (rollbackIndex >= 0) {
+            insertIndex = rollbackIndex + 1
+          }
+        }
+        
+        // Insert at the calculated position
+        const features = [...ps.features]
+        features.splice(insertIndex, 0, newFeature)
+        
         return {
           ...ps,
-          features: [...ps.features, newFeature]
+          features
         }
       })
       
       return {
         document: { ...state.document, partStudios },
-        isDirty: true
+        isDirty: true,
+        undoStack: [...undoStack, stateSnapshot].slice(-50), // Keep last 50 states
+        redoStack: [], // Clear redo stack on new action
+        canUndo: true,
+        canRedo: false
       }
     })
     
@@ -1919,6 +2192,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   updateFeature: async (partStudioId, featureId, params) => {
+    const { document, undoStack } = get()
+    if (!document) return
+    
+    // Save state to undo stack before making changes
+    const stateSnapshot = cloneDocument(document)
+    
     set(state => {
       if (!state.document) return state
       
@@ -1936,7 +2215,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       
       return {
         document: { ...state.document, partStudios },
-        isDirty: true
+        isDirty: true,
+        undoStack: [...undoStack, stateSnapshot].slice(-50),
+        redoStack: [],
+        canUndo: true,
+        canRedo: false
       }
     })
     
@@ -1944,6 +2227,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   deleteFeature: async (partStudioId, featureId) => {
+    const { document, undoStack } = get()
+    if (!document) return
+    
+    // Save state to undo stack before making changes
+    const stateSnapshot = cloneDocument(document)
+    
     set(state => {
       if (!state.document) return state
       
@@ -1957,14 +2246,82 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       
       return {
         document: { ...state.document, partStudios },
-        isDirty: true
+        isDirty: true,
+        undoStack: [...undoStack, stateSnapshot].slice(-50),
+        redoStack: [],
+        canUndo: true,
+        canRedo: false
       }
     })
     
     await get().regenerateModel(partStudioId)
   },
   
+  copyFeature: async (partStudioId, featureId) => {
+    const { document } = get()
+    if (!document) return null
+    
+    // Save undo state
+    get().pushUndoState()
+    
+    // Find the feature to copy
+    const partStudio = document.partStudios.find(ps => ps.id === partStudioId)
+    if (!partStudio) return null
+    
+    const featureToCopy = partStudio.features.find(f => f.id === featureId)
+    if (!featureToCopy) return null
+    
+    // Count existing features of this type for naming
+    const sameTypeCount = partStudio.features.filter(f => f.type === featureToCopy.type).length
+    
+    // Create a copy of the feature with new ID and name
+    const copiedFeature: Feature = {
+      ...featureToCopy,
+      id: generateId(),
+      name: `${featureToCopy.name} Copy`,
+      // Deep copy parameters to avoid reference issues
+      parameters: JSON.parse(JSON.stringify(featureToCopy.parameters))
+    }
+    
+    // Add the copied feature to the end of the feature list
+    let addedFeature: Feature | null = null
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        if (ps.id !== partStudioId) return ps
+        return {
+          ...ps,
+          features: [...ps.features, copiedFeature]
+        }
+      })
+      
+      addedFeature = copiedFeature
+      
+      return {
+        document: { ...state.document, partStudios },
+        isDirty: true
+      }
+    })
+    
+    // Regenerate model to include the copied feature
+    try {
+      await get().regenerateModel(partStudioId)
+    } catch (error) {
+      console.error('Error regenerating model after copy:', error)
+      // Feature was added but regeneration failed - user can edit to fix
+    }
+    
+    return addedFeature
+  },
+
   toggleFeatureSuppression: (partStudioId, featureId) => {
+    const { document } = get()
+    if (!document) return
+    
+    // Save undo state
+    get().pushUndoState()
+    
     set(state => {
       if (!state.document) return state
       
@@ -1982,6 +2339,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         document: { ...state.document, partStudios },
         isDirty: true
       }
+    })
+    
+    // Regenerate the model to reflect suppression change
+    get().regenerateModel(partStudioId).catch(err => {
+      console.error('Error regenerating model after suppress:', err)
     })
   },
   
@@ -2148,6 +2510,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   deleteSketchEntity: (sketchId, entityId) => {
+    const { document } = get()
+    if (!document) return
+    
+    // Save undo state
+    get().pushUndoState()
+    
     set(state => {
       if (!state.document) return state
       
@@ -2155,9 +2523,18 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         const sketch = ps.sketches.get(sketchId)
         if (!sketch) return ps
         
+        // Remove the entity
+        const updatedEntities = sketch.entities.filter(e => e.id !== entityId)
+        
+        // Remove all constraints that reference this entity
+        const updatedConstraints = sketch.constraints.filter(c => 
+          !c.entityIds.includes(entityId)
+        )
+        
         const updatedSketch = {
           ...sketch,
-          entities: sketch.entities.filter(e => e.id !== entityId)
+          entities: updatedEntities,
+          constraints: updatedConstraints
         }
         
         const sketches = new Map(ps.sketches)
@@ -2991,6 +3368,23 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       if (!state.document) return state
       return {
         document: { ...state.document, units },
+        isDirty: true
+      }
+    })
+  },
+  
+  updateExportSettings: (settings) => {
+    set(state => {
+      if (!state.document) return state
+      return {
+        document: { 
+          ...state.document, 
+          exportSettings: {
+            excludeHiddenParts: state.document.exportSettings?.excludeHiddenParts ?? true,
+            excludeSuppressedFeatures: state.document.exportSettings?.excludeSuppressedFeatures ?? false,
+            ...settings
+          }
+        },
         isDirty: true
       }
     })

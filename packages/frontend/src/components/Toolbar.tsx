@@ -3,10 +3,11 @@
  * Academic/scholarly theme styling
  */
 
-import React, { useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
+import { useProjectStore } from '../store/projectStore'
 import { useFEAStore } from '../store/feaStore'
 import {
   Undo,
@@ -203,9 +204,10 @@ interface ToolButtonProps {
   active?: boolean
   onClick?: () => void
   disabled?: boolean
+  title?: string  // Optional detailed tooltip (overrides label)
 }
 
-function ToolButton({ icon, label, active, onClick, disabled }: ToolButtonProps) {
+function ToolButton({ icon, label, active, onClick, disabled, title }: ToolButtonProps) {
   return (
     <button
       className={`
@@ -219,7 +221,7 @@ function ToolButton({ icon, label, active, onClick, disabled }: ToolButtonProps)
       `}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      title={label}
+      title={title || label}  // Use detailed tooltip if provided, otherwise label
     >
       {icon}
       <span className="text-[9px] mt-0.5 font-medium whitespace-nowrap">{label}</span>
@@ -243,12 +245,18 @@ export function Toolbar() {
     openDialog,
     addNotification,
     rightPanelOpen,
-    toggleRightPanel
+    toggleRightPanel,
+    rollbackState,
+    rollToEnd
   } = useUIStore()
   
-  const { document, createNewDocument, importSTLPart } = useDocumentStore()
+  const { document, createNewDocument, importSTLPart, undo, redo, canUndo, canRedo, updateDocumentName, showAllBodies } = useDocumentStore()
   const { isSimulationMode, enterSimulationMode, exitSimulationMode } = useFEAStore()
+  const { currentProject, updateProject } = useProjectStore()
+  const { projectId } = useParams<{ projectId?: string }>()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editedName, setEditedName] = useState('')
   
   // FEA/Simulation handler
   const handleSimulation = () => {
@@ -385,33 +393,72 @@ export function Toolbar() {
     e.target.value = ''
   }
 
+  // Handle project name editing
+  const handleStartEditingName = () => {
+    if (currentProject) {
+      setEditedName(currentProject.name)
+      setIsEditingName(true)
+    } else if (document) {
+      setEditedName(document.name)
+      setIsEditingName(true)
+    }
+  }
+
+  const handleSaveName = async () => {
+    if (!editedName.trim()) {
+      setIsEditingName(false)
+      return
+    }
+
+    try {
+      if (projectId && currentProject) {
+        await updateProject(projectId, { name: editedName.trim() })
+        addNotification('success', 'Project renamed')
+      } else if (document) {
+        updateDocumentName(editedName.trim())
+      }
+      setIsEditingName(false)
+    } catch (error) {
+      addNotification('error', 'Failed to rename')
+      console.error('Failed to rename:', error)
+    }
+  }
+
+  const handleCancelEditingName = () => {
+    setIsEditingName(false)
+    setEditedName('')
+  }
+
+  // Get display name
+  const displayName = currentProject?.name || document?.name || 'Untitled'
+
   // Sketch tools
   const sketchTools = [
-    { icon: <Minus size={16} />, label: 'Line', tool: 'line' },
-    { icon: <Square size={16} />, label: 'Rect', tool: 'rectangle' },
-    { icon: <Circle size={16} />, label: 'Circle', tool: 'circle' },
-    { icon: <Spline size={16} />, label: 'Arc', tool: 'arc' },
-    { icon: <Spline size={16} />, label: 'Spline', tool: 'spline' },
+    { icon: <Minus size={16} />, label: 'Line', tool: 'line', title: 'Draw straight lines (L)' },
+    { icon: <Square size={16} />, label: 'Rect', tool: 'rectangle', title: 'Draw rectangles (R)' },
+    { icon: <Circle size={16} />, label: 'Circle', tool: 'circle', title: 'Draw circles (C)' },
+    { icon: <Spline size={16} />, label: 'Arc', tool: 'arc', title: 'Draw circular arcs (A)' },
+    { icon: <Spline size={16} />, label: 'Spline', tool: 'spline', title: 'Draw smooth curves (S)' },
   ]
 
   // Model feature tools
   const modelTools = [
-    { icon: <Box size={16} />, label: 'Extrude', action: handleExtrude },
-    { icon: <RotateCcw size={16} />, label: 'Revolve', action: handleRevolve },
-    { icon: <Layers size={16} />, label: 'Loft', action: handleLoft },
-    { icon: <CornerUpRight size={16} />, label: 'Sweep', action: handleSweep },
+    { icon: <Box size={16} />, label: 'Extrude', action: handleExtrude, title: 'Create 3D solid by extruding sketch profile' },
+    { icon: <RotateCcw size={16} />, label: 'Revolve', action: handleRevolve, title: 'Create solid by revolving sketch around axis' },
+    { icon: <Layers size={16} />, label: 'Loft', action: handleLoft, title: 'Blend between multiple profiles' },
+    { icon: <CornerUpRight size={16} />, label: 'Sweep', action: handleSweep, title: 'Sweep profile along path' },
   ]
   
   const modifyTools = [
-    { icon: <Circle size={16} />, label: 'Fillet', action: handleFillet },
-    { icon: <Scissors size={16} />, label: 'Chamfer', action: handleChamfer },
-    { icon: <Shell size={16} />, label: 'Shell', action: handleShell },
+    { icon: <Circle size={16} />, label: 'Fillet', action: handleFillet, title: 'Round sharp edges with smooth radius' },
+    { icon: <Scissors size={16} />, label: 'Chamfer', action: handleChamfer, title: 'Bevel edges at an angle' },
+    { icon: <Shell size={16} />, label: 'Shell', action: handleShell, title: 'Hollow out solid with uniform wall thickness' },
   ]
   
   const patternTools = [
-    { icon: <Grid3x3 size={16} />, label: 'Linear', action: handleLinearPattern },
-    { icon: <RotateCw size={16} />, label: 'Circular', action: handleCircularPattern },
-    { icon: <FlipHorizontal size={16} />, label: 'Mirror', action: handleMirrorFeature },
+    { icon: <Grid3x3 size={16} />, label: 'Linear', action: handleLinearPattern, title: 'Repeat features in linear array' },
+    { icon: <RotateCw size={16} />, label: 'Circular', action: handleCircularPattern, title: 'Repeat features around axis' },
+    { icon: <FlipHorizontal size={16} />, label: 'Mirror', action: handleMirrorFeature, title: 'Mirror features across plane' },
   ]
 
   return (
@@ -441,6 +488,54 @@ export function Toolbar() {
 
       <ToolDivider />
 
+      {/* Project/Document Name */}
+      <div className="flex items-center px-2 flex-shrink-0">
+        {isEditingName ? (
+          <input
+            type="text"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSaveName()
+              if (e.key === 'Escape') handleCancelEditingName()
+            }}
+            onBlur={handleSaveName}
+            className="px-2 py-1 text-sm font-serif border border-cad-accent focus:outline-none min-w-[120px] max-w-[200px]"
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={handleStartEditingName}
+            className="px-2 py-1 text-sm font-serif text-cad-text hover:bg-gray-100 transition-colors truncate max-w-[200px]"
+            title={`${displayName} (click to rename)`}
+          >
+            {displayName}
+          </button>
+        )}
+      </div>
+
+      <ToolDivider />
+      
+      {/* Rollback indicator */}
+      {rollbackState.isActive && (
+        <div className="flex items-center px-3 py-1 bg-cad-accent/10 border border-cad-accent/30 rounded mx-2 flex-shrink-0">
+          <RotateCcw size={14} className="text-cad-accent mr-2" />
+          <span className="text-xs font-medium text-cad-text">History Rolled Back</span>
+          <button
+            onClick={() => {
+              if (rollbackState.partStudioId) {
+                rollToEnd(rollbackState.partStudioId)
+              }
+            }}
+            className="ml-3 px-2 py-0.5 text-xs bg-cad-accent text-white hover:bg-cad-accent-hover rounded transition-colors"
+          >
+            Roll to End
+          </button>
+        </div>
+      )}
+
+      <ToolDivider />
+
       {/* File operations */}
       <div className="flex items-center flex-shrink-0">
         <ToolButton icon={<Upload size={16} />} label="Import" onClick={handleImport} />
@@ -451,8 +546,26 @@ export function Toolbar() {
 
       {/* Undo/Redo */}
       <div className="flex items-center flex-shrink-0">
-        <ToolButton icon={<Undo size={16} />} label="Undo" onClick={() => addNotification('info', 'Undo')} />
-        <ToolButton icon={<Redo size={16} />} label="Redo" onClick={() => addNotification('info', 'Redo')} />
+        <ToolButton 
+          icon={<Undo size={16} />} 
+          label="Undo" 
+          onClick={() => {
+            undo()
+            addNotification('info', 'Undone')
+          }} 
+          disabled={!canUndo}
+          title="Undo last action (Ctrl+Z)"
+        />
+        <ToolButton 
+          icon={<Redo size={16} />} 
+          label="Redo" 
+          onClick={() => {
+            redo()
+            addNotification('info', 'Redone')
+          }} 
+          disabled={!canRedo}
+          title="Redo last undone action (Ctrl+Y)"
+        />
       </div>
 
       <ToolDivider />
@@ -463,6 +576,7 @@ export function Toolbar() {
         label="Select" 
         active={activeTool === null}
         onClick={() => setActiveTool(null)}
+        title="Select entities (drag for box selection)"
       />
 
       <ToolDivider />
@@ -478,6 +592,7 @@ export function Toolbar() {
               label={tool.label}
               active={activeTool === tool.tool}
               onClick={() => setActiveTool(tool.tool)}
+              title={tool.title}
             />
           ))}
         </div>
@@ -501,6 +616,7 @@ export function Toolbar() {
                 icon={tool.icon}
                 label={tool.label}
                 onClick={tool.action}
+                title={tool.title}
               />
             ))}
           </div>
@@ -515,6 +631,7 @@ export function Toolbar() {
                 icon={tool.icon}
                 label={tool.label}
                 onClick={tool.action}
+                title={tool.title}
               />
             ))}
           </div>
@@ -529,6 +646,7 @@ export function Toolbar() {
                 icon={tool.icon}
                 label={tool.label}
                 onClick={tool.action}
+                title={tool.title}
               />
             ))}
           </div>
@@ -570,6 +688,12 @@ export function Toolbar() {
           label="Grid" 
           active={viewSettings.showGrid}
           onClick={() => toggleViewSetting('showGrid')}
+        />
+        <ToolButton 
+          icon={<Eye size={16} />} 
+          label="Show All" 
+          onClick={() => showAllBodies()}
+          title="Show all hidden bodies"
         />
         <ToolButton 
           icon={<Eye size={16} />} 

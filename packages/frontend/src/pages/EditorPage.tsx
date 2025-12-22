@@ -27,10 +27,13 @@ import { MirrorFeatureDialog } from '../components/dialogs/MirrorFeatureDialog'
 import { LinearPatternDialog } from '../components/dialogs/LinearPatternDialog'
 import { CircularPatternDialog } from '../components/dialogs/CircularPatternDialog'
 import { SketchDialog } from '../components/dialogs/SketchDialog'
+import { FEAConfigDialog } from '../components/dialogs/FEAConfigDialog'
+import { MoveCopyBodyDialog } from '../components/dialogs/MoveCopyBodyDialog'
 import { Notifications } from '../components/Notifications'
 import { ChatPanel } from '../components/chat'
 import { SimulationPanel } from '../components/fea'
 import { ResizablePanel } from '../components/ResizablePanel'
+import { MeasurementsPanel } from '../components/MeasurementsPanel'
 import { useDocumentStore } from '../store/documentStore'
 import { useUIStore } from '../store/uiStore'
 import { useProjectStore } from '../store/projectStore'
@@ -129,7 +132,9 @@ export function EditorPage() {
       }
       
       if (e.key === 'Escape') {
-        if (sketchMode) {
+        if (transformState.isActive) {
+          exitTransformMode()
+        } else if (sketchMode) {
           handleCancelSketch()
         } else {
           setActiveTool(null)
@@ -156,7 +161,38 @@ export function EditorPage() {
       
       if (!sketchMode) {
         if (e.key === 'Home') {
-          addNotification('info', 'View reset to home')
+          // Check if in rollback mode first
+          const { rollbackState, rollToEnd } = useUIStore.getState()
+          if (e.shiftKey && rollbackState.isActive && rollbackState.partStudioId) {
+            // Shift+Home: Roll to end (exit rollback)
+            e.preventDefault()
+            rollToEnd(rollbackState.partStudioId)
+          } else {
+            // Home: Reset view
+            addNotification('info', 'View reset to home')
+          }
+        }
+        
+        // H key: Toggle visibility of selected body/part
+        if (e.key === 'h' || e.key === 'H') {
+          const selection = useUIStore.getState().selection
+          if (selection.type === 'body' && selection.ids.length === 1) {
+            e.preventDefault()
+            const { toggleBodyVisibility } = useDocumentStore.getState()
+            toggleBodyVisibility(selection.ids[0])
+          }
+        }
+        
+        // N key: Orient to normal view of sketch plane (in sketch mode)
+        if ((e.key === 'n' || e.key === 'N') && sketchMode) {
+          e.preventDefault()
+          const plane = {
+            normal: sketchMode.planeNormal,
+            origin: sketchMode.planeOrigin
+          }
+          window.dispatchEvent(new CustomEvent('orientToSketchPlane', {
+            detail: { plane }
+          }))
         }
       }
     }
@@ -265,9 +301,14 @@ export function EditorPage() {
       {activeDialog === 'linear-pattern' && <LinearPatternDialog />}
       {activeDialog === 'circular-pattern' && <CircularPatternDialog />}
       {activeDialog === 'sketch' && <SketchDialog />}
+      {activeDialog === 'fea-config' && <FEAConfigDialog />}
+      {activeDialog === 'move-copy-body' && <MoveCopyBodyDialog />}
       
       {/* Notifications */}
       <Notifications />
+      
+      {/* Measurements Panel */}
+      <MeasurementsPanel />
       
       {/* FEA Simulation Panel */}
       <SimulationPanel />

@@ -12,10 +12,12 @@ import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, Book } from 'lucide-r
 export function DashboardPage() {
   const navigate = useNavigate()
   const { user, signOut } = useAuthStore()
-  const { projects, isLoading, fetchProjects, createProject, deleteProject } = useProjectStore()
+  const { projects, isLoading, fetchProjects, createProject, deleteProject, updateProject } = useProjectStore()
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const [renamingProject, setRenamingProject] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,9 +49,38 @@ export function DashboardPage() {
 
   const handleDeleteProject = async (projectId: string) => {
     if (confirm('Are you sure you want to delete this project?')) {
-      await deleteProject(projectId)
-      setActiveMenu(null)
+      try {
+        await deleteProject(projectId)
+        setActiveMenu(null)
+      } catch (err) {
+        console.error('Failed to delete project:', err)
+        alert('Failed to delete project')
+      }
     }
+  }
+
+  const handleRenameProject = (projectId: string, currentName: string) => {
+    setRenamingProject(projectId)
+    setRenameValue(currentName)
+    setActiveMenu(null)
+  }
+
+  const handleSaveRename = async (projectId: string) => {
+    if (!renameValue.trim()) return
+    
+    try {
+      await updateProject(projectId, { name: renameValue.trim() })
+      setRenamingProject(null)
+      setRenameValue('')
+    } catch (err) {
+      console.error('Failed to rename project:', err)
+      alert('Failed to rename project')
+    }
+  }
+
+  const handleCancelRename = () => {
+    setRenamingProject(null)
+    setRenameValue('')
   }
 
   const handleOpenProject = (projectId: string) => {
@@ -167,35 +198,55 @@ export function DashboardPage() {
                   </div>
                   
                   {/* Project Info */}
-                  <h3 className="font-serif text-base text-cad-text mb-1 truncate">
-                    {project.name}
-                  </h3>
+                  {renamingProject === project.id ? (
+                    <div className="mb-1" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveRename(project.id)
+                          if (e.key === 'Escape') handleCancelRename()
+                        }}
+                        onBlur={() => handleSaveRename(project.id)}
+                        className="w-full px-2 py-1 border border-cad-accent text-sm font-serif focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                  ) : (
+                    <h3 className="font-serif text-base text-cad-text mb-1 truncate">
+                      {project.name}
+                    </h3>
+                  )}
                   <div className="flex items-center gap-1 text-xs text-gray-500 font-sans">
                     <Clock size={12} />
                     <span>{formatDate(project.updatedAt)}</span>
                   </div>
                   
-                  {/* Actions Menu */}
-                  <div className="absolute top-2 right-2">
+                  {/* Actions Menu - Fixed positioning */}
+                  <div className="absolute top-4 right-4">
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         setActiveMenu(activeMenu === project.id ? null : project.id)
                       }}
-                      className="p-1 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 hover:bg-white/90 bg-white/70 backdrop-blur-sm rounded border border-cad-border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="More options"
                     >
-                      <MoreVertical size={16} className="text-gray-500" />
+                      <MoreVertical size={16} className="text-gray-600" />
                     </button>
                     
                     {activeMenu === project.id && (
-                      <div className="absolute right-0 top-8 w-36 bg-white border border-cad-border shadow-lg z-10">
+                      <div 
+                        className="absolute right-0 top-full mt-1 w-40 bg-white border border-cad-border shadow-lg z-10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
-                            // TODO: Implement rename
-                            setActiveMenu(null)
+                            handleRenameProject(project.id, project.name)
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-cad-text hover:bg-gray-50 font-sans"
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-cad-text hover:bg-gray-50 font-sans text-left"
                         >
                           <Edit2 size={14} />
                           Rename
@@ -205,7 +256,7 @@ export function DashboardPage() {
                             e.stopPropagation()
                             handleDeleteProject(project.id)
                           }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 font-sans"
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 font-sans text-left border-t border-cad-border"
                         >
                           <Trash2 size={14} />
                           Delete

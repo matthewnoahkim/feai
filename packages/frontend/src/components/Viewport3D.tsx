@@ -15,6 +15,11 @@ import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useFEAStore } from '../store/feaStore'
 import { FEAResultsViewer, FEAMeshPreview, FEABCIcons } from './fea'
+import { MeasurementVisualization } from './MeasurementVisualization'
+import { MeasurementHandler } from './MeasurementHandler'
+import { TransformGizmo } from './TransformGizmo'
+import { BoxSelectionHandler } from './BoxSelectionHandler'
+import { BoxSelectionOverlay } from './BoxSelectionOverlay'
 
 // Grid component - efficient grid using single geometry
 function CADGrid() {
@@ -134,10 +139,23 @@ function ReferencePlanes() {
 
 // Part mesh component
 function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
-  const { viewSettings, setSelection, setHovered, hovered } = useUIStore()
+  const { viewSettings, setSelection, setHovered, hovered, sketchMode, boxSelection } = useUIStore()
   const meshRef = useRef<THREE.Mesh>(null)
   
   const isHovered = hovered === part.id
+  const isPreviewSelected = boxSelection.previewIds.includes(part.id)
+  
+  // Check if part is hidden
+  const isHidden = part.visible === false
+  
+  // Show ghost preview if hidden but selected
+  const showAsGhost = isHidden && isSelected
+  
+  // Check if we should dim the model in sketch mode
+  const shouldDim = sketchMode !== null && viewSettings.dimModelInSketch
+  
+  // Don't render if hidden and not selected
+  if (isHidden && !isSelected) return null
   
   // Create geometry from mesh data
   const geometry = useMemo(() => {
@@ -201,10 +219,28 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
   
   if (!geometry) return null
   
-  // Determine color
+  // Determine color and opacity for ghost preview and sketch dimming
   let color = part.color || '#6b7280'
-  if (isSelected) color = '#3b82f6'
-  else if (isHovered) color = '#60a5fa'
+  let opacity = 1.0
+  let transparent = false
+  
+  if (showAsGhost) {
+    // Ghost appearance for hidden but selected parts
+    color = '#9ca3af'  // Light gray
+    opacity = 0.3      // Very transparent
+    transparent = true
+  } else if (shouldDim) {
+    // Dim the model in sketch mode for focus
+    opacity = 0.2      // Make very transparent
+    transparent = true
+    // Keep original color but dimmed
+  } else if (isSelected) {
+    color = '#3b82f6'  // Blue for selected
+  } else if (isPreviewSelected) {
+    color = '#60a5fa'  // Light blue for preview selection
+  } else if (isHovered) {
+    color = '#93c5fd'  // Even lighter blue for hover
+  }
   
   return (
     <group>
@@ -214,24 +250,45 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
         onClick={handleClick}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
-        castShadow
-        receiveShadow
+        castShadow={!showAsGhost && !shouldDim}
+        receiveShadow={!showAsGhost && !shouldDim}
+        userData={{ partId: part.id }}  // Store part ID for box selection
       >
         {viewSettings.displayMode === 'wireframe' ? (
-          <meshBasicMaterial color={color} wireframe />
+          <meshBasicMaterial 
+            color={color} 
+            wireframe 
+            transparent={transparent}
+            opacity={opacity}
+          />
         ) : (
           <meshStandardMaterial 
             color={color}
-            metalness={0.3}
-            roughness={0.7}
+            metalness={showAsGhost || shouldDim ? 0.1 : 0.3}
+            roughness={showAsGhost || shouldDim ? 0.9 : 0.7}
+            transparent={transparent}
+            opacity={opacity}
+            depthWrite={!showAsGhost && !shouldDim}
           />
         )}
       </mesh>
       
-      {/* Edge lines */}
-      {viewSettings.displayMode === 'shadedEdges' && (
+      {/* Edge lines - only show for non-ghost or if shaded edges mode */}
+      {viewSettings.displayMode === 'shadedEdges' && !showAsGhost && (
         <lineSegments geometry={new THREE.EdgesGeometry(geometry)}>
           <lineBasicMaterial color={isSelected ? '#1d4ed8' : '#1f2937'} />
+        </lineSegments>
+      )}
+      
+      {/* Ghost outline for hidden parts */}
+      {showAsGhost && (
+        <lineSegments geometry={new THREE.EdgesGeometry(geometry)}>
+          <lineBasicMaterial 
+            color="#9ca3af" 
+            transparent 
+            opacity={0.5}
+            linewidth={1}
+          />
         </lineSegments>
       )}
     </group>
@@ -2197,6 +2254,117 @@ function CompletedSketchesVisualization() {
   )
 }
 
+// Camera controller - handles reset view events
+function CameraController() {
+  const { camera, controls } = useThree()
+  const animationRef = useRef<number | null>(null)
+  
+  useEffect(() => {
+    const handleResetView = () => {
+      if (controls) {
+        // Reset camera to default position
+        camera.position.set(200, 150, 200)
+        camera.lookAt(0, 0, 0)
+        // @ts-ignore - controls is OrbitControls
+        controls.target.set(0, 0, 0)
+        // @ts-ignore
+        controls.update()
+      }
+    }
+    
+    const handleOrientToSketchPlane = (event: CustomEvent) => {
+      if (!controls) return
+      
+      const { plane } = event.detail
+      const normal = new THREE.Vector3(...plane.normal)
+      const origin = new THREE.Vector3(...plane.origin)
+      
+      // Cancel any ongoing animation
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current)
+      }
+      
+      // Calculate target camera position (normal to plane, looking at origin)
+      const distance = 200 // Distance from plane
+      const targetPosition = origin.clone().add(normal.clone().multiplyScalar(distance))
+      
+      // Calculate "up" vector for camera orientation
+      // Try to keep the camera upright relative to world up
+      const worldUp = new THREE.Vector3(0, 1, 0)
+      let targetUp = worldUp.clone()
+      
+      // If plane normal is parallel to world up, use a different up vector
+      if (Math.abs(normal.dot(worldUp)) > 0.99) {
+        targetUp = new THREE.Vector3(0, 0, 1)
+      }
+      
+      // Store initial camera state
+      const startPosition = camera.position.clone()
+      const startTarget = (controls as any).target.clone()
+      const startUp = camera.up.clone()
+      
+      // Target state
+      const endPosition = targetPosition
+      const endTarget = origin
+      const endUp = targetUp
+      
+      // Animation parameters
+      const duration = 1000 // 1 second
+      const startTime = performance.now()
+      
+      // Easing function (ease-in-out cubic)
+      const easeInOutCubic = (t: number): number => {
+        return t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2
+      }
+      
+      // Animation loop
+      const animate = () => {
+        const elapsed = performance.now() - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        const t = easeInOutCubic(progress)
+        
+        // Interpolate position
+        camera.position.lerpVectors(startPosition, endPosition, t)
+        
+        // Interpolate target
+        const currentTarget = new THREE.Vector3().lerpVectors(startTarget, endTarget, t)
+        ;(controls as any).target.copy(currentTarget)
+        
+        // Interpolate up vector
+        camera.up.lerpVectors(startUp, endUp, t).normalize()
+        
+        // Update controls
+        ;(controls as any).update()
+        
+        // Continue animation or finish
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate)
+        } else {
+          animationRef.current = null
+        }
+      }
+      
+      // Start animation
+      animate()
+    }
+    
+    window.addEventListener('resetCameraView', handleResetView)
+    window.addEventListener('orientToSketchPlane', handleOrientToSketchPlane as EventListener)
+    
+    return () => {
+      window.removeEventListener('resetCameraView', handleResetView)
+      window.removeEventListener('orientToSketchPlane', handleOrientToSketchPlane as EventListener)
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [camera, controls])
+  
+  return null
+}
+
 // Scene content
 function Scene() {
   const { viewSettings, selection, sketchMode } = useUIStore()
@@ -2209,6 +2377,18 @@ function Scene() {
   
   return (
     <>
+      {/* Camera controller */}
+      <CameraController />
+      
+      {/* Measurement interaction handler */}
+      <MeasurementHandler />
+      
+      {/* Box selection handler */}
+      <BoxSelectionHandler />
+      
+      {/* Transform gizmo for move/copy */}
+      <TransformGizmo />
+      
       {/* Lighting */}
       <ambientLight intensity={0.4} />
       <directionalLight
@@ -2274,6 +2454,9 @@ function Scene() {
       {isSimulationMode && !results && <FEAMeshPreview />}
       {isSimulationMode && results && <FEAResultsViewer />}
       {isSimulationMode && <FEABCIcons />}
+      
+      {/* Measurement dimension lines */}
+      <MeasurementVisualization />
 
       {/* Camera controls */}
       <OrbitControls
@@ -2538,6 +2721,9 @@ export function Viewport3D() {
         <Scene />
         <CanvasEventHandler />
       </Canvas>
+      
+      {/* Box selection overlay */}
+      <BoxSelectionOverlay />
     </div>
   )
 }

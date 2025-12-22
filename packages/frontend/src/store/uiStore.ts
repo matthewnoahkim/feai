@@ -67,6 +67,8 @@ export interface ViewSettings {
   showPlanes: boolean
   displayMode: DisplayMode
   showEdges: boolean
+  autoOrientSketch: boolean  // Auto-orient camera when entering sketch mode
+  dimModelInSketch: boolean  // Dim 3D model when sketching for focus
 }
 
 export interface CameraState {
@@ -144,10 +146,94 @@ export interface DrawingState {
   mirrorMode: 'select-line' | 'select-entities' | 'preview' | null
 }
 
+// Constraint tool state
+export interface ConstraintToolState {
+  isActive: boolean
+  constraintType: import('./documentStore').SketchConstraintType | null
+  step: 'select-first' | 'select-second' | 'complete'
+  firstEntityId: string | null
+  hoverEntityId: string | null
+  pendingConstraint: {
+    type: import('./documentStore').SketchConstraintType
+    entityIds: string[]
+  } | null
+}
+
+// Dimension tool state
+export interface DimensionToolState {
+  isActive: boolean
+  dimensionType: 'length' | 'distance' | 'angle' | 'radius' | 'diameter' | null
+  step: 'select-entity' | 'select-second' | 'place-label' | 'edit-value'
+  selectedEntityIds: string[]
+  labelPosition: { x: number; y: number } | null
+  currentValue: number | null
+  isDriving: boolean  // true = drives geometry, false = reference only
+  pendingDimension: {
+    type: 'length' | 'distance' | 'angle' | 'radius' | 'diameter'
+    entityIds: string[]
+    value: number
+    position: { x: number; y: number }
+    isDriving: boolean
+  } | null
+}
+
 export interface ToolPrompt {
   primary: string
   secondary?: string
   hint?: string
+}
+
+// Measurement types
+export interface MeasurementEntity {
+  type: 'vertex' | 'edge' | 'face' | 'point'
+  id: string
+  position?: [number, number, number]  // For vertices/points
+  normal?: [number, number, number]    // For faces
+  direction?: [number, number, number] // For edges
+}
+
+export interface Measurement {
+  id: string
+  type: 'distance' | 'angle' | 'length' | 'radius' | 'diameter' | 'area'
+  entity1: MeasurementEntity
+  entity2?: MeasurementEntity
+  value: number
+  delta?: {
+    x: number
+    y: number
+    z: number
+  }
+  unit: string
+  timestamp: Date
+}
+
+export interface MeasurementMode {
+  isActive: boolean
+  step: 'select-first' | 'select-second' | 'complete'
+  firstEntity: MeasurementEntity | null
+  hoverEntity: MeasurementEntity | null
+  previewMeasurement: Measurement | null
+}
+
+// Transform/Move body state
+export interface TransformState {
+  isActive: boolean
+  mode: 'move' | 'copy' | null
+  bodyId: string | null
+  translation: { x: number; y: number; z: number }
+  rotation: { 
+    axis: 'x' | 'y' | 'z' | 'custom'
+    angle: number  // degrees
+    customAxis?: { x: number; y: number; z: number }
+  }
+  createCopy: boolean
+  showGizmo: boolean
+  gizmoMode: 'translate' | 'rotate' | 'scale'
+  coordinateSpace: 'world' | 'local'
+  previewTransform: {
+    position: [number, number, number]
+    rotation: [number, number, number]  // Euler angles in radians
+  } | null
 }
 
 interface UIState {
@@ -163,12 +249,19 @@ interface UIState {
   // View settings
   viewSettings: ViewSettings
   camera: CameraState
+  previousCamera: CameraState | null  // Store camera state before sketch mode
   
   // Sketch mode
   sketchMode: SketchModeState | null
   
   // Enhanced drawing state
   drawing: DrawingState
+  
+  // Constraint tool state
+  constraintTool: ConstraintToolState
+  
+  // Dimension tool state
+  dimensionTool: DimensionToolState
   
   // Legacy drawing state for backwards compatibility
   isDrawing: boolean
@@ -179,6 +272,33 @@ interface UIState {
   
   // Cursor style
   cursorStyle: string
+  
+  // Measurement mode
+  measurementMode: MeasurementMode
+  measurements: Measurement[]
+  showMeasurementsPanel: boolean
+  
+  // Transform/Move body mode
+  transformState: TransformState
+  
+  // History rollback state (for Roll to Feature)
+  rollbackState: {
+    isActive: boolean
+    partStudioId: string | null
+    featureId: string | null  // Last active feature (roll to here)
+    showGhostFeatures: boolean  // Show suppressed features as translucent
+  }
+  
+  // Box selection state
+  boxSelection: {
+    isActive: boolean
+    startX: number
+    startY: number
+    currentX: number
+    currentY: number
+    mode: 'window' | 'crossing' | null  // Left-to-right = window, right-to-left = crossing
+    previewIds: string[]  // IDs being previewed as selected
+  }
   
   // UI panels
   leftPanelOpen: boolean
@@ -246,6 +366,21 @@ interface UIState {
   setMirrorMode: (mode: 'select-line' | 'select-entities' | 'preview' | null) => void
   clearMirrorState: () => void
   
+  // Constraint tool actions
+  enterConstraintTool: (constraintType: import('./documentStore').SketchConstraintType) => void
+  exitConstraintTool: () => void
+  setConstraintFirstEntity: (entityId: string) => void
+  setConstraintHoverEntity: (entityId: string | null) => void
+  applyConstraint: (sketchId: string) => Promise<void>
+  
+  // Dimension tool actions
+  enterDimensionTool: () => void
+  exitDimensionTool: () => void
+  selectDimensionEntity: (entityId: string) => void
+  placeDimensionLabel: (position: { x: number; y: number }) => void
+  setDimensionValue: (value: number, sketchId: string) => Promise<void>
+  toggleDimensionDriving: () => void
+  
   // Tool prompt
   setToolPrompt: (prompt: ToolPrompt | null) => void
   setCursorStyle: (style: string) => void
@@ -260,8 +395,42 @@ interface UIState {
   setChatPanelWidth: (width: number) => void
   
   openDialog: (dialogId: string, data?: any) => void
+  openFeatureForEdit: (featureId: string, partStudioId: string) => void
   closeDialog: () => void
   setDialogData: (data: any) => void
+  
+  // Measurement actions
+  enterMeasurementMode: () => void
+  exitMeasurementMode: () => void
+  setMeasurementFirstEntity: (entity: MeasurementEntity) => void
+  setMeasurementHoverEntity: (entity: MeasurementEntity | null) => void
+  completeMeasurement: (measurement: Measurement) => void
+  clearMeasurements: () => void
+  removeMeasurement: (id: string) => void
+  toggleMeasurementsPanel: () => void
+  
+  // Transform/Move body actions
+  enterTransformMode: (bodyId: string, mode: 'move' | 'copy') => void
+  exitTransformMode: () => void
+  setTransformTranslation: (translation: { x: number; y: number; z: number }) => void
+  setTransformRotation: (rotation: { axis: 'x' | 'y' | 'z' | 'custom'; angle: number; customAxis?: { x: number; y: number; z: number } }) => void
+  toggleCreateCopy: () => void
+  setGizmoMode: (mode: 'translate' | 'rotate' | 'scale') => void
+  setCoordinateSpace: (space: 'world' | 'local') => void
+  updatePreviewTransform: (position: [number, number, number], rotation: [number, number, number]) => void
+  applyTransform: () => Promise<void>
+  cancelTransform: () => void
+  
+  // History rollback actions
+  rollToFeature: (partStudioId: string, featureId: string) => Promise<void>
+  rollToEnd: (partStudioId: string) => Promise<void>
+  toggleGhostFeatures: () => void
+  
+  // Box selection actions
+  startBoxSelection: (x: number, y: number) => void
+  updateBoxSelection: (x: number, y: number, previewIds: string[]) => void
+  finishBoxSelection: (addToSelection: boolean) => void
+  cancelBoxSelection: () => void
   
   addNotification: (type: 'info' | 'success' | 'warning' | 'error', message: string) => void
   removeNotification: (id: string) => void
@@ -297,6 +466,27 @@ const DEFAULT_DRAWING: DrawingState = {
   selectedEntityIds: [],
   mirrorLineId: null,
   mirrorMode: null
+}
+
+const DEFAULT_MEASUREMENT: MeasurementMode = {
+  isActive: false,
+  step: 'select-first',
+  firstEntity: null,
+  hoverEntity: null,
+  previewMeasurement: null
+}
+
+const DEFAULT_TRANSFORM: TransformState = {
+  isActive: false,
+  mode: null,
+  bodyId: null,
+  translation: { x: 0, y: 0, z: 0 },
+  rotation: { axis: 'z', angle: 0 },
+  createCopy: false,
+  showGizmo: true,
+  gizmoMode: 'translate',
+  coordinateSpace: 'world',
+  previewTransform: null
 }
 
 // Tool prompts
@@ -563,19 +753,49 @@ export const useUIStore = create<UIState>((set, get) => ({
     showOrigin: true,
     showPlanes: true,
     displayMode: 'shadedEdges',
-    showEdges: true
+    showEdges: true,
+    autoOrientSketch: true,  // Default: enabled for better UX
+    dimModelInSketch: true   // Default: enabled for focus
   },
   camera: DEFAULT_CAMERA,
+  previousCamera: null,
   
   sketchMode: null,
   
   drawing: DEFAULT_DRAWING,
+  
+  constraintTool: DEFAULT_CONSTRAINT_TOOL,
+  
+  dimensionTool: DEFAULT_DIMENSION_TOOL,
   
   isDrawing: false,
   drawingPoints: [],
   
   toolPrompt: null,
   cursorStyle: 'default',
+  
+  measurementMode: DEFAULT_MEASUREMENT,
+  measurements: [],
+  showMeasurementsPanel: false,
+  
+  transformState: DEFAULT_TRANSFORM,
+  
+  rollbackState: {
+    isActive: false,
+    partStudioId: null,
+    featureId: null,
+    showGhostFeatures: false
+  },
+  
+  boxSelection: {
+    isActive: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    mode: null,
+    previewIds: []
+  },
   
   leftPanelOpen: true,
   rightPanelOpen: false, // Closed by default
@@ -647,29 +867,48 @@ export const useUIStore = create<UIState>((set, get) => ({
   
   resetCamera: () => set({ camera: DEFAULT_CAMERA }),
   
-  enterSketchMode: (partStudioId, sketchId, plane) => set({
-    activeMode: 'sketch',
-    sketchMode: {
-      partStudioId,
-      sketchId,
-      planeNormal: plane.normal,
-      planeOrigin: plane.origin
-    },
-    activeTool: 'line',
-    toolPrompt: TOOL_PROMPTS['line'],
-    cursorStyle: 'crosshair'
-  }),
+  enterSketchMode: (partStudioId, sketchId, plane) => {
+    const currentCamera = get().camera
+    const { autoOrientSketch } = get().viewSettings
+    
+    set({
+      activeMode: 'sketch',
+      sketchMode: {
+        partStudioId,
+        sketchId,
+        planeNormal: plane.normal,
+        planeOrigin: plane.origin
+      },
+      activeTool: 'line',
+      toolPrompt: TOOL_PROMPTS['line'],
+      cursorStyle: 'crosshair',
+      previousCamera: currentCamera  // Save current camera for restoration
+    })
+    
+    // Dispatch event for camera animation if auto-orient is enabled
+    if (autoOrientSketch) {
+      window.dispatchEvent(new CustomEvent('orientToSketchPlane', {
+        detail: { plane }
+      }))
+    }
+  },
   
-  exitSketchMode: () => set({
-    activeMode: 'model',
-    sketchMode: null,
-    activeTool: null,
-    drawing: DEFAULT_DRAWING,
-    isDrawing: false,
-    drawingPoints: [],
-    toolPrompt: null,
-    cursorStyle: 'default'
-  }),
+  exitSketchMode: () => {
+    // Optionally restore previous camera (for now, leave as-is for user control)
+    // const { previousCamera } = get()
+    
+    set({
+      activeMode: 'model',
+      sketchMode: null,
+      activeTool: null,
+      drawing: DEFAULT_DRAWING,
+      isDrawing: false,
+      drawingPoints: [],
+      toolPrompt: null,
+      cursorStyle: 'default',
+      previousCamera: null  // Clear saved camera
+    })
+  },
   
   // Enhanced drawing actions
   startDrawing: (tool) => {
@@ -907,9 +1146,613 @@ export const useUIStore = create<UIState>((set, get) => ({
   
   openDialog: (dialogId, data) => set({ activeDialog: dialogId, dialogData: data }),
   
+  openFeatureForEdit: (featureId, partStudioId) => {
+    // Get the feature from document store
+    const { document } = require('./documentStore').useDocumentStore.getState()
+    if (!document) return
+    
+    const partStudio = document.partStudios.find(ps => ps.id === partStudioId)
+    if (!partStudio) return
+    
+    const feature = partStudio.features.find(f => f.id === featureId)
+    if (!feature) return
+    
+    // Open the appropriate dialog based on feature type
+    const dialogMap: Record<string, string> = {
+      'extrude': 'extrude',
+      'revolve': 'revolve',
+      'sweep': 'sweep',
+      'loft': 'loft',
+      'fillet': 'fillet',
+      'chamfer': 'chamfer',
+      'shell': 'shell',
+      'mirror': 'mirror-feature',
+      'linear-pattern': 'linear-pattern',
+      'circular-pattern': 'circular-pattern'
+    }
+    
+    const dialogId = dialogMap[feature.type]
+    if (!dialogId) {
+      console.warn(`No dialog mapping for feature type: ${feature.type}`)
+      return
+    }
+    
+    // Open dialog with feature parameters pre-populated and editing flag
+    set({ 
+      activeDialog: dialogId, 
+      dialogData: { 
+        ...feature.parameters, 
+        isEditing: true, 
+        featureId: feature.id,
+        partStudioId: partStudioId
+      } 
+    })
+  },
+  
   closeDialog: () => set({ activeDialog: null, dialogData: null }),
   
   setDialogData: (data) => set((state) => ({ dialogData: { ...state.dialogData, ...data } })),
+  
+  // Measurement actions
+  enterMeasurementMode: () => set({ 
+    measurementMode: {
+      ...DEFAULT_MEASUREMENT,
+      isActive: true
+    },
+    activeTool: 'measure',
+    toolPrompt: {
+      primary: 'Select first entity to measure',
+      secondary: 'Click on a face, edge, or vertex'
+    },
+    cursorStyle: 'crosshair',
+    showMeasurementsPanel: true
+  }),
+  
+  exitMeasurementMode: () => set({ 
+    measurementMode: DEFAULT_MEASUREMENT,
+    activeTool: null,
+    toolPrompt: null,
+    cursorStyle: 'default'
+  }),
+  
+  setMeasurementFirstEntity: (entity) => set((state) => ({
+    measurementMode: {
+      ...state.measurementMode,
+      firstEntity: entity,
+      step: 'select-second'
+    },
+    toolPrompt: {
+      primary: 'Select second entity to measure',
+      secondary: 'Hover to see live measurement preview'
+    }
+  })),
+  
+  setMeasurementHoverEntity: (entity) => set((state) => {
+    if (!state.measurementMode.firstEntity || !entity) {
+      return {
+        measurementMode: {
+          ...state.measurementMode,
+          hoverEntity: entity,
+          previewMeasurement: null
+        }
+      }
+    }
+    
+    // Calculate preview measurement
+    // This will be properly implemented in the measurement utility
+    const previewMeasurement: Measurement = {
+      id: 'preview',
+      type: 'distance',
+      entity1: state.measurementMode.firstEntity,
+      entity2: entity,
+      value: 0, // Will be calculated
+      unit: 'mm',
+      timestamp: new Date()
+    }
+    
+    return {
+      measurementMode: {
+        ...state.measurementMode,
+        hoverEntity: entity,
+        previewMeasurement
+      }
+    }
+  }),
+  
+  completeMeasurement: (measurement) => set((state) => ({
+    measurements: [...state.measurements, measurement],
+    measurementMode: {
+      ...DEFAULT_MEASUREMENT,
+      isActive: true, // Keep in measurement mode for multiple measurements
+      step: 'select-first'
+    },
+    toolPrompt: {
+      primary: 'Select first entity to measure',
+      secondary: 'Click on a face, edge, or vertex • Press ESC to exit'
+    }
+  })),
+  
+  clearMeasurements: () => set({ measurements: [] }),
+  
+  removeMeasurement: (id) => set((state) => ({
+    measurements: state.measurements.filter(m => m.id !== id)
+  })),
+  
+  toggleMeasurementsPanel: () => set((state) => ({
+    showMeasurementsPanel: !state.showMeasurementsPanel
+  })),
+  
+  // Constraint tool actions
+  enterConstraintTool: (constraintType) => set({
+    constraintTool: {
+      ...DEFAULT_CONSTRAINT_TOOL,
+      isActive: true,
+      constraintType
+    },
+    toolPrompt: {
+      primary: `Apply ${constraintType} constraint`,
+      secondary: 'Select first entity'
+    },
+    cursorStyle: 'crosshair'
+  }),
+  
+  exitConstraintTool: () => set({
+    constraintTool: DEFAULT_CONSTRAINT_TOOL,
+    toolPrompt: null,
+    cursorStyle: 'default'
+  }),
+  
+  setConstraintFirstEntity: (entityId) => set((state) => ({
+    constraintTool: {
+      ...state.constraintTool,
+      firstEntityId: entityId,
+      step: 'select-second'
+    },
+    toolPrompt: {
+      primary: `Apply ${state.constraintTool.constraintType} constraint`,
+      secondary: 'Select second entity'
+    }
+  })),
+  
+  setConstraintHoverEntity: (entityId) => set((state) => ({
+    constraintTool: {
+      ...state.constraintTool,
+      hoverEntityId: entityId
+    }
+  })),
+  
+  applyConstraint: async (sketchId) => {
+    const { constraintTool } = get()
+    if (!constraintTool.constraintType || !constraintTool.firstEntityId) return
+    
+    // Get the second entity from hover or pending
+    const secondEntityId = constraintTool.hoverEntityId
+    if (!secondEntityId) return
+    
+    // Call documentStore to add constraint
+    const { addSketchConstraint } = await import('./documentStore').then(m => m.useDocumentStore.getState())
+    addSketchConstraint(sketchId, {
+      type: constraintTool.constraintType,
+      entityIds: [constraintTool.firstEntityId, secondEntityId],
+      status: 'satisfied'
+    })
+    
+    // Reset to first entity selection for continuous constraint application
+    set((state) => ({
+      constraintTool: {
+        ...state.constraintTool,
+        firstEntityId: null,
+        hoverEntityId: null,
+        step: 'select-first'
+      },
+      toolPrompt: {
+        primary: `Apply ${state.constraintTool.constraintType} constraint`,
+        secondary: 'Select first entity (or ESC to exit)'
+      }
+    }))
+    
+    // Show notification
+    const { addNotification } = get()
+    addNotification('success', `${constraintTool.constraintType} constraint applied`)
+  },
+  
+  // Dimension tool actions
+  enterDimensionTool: () => set({
+    dimensionTool: {
+      ...DEFAULT_DIMENSION_TOOL,
+      isActive: true,
+      isDriving: true  // Default to driving
+    },
+    activeTool: 'dimension',
+    toolPrompt: {
+      primary: 'Add dimension',
+      secondary: 'Select entity to dimension (line, arc, or two points for distance)'
+    },
+    cursorStyle: 'crosshair'
+  }),
+  
+  exitDimensionTool: () => set({
+    dimensionTool: DEFAULT_DIMENSION_TOOL,
+    activeTool: null,
+    toolPrompt: null,
+    cursorStyle: 'default'
+  }),
+  
+  selectDimensionEntity: (entityId) => set((state) => {
+    const newSelectedIds = [...state.dimensionTool.selectedEntityIds, entityId]
+    
+    // Determine if we have enough entities
+    let needsMore = true
+    let dimensionType: 'length' | 'distance' | 'angle' | 'radius' | 'diameter' = 'length'
+    
+    if (newSelectedIds.length === 1) {
+      // Single entity - could be length, radius, diameter
+      dimensionType = 'length'  // Default, will determine from entity type
+      needsMore = false  // Can dimension single entity
+    } else if (newSelectedIds.length === 2) {
+      // Two entities - distance or angle
+      dimensionType = 'distance'
+      needsMore = false
+    }
+    
+    return {
+      dimensionTool: {
+        ...state.dimensionTool,
+        selectedEntityIds: newSelectedIds,
+        dimensionType,
+        step: needsMore ? 'select-second' : 'place-label'
+      },
+      toolPrompt: needsMore 
+        ? { primary: 'Add dimension', secondary: 'Select second entity' }
+        : { primary: 'Place dimension', secondary: 'Click to place dimension label' }
+    }
+  }),
+  
+  placeDimensionLabel: (position) => set((state) => ({
+    dimensionTool: {
+      ...state.dimensionTool,
+      labelPosition: position,
+      step: 'edit-value'
+    },
+    toolPrompt: {
+      primary: 'Enter dimension value',
+      secondary: 'Type value and press Enter (or press Enter to keep current)'
+    }
+  })),
+  
+  setDimensionValue: async (value, sketchId) => {
+    const { dimensionTool } = get()
+    if (!dimensionTool.dimensionType || dimensionTool.selectedEntityIds.length === 0) return
+    
+    // Add dimension constraint to the sketch
+    const { addSketchConstraint } = await import('./documentStore').then(m => m.useDocumentStore.getState())
+    
+    // Create a dimensional constraint
+    // For now, we'll use 'distance' type constraint with a value
+    addSketchConstraint(sketchId, {
+      type: 'horizontal',  // This would be replaced with proper dimension constraint type
+      entityIds: dimensionTool.selectedEntityIds,
+      value,
+      status: 'satisfied',
+      driven: !dimensionTool.isDriving
+    })
+    
+    // Reset for next dimension
+    set({
+      dimensionTool: {
+        ...DEFAULT_DIMENSION_TOOL,
+        isActive: true,
+        isDriving: dimensionTool.isDriving  // Preserve driving mode
+      },
+      toolPrompt: {
+        primary: 'Add dimension',
+        secondary: 'Select entity to dimension'
+      }
+    })
+    
+    const { addNotification } = get()
+    addNotification('success', `Dimension added: ${value}mm ${dimensionTool.isDriving ? '(driving)' : '(reference)'}`)
+  },
+  
+  toggleDimensionDriving: () => set((state) => ({
+    dimensionTool: {
+      ...state.dimensionTool,
+      isDriving: !state.dimensionTool.isDriving
+    }
+  })),
+  
+  // Transform/Move body actions
+  enterTransformMode: (bodyId, mode) => set({
+    transformState: {
+      ...DEFAULT_TRANSFORM,
+      isActive: true,
+      mode,
+      bodyId,
+      createCopy: mode === 'copy'
+    },
+    activeDialog: 'move-copy-body',
+    toolPrompt: {
+      primary: mode === 'copy' ? 'Move and copy body' : 'Move body',
+      secondary: 'Use gizmo to drag or enter values'
+    }
+  }),
+  
+  exitTransformMode: () => set({
+    transformState: DEFAULT_TRANSFORM,
+    activeDialog: null,
+    toolPrompt: null
+  }),
+  
+  setTransformTranslation: (translation) => set((state) => ({
+    transformState: {
+      ...state.transformState,
+      translation
+    }
+  })),
+  
+  setTransformRotation: (rotation) => set((state) => ({
+    transformState: {
+      ...state.transformState,
+      rotation
+    }
+  })),
+  
+  toggleCreateCopy: () => set((state) => ({
+    transformState: {
+      ...state.transformState,
+      createCopy: !state.transformState.createCopy
+    }
+  })),
+  
+  setGizmoMode: (mode) => set((state) => ({
+    transformState: {
+      ...state.transformState,
+      gizmoMode: mode
+    }
+  })),
+  
+  setCoordinateSpace: (space) => set((state) => ({
+    transformState: {
+      ...state.transformState,
+      coordinateSpace: space
+    }
+  })),
+  
+  updatePreviewTransform: (position, rotation) => set((state) => ({
+    transformState: {
+      ...state.transformState,
+      previewTransform: { position, rotation }
+    }
+  })),
+  
+  applyTransform: async () => {
+    const { transformState } = get()
+    if (!transformState.bodyId) return
+    
+    // Call documentStore to actually transform the body
+    const { transformBody } = await import('./documentStore').then(m => m.useDocumentStore.getState())
+    transformBody(
+      transformState.bodyId,
+      transformState.translation,
+      transformState.rotation,
+      transformState.createCopy
+    )
+    
+    // Exit transform mode
+    get().exitTransformMode()
+    get().addNotification('success', transformState.createCopy ? 'Body copied and moved' : 'Body moved')
+  },
+  
+  cancelTransform: () => {
+    get().exitTransformMode()
+    get().addNotification('info', 'Transform cancelled')
+  },
+  
+  // History rollback implementation
+  rollToFeature: async (partStudioId, featureId) => {
+    const { documentStore } = await import('./documentStore').then(m => ({ documentStore: m.useDocumentStore.getState() }))
+    const { document } = documentStore
+    
+    if (!document) return
+    
+    const partStudio = document.partStudios.find(ps => ps.id === partStudioId)
+    if (!partStudio) return
+    
+    const featureIndex = partStudio.features.findIndex(f => f.id === featureId)
+    if (featureIndex === -1) return
+    
+    // Enter rollback mode
+    set({
+      rollbackState: {
+        isActive: true,
+        partStudioId,
+        featureId,
+        showGhostFeatures: false
+      }
+    })
+    
+    // Temporarily suppress all features after the selected one
+    // We'll mark them with a special flag so they're skipped during regeneration
+    const featuresToSuppress = partStudio.features.slice(featureIndex + 1).map(f => f.id)
+    
+    // Store original suppression states to restore later
+    const originalSuppressionStates = new Map(
+      featuresToSuppress.map(id => {
+        const feature = partStudio.features.find(f => f.id === id)
+        return [id, feature?.suppressed || false]
+      })
+    )
+    
+    // Temporarily suppress features after the rollback point
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        if (ps.id !== partStudioId) return ps
+        
+        return {
+          ...ps,
+          features: ps.features.map(f => {
+            if (featuresToSuppress.includes(f.id)) {
+              return { ...f, suppressed: true, rollbackSuppressed: true }
+            }
+            return f
+          })
+        }
+      })
+      
+      return {
+        ...state,
+        rollbackState: {
+          ...state.rollbackState,
+          originalSuppressionStates
+        }
+      }
+    })
+    
+    // Regenerate model up to rollback point
+    await documentStore.regenerateModel(partStudioId)
+    
+    get().addNotification('info', `Rolled back to ${partStudio.features[featureIndex].name}`)
+  },
+  
+  rollToEnd: async (partStudioId) => {
+    const { documentStore } = await import('./documentStore').then(m => ({ documentStore: m.useDocumentStore.getState() }))
+    const { document } = documentStore
+    
+    if (!document || !get().rollbackState.isActive) return
+    
+    const partStudio = document.partStudios.find(ps => ps.id === partStudioId)
+    if (!partStudio) return
+    
+    const { originalSuppressionStates } = get().rollbackState as any
+    
+    // Restore original suppression states
+    set(state => {
+      if (!state.document) return state
+      
+      const partStudios = state.document.partStudios.map(ps => {
+        if (ps.id !== partStudioId) return ps
+        
+        return {
+          ...ps,
+          features: ps.features.map(f => {
+            if (f.rollbackSuppressed) {
+              // Restore original state
+              const originalSuppressed = originalSuppressionStates?.get(f.id) || false
+              const { rollbackSuppressed, ...rest } = f
+              return { ...rest, suppressed: originalSuppressed }
+            }
+            return f
+          })
+        }
+      })
+      
+      return { ...state, document: { ...state.document, partStudios } }
+    })
+    
+    // Exit rollback mode
+    set({
+      rollbackState: {
+        isActive: false,
+        partStudioId: null,
+        featureId: null,
+        showGhostFeatures: false
+      }
+    })
+    
+    // Regenerate full model
+    await documentStore.regenerateModel(partStudioId)
+    
+    get().addNotification('info', 'Rolled to end - all features active')
+  },
+  
+  toggleGhostFeatures: () => set((state) => ({
+    rollbackState: {
+      ...state.rollbackState,
+      showGhostFeatures: !state.rollbackState.showGhostFeatures
+    }
+  })),
+  
+  // Box selection implementation
+  startBoxSelection: (x, y) => set({
+    boxSelection: {
+      isActive: true,
+      startX: x,
+      startY: y,
+      currentX: x,
+      currentY: y,
+      mode: null,  // Determined on first movement
+      previewIds: []
+    }
+  }),
+  
+  updateBoxSelection: (x, y, previewIds) => set((state) => {
+    // Determine mode based on drag direction
+    const mode = x >= state.boxSelection.startX ? 'window' : 'crossing'
+    
+    return {
+      boxSelection: {
+        ...state.boxSelection,
+        currentX: x,
+        currentY: y,
+        mode,
+        previewIds
+      }
+    }
+  }),
+  
+  finishBoxSelection: (addToSelection) => {
+    const { boxSelection, selection } = get()
+    
+    if (boxSelection.previewIds.length > 0) {
+      if (addToSelection) {
+        // Add to existing selection
+        const newIds = [...new Set([...selection.ids, ...boxSelection.previewIds])]
+        set({
+          selection: { type: 'body', ids: newIds },
+          boxSelection: {
+            isActive: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            mode: null,
+            previewIds: []
+          }
+        })
+      } else {
+        // Replace selection
+        set({
+          selection: { type: 'body', ids: boxSelection.previewIds },
+          boxSelection: {
+            isActive: false,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            mode: null,
+            previewIds: []
+          }
+        })
+      }
+    } else {
+      // No items selected, just clear box
+      get().cancelBoxSelection()
+    }
+  },
+  
+  cancelBoxSelection: () => set({
+    boxSelection: {
+      isActive: false,
+      startX: 0,
+      startY: 0,
+      currentX: 0,
+      currentY: 0,
+      mode: null,
+      previewIds: []
+    }
+  }),
   
   addNotification: (type, message) => {
     const id = Math.random().toString(36).substring(2, 9)

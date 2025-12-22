@@ -54,7 +54,12 @@ interface ProfileInfo {
 
 export function ExtrudeDialog() {
   const { closeDialog, dialogData, addNotification, selection, setDialogData } = useUIStore()
-  const { document, addFeature } = useDocumentStore()
+  const { document, addFeature, updateFeature } = useDocumentStore()
+  
+  // Check if we're in editing mode
+  const isEditing = dialogData?.isEditing === true
+  const featureId = dialogData?.featureId
+  const partStudioId = dialogData?.partStudioId
   
   // Get active part studio
   const activePartStudio = useMemo(() => 
@@ -85,13 +90,13 @@ export function ExtrudeDialog() {
     return profiles
   }, [activePartStudio])
   
-  // State for extrude parameters
-  const [selectedProfiles, setSelectedProfiles] = useState<string[]>([])
-  const [operation, setOperation] = useState<OperationType>('new')
-  const [extrudeType, setExtrudeType] = useState<ExtrudeType>('solid')
-  const [endCondition1, setEndCondition1] = useState<EndCondition>('blind')
-  const [depth1, setDepth1] = useState(25)
-  const [flipDirection1, setFlipDirection1] = useState(false)
+  // State for extrude parameters (initialize from dialogData if editing)
+  const [selectedProfiles, setSelectedProfiles] = useState<string[]>(dialogData?.profileIds || [])
+  const [operation, setOperation] = useState<OperationType>(dialogData?.operation || 'new')
+  const [extrudeType, setExtrudeType] = useState<ExtrudeType>(dialogData?.extrudeType || 'solid')
+  const [endCondition1, setEndCondition1] = useState<EndCondition>(dialogData?.endCondition1 || 'blind')
+  const [depth1, setDepth1] = useState(dialogData?.depth1 || 25)
+  const [flipDirection1, setFlipDirection1] = useState(dialogData?.flipDirection1 || false)
   
   // Second direction
   const [useSecondDirection, setUseSecondDirection] = useState(false)
@@ -275,7 +280,7 @@ export function ExtrudeDialog() {
             <div className="w-6 h-6 bg-cad-accent/20 flex items-center justify-center">
               <ArrowUp size={14} className="text-cad-accent" />
             </div>
-            <h2 className="font-semibold text-cad-text">Extrude</h2>
+            <h2 className="font-semibold text-cad-text">{isEditing ? 'Edit Extrude' : 'Extrude'}</h2>
           </div>
           <button
             onClick={closeDialog}
@@ -652,7 +657,7 @@ export function ExtrudeDialog() {
               `}
             >
               <Check size={14} />
-              Create
+              {isEditing ? 'Update' : 'Create'}
             </button>
           </div>
         </div>

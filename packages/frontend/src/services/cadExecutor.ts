@@ -38,7 +38,7 @@ export async function executeActions(
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i]
     
-    // Notify progress
+    // Notify progress - executing
     if (onProgress) {
       onProgress({ ...action, status: 'executing' }, i)
     }
@@ -46,6 +46,11 @@ export async function executeActions(
     try {
       const result = await executeAction(action, partStudioId, store)
       results.push(result)
+      
+      // Notify progress - completed (success or error)
+      if (onProgress) {
+        onProgress(result.action, i)
+      }
       
       if (!result.success) {
         allSuccess = false
@@ -56,11 +61,18 @@ export async function executeActions(
         createdFeatureIds.push(result.createdId)
       }
     } catch (error) {
+      const errorAction = { ...action, status: 'error' as const }
       results.push({
         success: false,
-        action: { ...action, status: 'error' },
+        action: errorAction,
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+      
+      // Notify progress - error
+      if (onProgress) {
+        onProgress(errorAction, i)
+      }
+      
       allSuccess = false
       break
     }
