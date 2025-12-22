@@ -1122,7 +1122,7 @@ export function SketchCanvas() {
     setActiveTool
   } = useUIStore()
   
-  const { addSketchEntity, addSketchConstraint, deleteSketchConstraint, updateEntityConstraintStatus, document } = useDocumentStore()
+  const { addSketchEntity, addSketchConstraint, deleteSketchConstraint, deleteSketchEntity, updateEntityConstraintStatus, document, undo, redo } = useDocumentStore()
   
   // Get current sketch
   const sketch = sketchMode && document?.partStudios
@@ -2119,6 +2119,35 @@ export function SketchCanvas() {
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Update modifier keys
     setModifierKeys(e.shiftKey, e.ctrlKey, e.altKey)
+    
+    // Delete key - delete selected entities
+    if (e.key === 'Delete' && drawing.selectedEntityIds.length > 0 && !drawing.isActive) {
+      e.preventDefault()
+      const selectedIds = drawing.selectedEntityIds
+      // Delete all selected entities
+      selectedIds.forEach(entityId => {
+        deleteSketchEntity(sketchMode!.sketchId!, entityId)
+      })
+      clearSelectedEntityIds()
+      addNotification('success', `Deleted ${selectedIds.length} entit${selectedIds.length > 1 ? 'ies' : 'y'}`)
+      return
+    }
+    
+    // Ctrl+Z - Undo
+    if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault()
+      undo()
+      addNotification('info', 'Undo')
+      return
+    }
+    
+    // Ctrl+Y or Ctrl+Shift+Z - Redo
+    if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
+      e.preventDefault()
+      redo()
+      addNotification('info', 'Redo')
+      return
+    }
     
     // ESC - cancel or deselect tool
     if (e.key === 'Escape') {

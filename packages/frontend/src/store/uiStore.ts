@@ -1035,11 +1035,13 @@ export const useUIStore = create<UIState>((set, get) => ({
     set((state) => ({ 
       drawing: { 
         ...DEFAULT_DRAWING,
-        tool: state.drawing.tool
+        tool: null  // Clear tool to prevent auto-restarting
       },
       isDrawing: false, 
       drawingPoints: [],
-      toolPrompt: tool ? TOOL_PROMPTS[tool] || null : null
+      activeTool: 'select',  // Switch back to select tool
+      toolPrompt: TOOL_PROMPTS['select'],  // Update prompt
+      cursorStyle: 'default'  // Reset cursor
     }))
     
     return points

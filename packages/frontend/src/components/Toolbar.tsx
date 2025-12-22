@@ -32,7 +32,13 @@ import {
   Shell,
   FlipHorizontal,
   Activity,
-  PanelRight
+  PanelRight,
+  Check,
+  X,
+  Lock,
+  Unlock,
+  AlertCircle,
+  Maximize
 } from 'lucide-react'
 
 // Helper to convert mesh to STL format (ASCII)
@@ -247,7 +253,9 @@ export function Toolbar() {
     rightPanelOpen,
     toggleRightPanel,
     rollbackState,
-    rollToEnd
+    rollToEnd,
+    sketchMode,
+    exitSketchMode
   } = useUIStore()
   
   const { document, createNewDocument, importSTLPart, undo, redo, canUndo, canRedo, updateDocumentName, showAllBodies } = useDocumentStore()
@@ -431,6 +439,77 @@ export function Toolbar() {
 
   // Get display name
   const displayName = currentProject?.name || document?.name || 'Untitled'
+  
+  // Get current sketch info for sketch mode
+  const activePartStudio = document?.partStudios.find(ps => ps.id === document.activeElementId)
+  const currentSketch = sketchMode && activePartStudio?.sketches.get(sketchMode.sketchId)
+  
+  // Calculate accurate entity count (filter out construction entities if needed)
+  const entityCount = currentSketch?.entities?.filter(e => !e.construction).length || 0
+  const constraintCount = currentSketch?.constraints?.length || 0
+  const sketchStatus = currentSketch?.status || 'under-constrained'
+  
+  // Status styling for sketch mode
+  const getStatusStyle = () => {
+    switch (sketchStatus) {
+      case 'fully-constrained':
+        return {
+          bgColor: 'bg-green-500/20',
+          borderColor: 'border-green-500/50',
+          textColor: 'text-green-600',
+          icon: <Lock size={12} />,
+          label: 'Fully Constrained'
+        }
+      case 'over-constrained':
+        return {
+          bgColor: 'bg-red-500/20',
+          borderColor: 'border-red-500/50',
+          textColor: 'text-red-600',
+          icon: <AlertCircle size={12} />,
+          label: 'Over-Constrained'
+        }
+      case 'under-constrained':
+      default:
+        return {
+          bgColor: 'bg-blue-500/20',
+          borderColor: 'border-blue-500/50',
+          textColor: 'text-blue-600',
+          icon: <Unlock size={12} />,
+          label: 'Under-Constrained'
+        }
+    }
+  }
+  
+  const statusStyle = getStatusStyle()
+  
+  // Handle finish sketch
+  const handleFinishSketch = () => {
+    exitSketchMode()
+    addNotification('success', `Finished ${currentSketch?.name}`)
+  }
+  
+  // Handle cancel sketch
+  const handleCancelSketch = () => {
+    if (window.confirm('Cancel sketch changes?')) {
+      exitSketchMode()
+      addNotification('info', 'Sketch cancelled')
+    }
+  }
+  
+  // Handle view normal to sketch
+  const handleViewNormal = () => {
+    if (sketchMode) {
+      window.dispatchEvent(new CustomEvent('orientToSketchPlane', {
+        detail: { 
+          plane: {
+            normal: sketchMode.planeNormal,
+            origin: sketchMode.planeOrigin
+          }
+        }
+      }))
+      addNotification('info', 'View set to normal')
+    }
+  }
 
   // Sketch tools
   const sketchTools = [
@@ -579,19 +658,107 @@ export function Toolbar() {
 
       {/* Mode-specific tools */}
       {activeMode === 'sketch' ? (
-        // Sketch mode tools
-        <div className="flex items-center flex-shrink-0">
-          {sketchTools.map((tool) => (
-            <ToolButton
-              key={tool.tool}
-              icon={tool.icon}
-              label={tool.label}
-              active={activeTool === tool.tool}
-              onClick={() => setActiveTool(tool.tool)}
-              title={tool.title}
+        // Sketch mode comprehensive controls
+        <>
+          {/* Sketch name indicator */}
+          <div className="flex items-center gap-2 px-3 py-1 bg-cad-accent/10 border border-cad-accent/30 mr-2 flex-shrink-0">
+            <Pencil size={14} className="text-cad-accent" />
+            <span className="text-xs font-medium text-cad-text">
+              {currentSketch?.name || 'Sketch'}
+            </span>
+          </div>
+          
+          {/* Sketch tools */}
+          <div className="flex items-center flex-shrink-0">
+            {sketchTools.map((tool) => (
+              <ToolButton
+                key={tool.tool}
+                icon={tool.icon}
+                label={tool.label}
+                active={activeTool === tool.tool}
+                onClick={() => setActiveTool(tool.tool)}
+                title={tool.title}
+              />
+            ))}
+          </div>
+          
+          <ToolDivider />
+          
+          {/* Constraint status */}
+          <div className={`
+            flex items-center gap-1.5 px-2 py-1 border text-xs font-medium mr-2 flex-shrink-0
+            ${statusStyle.bgColor} ${statusStyle.borderColor} ${statusStyle.textColor}
+          `}>
+            {statusStyle.icon}
+            <span>{statusStyle.label}</span>
+          </div>
+          
+          {/* Entity count */}
+          <div className="flex items-center gap-1 px-2 py-1 bg-white border border-cad-border text-xs text-cad-text-dim mr-2 flex-shrink-0">
+            <Square size={12} />
+            <span>{entityCount} entities</span>
+          </div>
+          
+          <ToolDivider />
+          
+          {/* Undo/Redo for sketch */}
+          <div className="flex items-center flex-shrink-0">
+            <ToolButton 
+              icon={<Undo size={16} />} 
+              label="Undo" 
+              onClick={() => {
+                undo()
+                addNotification('info', 'Undone')
+              }} 
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
             />
-          ))}
-        </div>
+            <ToolButton 
+              icon={<Redo size={16} />} 
+              label="Redo" 
+              onClick={() => {
+                redo()
+                addNotification('info', 'Redone')
+              }} 
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+            />
+          </div>
+          
+          <ToolDivider />
+          
+          {/* View Normal button */}
+          <button
+            onClick={handleViewNormal}
+            className="flex flex-col items-center justify-center p-1.5 min-w-[40px] hover:bg-gray-100 text-cad-text-dim hover:text-cad-text transition-colors flex-shrink-0 font-sans text-xs"
+            title="View Normal to Sketch (N)"
+          >
+            <Maximize size={16} />
+            <span className="text-[9px] mt-0.5 font-medium">Normal</span>
+          </button>
+          
+          <ToolDivider />
+          
+          {/* Cancel button */}
+          <button
+            onClick={handleCancelSketch}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-xs text-red-600 hover:text-red-700 transition-colors flex-shrink-0 mr-1"
+            title="Cancel sketch (Esc)"
+          >
+            <X size={14} />
+            <span className="font-medium">Cancel</span>
+          </button>
+          
+          {/* Finish button */}
+          <button
+            onClick={handleFinishSketch}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-xs text-white font-medium transition-colors flex-shrink-0"
+            title="Finish sketch (Enter)"
+          >
+            <Check size={14} />
+            <span>Finish</span>
+          </button>
+        </>
       ) : (
         // Model mode tools
         <>

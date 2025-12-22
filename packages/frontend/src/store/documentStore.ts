@@ -2157,7 +2157,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     if (!document) return null
     
     // Check if we're in rollback mode
-    const { rollbackState } = await import('./uiStore').then(m => m.useUIStore.getState())
+    const uiStoreModule = await import('./uiStore')
+    const { rollbackState } = uiStoreModule.useUIStore.getState()
     
     // Save state to undo stack before making changes
     const stateSnapshot = cloneDocument(document)

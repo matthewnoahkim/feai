@@ -263,14 +263,14 @@ export function EditorPage() {
               {/* Sketch Canvas */}
               {isSketchMode && <SketchCanvas />}
               
-              {/* Sketch Mode Bar */}
-              {isSketchMode && (
+              {/* Sketch Mode Bar - Now integrated into top Toolbar */}
+              {/* {isSketchMode && (
                 <SketchModeBar
                   onConfirm={handleConfirmSketch}
                   onCancel={handleCancelSketch}
                   onViewNormal={handleViewNormal}
                 />
-              )}
+              )} */}
             </SelectionManager>
             
             {/* Selection Context Menu */}

@@ -20,7 +20,9 @@ import {
   AlertCircle,
   AlertTriangle,
   Square,
-  Maximize
+  Maximize,
+  Undo,
+  Redo
 } from 'lucide-react'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
@@ -33,7 +35,7 @@ interface SketchModeBarProps {
 
 export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeBarProps) {
   const { sketchMode } = useUIStore()
-  const { document } = useDocumentStore()
+  const { document, undo, redo, canUndo, canRedo } = useDocumentStore()
   
   if (!sketchMode) return null
   
@@ -112,6 +114,39 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
           {/* Divider */}
           <div className="w-px h-6 bg-cad-border" />
           
+          {/* Undo button */}
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className={`
+              flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors
+              ${canUndo 
+                ? 'bg-white hover:bg-cad-panel text-cad-text-dim hover:text-cad-text cursor-pointer' 
+                : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
+            `}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo size={14} />
+          </button>
+          
+          {/* Redo button */}
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className={`
+              flex items-center gap-1.5 px-2.5 py-1.5 text-xs transition-colors
+              ${canRedo 
+                ? 'bg-white hover:bg-cad-panel text-cad-text-dim hover:text-cad-text cursor-pointer' 
+                : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
+            `}
+            title="Redo (Ctrl+Y)"
+          >
+            <Redo size={14} />
+          </button>
+          
+          {/* Divider */}
+          <div className="w-px h-6 bg-cad-border" />
+          
           {/* View Normal button */}
           <button
             onClick={onViewNormal}
@@ -148,9 +183,11 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
         
         {/* Keyboard shortcuts hint */}
         <div className="flex items-center justify-center gap-4 px-3 py-1.5 bg-white/50 border-t border-cad-border text-[10px] text-cad-text-dim">
-          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Enter</kbd> Finish</span>
-          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Esc</kbd> Cancel</span>
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Ctrl+Z</kbd> Undo</span>
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Ctrl+Y</kbd> Redo</span>
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Del</kbd> Delete</span>
           <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">N</kbd> Normal View</span>
+          <span><kbd className="px-1 py-0.5 bg-cad-panel text-[9px]">Enter</kbd> Finish</span>
         </div>
       </div>
     </div>
