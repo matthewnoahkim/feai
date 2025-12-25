@@ -73,8 +73,8 @@ export function RevolveDialog() {
     const profiles: ProfileInfo[] = []
     activePartStudio.sketches.forEach((sketch, sketchId) => {
       sketch.entities.forEach((entity, index) => {
-        // Only closed profiles can be revolved as solids
-        if (entity.type === 'rectangle' || entity.type === 'circle' || entity.type === 'polygon') {
+        // Support more entity types including lines for surfaces
+        if (entity.type === 'rectangle' || entity.type === 'circle' || entity.type === 'polygon' || entity.type === 'line') {
           profiles.push({
             sketchId,
             sketchName: sketch.name,
@@ -323,12 +323,12 @@ export function RevolveDialog() {
             
             {availableProfiles.length === 0 ? (
               <div className="p-4 bg-white border border-cad-border">
-                <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2">
                   <AlertCircle size={16} className="text-cad-accent mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
                     <p className="text-cad-text font-medium">No profiles found</p>
                     <p className="text-cad-accent/70 mt-1">
-                      Create a sketch with closed profiles (rectangles, circles, or polygons) to revolve.
+                      Create a sketch with closed profiles (rectangles, circles, polygons) to create solids, or lines to create surfaces.
                     </p>
                   </div>
                 </div>
@@ -635,7 +635,7 @@ export function RevolveDialog() {
             </label>
           </div>
           
-          {/* Summary */}
+            {/* Summary */}
           <div className="p-3 bg-white border border-cad-border">
             <h4 className="text-xs font-medium text-cad-text mb-2">Summary</h4>
             <ul className="text-xs text-cad-text space-y-1">
@@ -643,8 +643,20 @@ export function RevolveDialog() {
               <li>• Axis: {availableAxes.find(a => a.entityId === selectedAxis)?.displayName || selectedAxis}</li>
               <li>• Operation: {operation.charAt(0).toUpperCase() + operation.slice(1)}</li>
               <li>• Angle: {directionType === 'full' ? '360°' : directionType === 'symmetric' ? `±${angle}°` : `${angle}°${angle2 > 0 ? ` + ${angle2}°` : ''}`}</li>
+              <li>• Type: {revolveType.charAt(0).toUpperCase() + revolveType.slice(1)}</li>
               {revolveType === 'thin' && <li>• Thin wall: {wallThickness} mm</li>}
             </ul>
+            
+            {/* Validation warnings */}
+            {selectedProfile && (
+              <div className="mt-3 pt-2 border-t border-cad-border">
+                <p className="text-xs text-cad-text-dim italic">
+                  {availableProfiles.find(p => p.entityId === selectedProfile)?.entityType === 'line' 
+                    ? 'Open profile - will create surface'
+                    : 'Closed profile - will create solid'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
         

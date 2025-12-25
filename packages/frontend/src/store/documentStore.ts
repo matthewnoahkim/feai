@@ -758,7 +758,10 @@ interface RevolveParams {
 }
 
 // Get axis vector from axis ID
-function getAxisVector(axisId: string): { origin: [number, number, number], direction: [number, number, number] } {
+function getAxisVector(
+  axisId: string, 
+  partStudio?: PartStudio
+): { origin: [number, number, number], direction: [number, number, number] } {
   switch (axisId) {
     case 'x-axis':
       return { origin: [0, 0, 0], direction: [1, 0, 0] }
@@ -767,6 +770,33 @@ function getAxisVector(axisId: string): { origin: [number, number, number], dire
     case 'z-axis':
       return { origin: [0, 0, 0], direction: [0, 0, 1] }
     default:
+      // Check if it's a sketch line entity
+      if (partStudio) {
+        for (const [, sketch] of partStudio.sketches) {
+          const entity = sketch.entities.find(e => e.id === axisId)
+          if (entity && entity.type === 'line') {
+            const data = entity.data
+            if (data.start && data.end) {
+              const dx = data.end.x - data.start.x
+              const dy = data.end.y - data.start.y
+              const length = Math.sqrt(dx * dx + dy * dy)
+              
+              if (length > 0.0001) {
+                // Assuming sketch is in XY plane for now
+                return {
+                  origin: [data.start.x, data.start.y, 0],
+                  direction: [dx / length, dy / length, 0]
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // Fallback to Y-axis
+      return { origin: [0, 0, 0], direction: [0, 1, 0] }
+  }
+}
       // Default to Y axis for unknown axes
       return { origin: [0, 0, 0], direction: [0, 1, 0] }
   }
@@ -776,6 +806,7 @@ function getAxisVector(axisId: string): { origin: [number, number, number], dire
 function createRevolvedRectangleMesh(
   entity: SketchEntity,
   params: RevolveParams,
+  partStudio?: PartStudio,
   segments: number = 32
 ): { vertices: number[], normals: number[], indices: number[] } {
   const data = entity.data
@@ -805,7 +836,7 @@ function createRevolvedRectangleMesh(
     hh = 10
   }
   
-  const axis = getAxisVector(params.axisId)
+  const axis = getAxisVector(params.axisId, partStudio)
   
   // Calculate angle range
   let startAngle = 0
@@ -929,6 +960,7 @@ function createRevolvedRectangleMesh(
 function createRevolvedCircleMesh(
   entity: SketchEntity,
   params: RevolveParams,
+  partStudio?: PartStudio,
   segments: number = 32
 ): { vertices: number[], normals: number[], indices: number[] } {
   const data = entity.data
@@ -936,7 +968,7 @@ function createRevolvedCircleMesh(
   const cy = data.center?.y || 0   // Circle center Y (height along axis)
   const radius = data.radius || 10
   
-  const axis = getAxisVector(params.axisId)
+  const axis = getAxisVector(params.axisId, partStudio)
   
   // Calculate angle range
   let startAngle = 0
@@ -1037,6 +1069,7 @@ function createRevolvedCircleMesh(
 function createRevolvedPolygonMesh(
   entity: SketchEntity,
   params: RevolveParams,
+  partStudio?: PartStudio,
   segments: number = 32
 ): { vertices: number[], normals: number[], indices: number[] } {
   const data = entity.data
@@ -1045,7 +1078,7 @@ function createRevolvedPolygonMesh(
   const radius = data.radius || 10
   const sides = data.sides || 6
   
-  const axis = getAxisVector(params.axisId)
+  const axis = getAxisVector(params.axisId, partStudio)
   
   // Calculate angle range
   let startAngle = 0
@@ -1117,15 +1150,16 @@ function createRevolvedPolygonMesh(
 // Create mesh from sketch entity for revolve
 function createMeshFromSketchEntityRevolve(
   entity: SketchEntity,
-  params: RevolveParams
+  params: RevolveParams,
+  partStudio?: PartStudio
 ): { vertices: number[], normals: number[], indices: number[] } | null {
   switch (entity.type) {
     case 'rectangle':
-      return createRevolvedRectangleMesh(entity, params)
+      return createRevolvedRectangleMesh(entity, params, partStudio)
     case 'circle':
-      return createRevolvedCircleMesh(entity, params)
+      return createRevolvedCircleMesh(entity, params, partStudio)
     case 'polygon':
-      return createRevolvedPolygonMesh(entity, params)
+      return createRevolvedPolygonMesh(entity, params, partStudio)
     default:
       return null
   }
@@ -1905,9 +1939,32 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     
     set({ isLoading: true })
     try {
-      // Save to API
-      set({ isLoading: false, isDirty: false })
+      // Convert Maps to plain objects for JSON serialization
+      const serializableDoc = {
+        ...document,
+        partStudios: document.partStudios.map(ps => ({
+          ...ps,
+          sketches: Object.fromEntries(ps.sketches) // Convert Map to object
+        }))
+      }
+      
+      // Get project ID from URL or current project
+      const projectIdMatch = window.location.pathname.match(/\/editor\/(.+)/)
+      const projectId = projectIdMatch ? projectIdMatch[1] : null
+      
+      if (projectId) {
+        const { saveProjectData } = await import('./projectStore').then(m => m.useProjectStore.getState())
+        await saveProjectData(projectId, serializableDoc)
+        set({ isLoading: false, isDirty: false })
+        console.log('Document saved successfully')
+      } else {
+        // Fallback to localStorage if no project ID
+        localStorage.setItem('cadDocument', JSON.stringify(serializableDoc))
+        set({ isLoading: false, isDirty: false })
+        console.log('Document saved to localStorage')
+      }
     } catch (error) {
+      console.error('Error saving document:', error)
       set({ error: (error as Error).message, isLoading: false })
     }
   },
@@ -3084,7 +3141,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           if (sketch && profileId) {
             const entity = sketch.entities.find(e => e.id === profileId)
             if (entity) {
-              const mesh = createMeshFromSketchEntityRevolve(entity, revolveParams)
+              const mesh = createMeshFromSketchEntityRevolve(entity, revolveParams, partStudio)
               if (mesh) {
                 meshCreated = true
                 
@@ -3110,7 +3167,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             // No specific profile selected - try first valid entity
             for (const entity of sketch.entities) {
               if (entity.type === 'rectangle' || entity.type === 'circle' || entity.type === 'polygon') {
-                const mesh = createMeshFromSketchEntityRevolve(entity, revolveParams)
+                const mesh = createMeshFromSketchEntityRevolve(entity, revolveParams, partStudio)
                 if (mesh) {
                   meshCreated = true
                   

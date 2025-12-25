@@ -752,7 +752,7 @@ export function Toolbar() {
           {/* Finish button */}
           <button
             onClick={handleFinishSketch}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-xs text-white font-medium transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-cad-accent hover:bg-cad-accent-hover text-xs text-white font-medium transition-colors flex-shrink-0"
             title="Finish sketch (Enter)"
           >
             <Check size={14} />

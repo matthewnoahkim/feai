@@ -98,11 +98,42 @@ export function EditorPage() {
     if (!projectId || !document || !user) return
     
     const saveInterval = setInterval(() => {
-      saveProjectData(projectId, document).catch(console.error)
+      // Convert Maps to plain objects for JSON serialization
+      const serializableDoc = {
+        ...document,
+        partStudios: document.partStudios.map(ps => ({
+          ...ps,
+          sketches: Object.fromEntries(ps.sketches) // Convert Map to object
+        }))
+      }
+      
+      saveProjectData(projectId, serializableDoc).catch(console.error)
     }, 30000) // Save every 30 seconds
     
     return () => clearInterval(saveInterval)
   }, [projectId, document, user, saveProjectData])
+  
+  // Save on window unload/close
+  useEffect(() => {
+    if (!projectId || !document || !user) return
+    
+    const handleBeforeUnload = () => {
+      const serializableDoc = {
+        ...document,
+        partStudios: document.partStudios.map(ps => ({
+          ...ps,
+          sketches: Object.fromEntries(ps.sketches)
+        }))
+      }
+      
+      // Use sendBeacon for more reliable save on page unload
+      const blob = new Blob([JSON.stringify({ data: serializableDoc })], { type: 'application/json' })
+      navigator.sendBeacon(`/api/projects/${projectId}/data`, blob)
+    }
+    
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [projectId, document, user])
 
   // Sketch mode handlers
   const handleConfirmSketch = useCallback(() => {

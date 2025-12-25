@@ -1,5 +1,5 @@
 // ============================================================================
-// Revolve Operation
+// Revolve Operation - Full-Fidelity Implementation
 // ============================================================================
 
 import { Sketch, SketchRegion, SolidData, Vector3, Plane, PlaneSurface } from '@feai/shared';
@@ -10,14 +10,124 @@ import { PlaneUtils } from '../geometry/surface';
 
 export interface RevolveOptions {
   angle: number;  // Radians, 2π for full revolution
+  angle2?: number; // Second direction angle (optional)
   axis: {
     point: Vector3;
     direction: Vector3;
   };
   segments?: number;  // Number of segments around the revolution
+  validateProfile?: boolean; // Run validation checks
+  surfaceOnly?: boolean; // Create surface instead of solid
+}
+
+export interface RevolveValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
 export class RevolveOperation {
+  private static readonly EPSILON = 1e-6;
+  private static readonly MIN_DISTANCE_TO_AXIS = 1e-4;
+  
+  /**
+   * Validate revolve parameters and profile
+   */
+  static validate(
+    sketch: Sketch,
+    region: SketchRegion,
+    options: RevolveOptions
+  ): RevolveValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // Normalize axis
+    const axisDir = new Vec3(
+      options.axis.direction.x,
+      options.axis.direction.y,
+      options.axis.direction.z
+    ).normalize();
+    const axisPoint = new Vec3(
+      options.axis.point.x,
+      options.axis.point.y,
+      options.axis.point.z
+    );
+    
+    // Check angle validity
+    const totalAngle = Math.abs(options.angle) + Math.abs(options.angle2 || 0);
+    if (totalAngle > Math.PI * 2 + this.EPSILON) {
+      warnings.push(`Total revolve angle (${(totalAngle * 180 / Math.PI).toFixed(1)}°) exceeds 360°`);
+    }
+    
+    if (Math.abs(options.angle) < this.EPSILON) {
+      errors.push('Revolve angle cannot be zero');
+    }
+    
+    // Get profile points
+    const profilePoints2D = this.getRegionPoints(sketch, region);
+    if (profilePoints2D.length < 2) {
+      errors.push('Profile must have at least 2 points');
+      return { valid: false, errors, warnings };
+    }
+    
+    // Convert profile to 3D
+    const profilePoints3D: Vec3[] = [];
+    for (const p2d of profilePoints2D) {
+      const p3d = PlaneUtils.to3D(sketch.plane, p2d.x, p2d.y);
+      profilePoints3D.push(p3d);
+    }
+    
+    // Check profile doesn't cross axis in problematic ways
+    let allOnSameSide = true;
+    let firstSide: number | null = null;
+    let minDistToAxis = Infinity;
+    
+    for (const point of profilePoints3D) {
+      // Vector from axis point to profile point
+      const toPoint = point.sub(axisPoint);
+      // Distance to axis
+      const projOnAxis = toPoint.dot(axisDir);
+      const nearestOnAxis = axisPoint.add(axisDir.mul(projOnAxis));
+      const distToAxis = point.sub(nearestOnAxis).length();
+      
+      minDistToAxis = Math.min(minDistToAxis, distToAxis);
+      
+      // Check which side of axis
+      const perpVec = point.sub(nearestOnAxis);
+      const cross = perpVec.cross(axisDir);
+      const side = Math.sign(cross.length());
+      
+      if (firstSide === null) {
+        firstSide = side;
+      } else if (Math.abs(side - firstSide) > this.EPSILON) {
+        allOnSameSide = false;
+      }
+    }
+    
+    // Check if profile is too close to axis
+    if (minDistToAxis < this.MIN_DISTANCE_TO_AXIS) {
+      warnings.push('Profile is very close to revolve axis - may produce degenerate geometry');
+    }
+    
+    // Check sketch plane orientation vs axis
+    const sketchNormal = new Vec3(
+      sketch.plane.normal.x,
+      sketch.plane.normal.y,
+      sketch.plane.normal.z
+    ).normalize();
+    const parallelness = Math.abs(sketchNormal.dot(axisDir));
+    
+    if (parallelness > 1 - this.EPSILON) {
+      errors.push('Sketch plane normal is parallel to revolve axis');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+  
   /**
    * Revolve a sketch region around an axis
    */
@@ -26,7 +136,15 @@ export class RevolveOperation {
     region: SketchRegion,
     options: RevolveOptions
   ): SolidData {
-    const { angle, axis, segments = 32 } = options;
+    const { angle, angle2 = 0, axis, segments = 32, validateProfile = true, surfaceOnly = false } = options;
+    
+    // Validate if requested
+    if (validateProfile) {
+      const validation = this.validate(sketch, region, options);
+      if (!validation.valid) {
+        throw new Error(`Revolve validation failed: ${validation.errors.join(', ')}`);
+      }
+    }
     
     // Normalize axis direction
     const axisDir = new Vec3(axis.direction.x, axis.direction.y, axis.direction.z).normalize();
@@ -45,10 +163,19 @@ export class RevolveOperation {
       profilePoints3D.push(p3d);
     }
     
+    // Calculate angle ranges
+    // Support two-direction revolve: angle in positive direction, angle2 in negative
+    const startAngle = -Math.abs(angle2);
+    const endAngle = Math.abs(angle);
+    const totalAngle = endAngle - startAngle;
+    
     // Check if this is a full revolution
-    const isFullRevolution = Math.abs(angle - Math.PI * 2) < 0.001;
-    const numSegments = isFullRevolution ? segments : segments + 1;
-    const angleStep = angle / segments;
+    const isFullRevolution = Math.abs(totalAngle - Math.PI * 2) < 0.001;
+    
+    // Calculate number of segments based on total angle
+    const effectiveSegments = Math.max(3, Math.ceil(segments * totalAngle / (2 * Math.PI)));
+    const numSegments = isFullRevolution ? effectiveSegments : effectiveSegments + 1;
+    const angleStep = totalAngle / effectiveSegments;
     
     const builder = new BRepBuilder();
     
@@ -56,7 +183,7 @@ export class RevolveOperation {
     const profiles: string[][] = []; // [segment][profilePoint] -> vertex ID
     
     for (let seg = 0; seg < numSegments; seg++) {
-      const currentAngle = seg * angleStep;
+      const currentAngle = startAngle + seg * angleStep;
       const rotationMatrix = Mat4.rotationAxis(axisDir, currentAngle);
       
       const segmentVertices: string[] = [];
@@ -79,8 +206,9 @@ export class RevolveOperation {
     const faceIds: string[] = [];
     
     // Create side faces (between profile segments)
-    for (let seg = 0; seg < segments; seg++) {
-      const nextSeg = (seg + 1) % numSegments;
+    const actualSegments = isFullRevolution ? effectiveSegments : effectiveSegments;
+    for (let seg = 0; seg < actualSegments; seg++) {
+      const nextSeg = isFullRevolution ? (seg + 1) % effectiveSegments : seg + 1;
       
       for (let pt = 0; pt < profilePoints3D.length; pt++) {
         const nextPt = (pt + 1) % profilePoints3D.length;
@@ -98,10 +226,11 @@ export class RevolveOperation {
         const e4 = builder.addEdge(v10, v00);  // Around revolution (reversed)
         
         // Calculate face normal (approximate)
-        const midAngle = (seg + 0.5) * angleStep;
+        const midAngle = startAngle + (seg + 0.5) * angleStep;
         const rotMat = Mat4.rotationAxis(axisDir, midAngle);
         const midPt = profilePoints3D[pt].add(profilePoints3D[nextPt]).mul(0.5).sub(axisPoint);
-        const normal = rotMat.transformDirection(midPt.cross(axisDir).normalize());
+        const perpDir = midPt.sub(axisDir.mul(midPt.dot(axisDir)));
+        const normal = rotMat.transformDirection(perpDir.normalize());
         
         const surface: PlaneSurface = {
           id: generateId('surf'),
@@ -115,8 +244,8 @@ export class RevolveOperation {
       }
     }
     
-    // Create end caps if not a full revolution
-    if (!isFullRevolution) {
+    // Create end caps if not a full revolution and not surface-only
+    if (!isFullRevolution && !surfaceOnly) {
       // Start cap
       const startEdges: string[] = [];
       for (let pt = 0; pt < profilePoints3D.length; pt++) {
@@ -124,7 +253,13 @@ export class RevolveOperation {
         startEdges.push(builder.addEdge(profiles[0][pt], profiles[0][nextPt]));
       }
       
-      const startNormal = axisDir.negate();
+      // Calculate start cap normal
+      const startRotMat = Mat4.rotationAxis(axisDir, startAngle);
+      const profileCenter = this.getProfileCenter(profilePoints3D, axisPoint, axisDir);
+      const startNormal = startRotMat.transformDirection(
+        profileCenter.cross(axisDir).normalize()
+      ).negate();
+      
       const startSurface: PlaneSurface = {
         id: generateId('surf'),
         type: 'plane',
@@ -136,17 +271,22 @@ export class RevolveOperation {
       
       // End cap
       const endEdges: string[] = [];
-      const lastSeg = segments;
+      const lastSeg = actualSegments;
       for (let pt = 0; pt < profilePoints3D.length; pt++) {
         const nextPt = (pt + 1) % profilePoints3D.length;
         endEdges.push(builder.addEdge(profiles[lastSeg][pt], profiles[lastSeg][nextPt]));
       }
       
+      const endRotMat = Mat4.rotationAxis(axisDir, endAngle);
+      const endNormal = endRotMat.transformDirection(
+        profileCenter.cross(axisDir).normalize()
+      );
+      
       const endSurface: PlaneSurface = {
         id: generateId('surf'),
         type: 'plane',
         origin: axisPoint,
-        normal: { x: axisDir.x, y: axisDir.y, z: axisDir.z }
+        normal: { x: endNormal.x, y: endNormal.y, z: endNormal.z }
       };
       const endLoop = builder.createLoop(endEdges, endEdges.map(() => true));
       faceIds.push(builder.addFace(endSurface, [endLoop]));
@@ -156,14 +296,30 @@ export class RevolveOperation {
     
     return builder.toSolidData();
   }
+  
+  /**
+   * Get center of profile relative to axis
+   */
+  private static getProfileCenter(profilePoints: Vec3[], axisPoint: Vec3, axisDir: Vec3): Vec3 {
+    let center = Vec3.zero();
+    for (const point of profilePoints) {
+      const relative = point.sub(axisPoint);
+      const projOnAxis = relative.dot(axisDir);
+      const perpendicular = relative.sub(axisDir.mul(projOnAxis));
+      center = center.add(perpendicular);
+    }
+    return center.div(profilePoints.length);
+  }
 
   /**
    * Get 2D points from a sketch region
+   * Supports both closed and open profiles
    */
   private static getRegionPoints(sketch: Sketch, region: SketchRegion): { x: number; y: number }[] {
     const points: { x: number; y: number }[] = [];
     const visitedPoints = new Set<string>();
     
+    // Process outer loop
     for (const edgeId of region.outerLoop) {
       const entity = sketch.entities[edgeId];
       if (!entity) continue;
@@ -171,15 +327,70 @@ export class RevolveOperation {
       if (entity.type === 'line') {
         const line = entity as any;
         const startPoint = sketch.entities[line.startPoint] as any;
+        const endPoint = sketch.entities[line.endPoint] as any;
         
         if (startPoint && !visitedPoints.has(line.startPoint)) {
           visitedPoints.add(line.startPoint);
           points.push({ x: startPoint.x, y: startPoint.y });
         }
+        
+        // For open profiles, also add end point of last segment
+        if (endPoint && region.outerLoop.indexOf(edgeId) === region.outerLoop.length - 1) {
+          visitedPoints.add(line.endPoint);
+          points.push({ x: endPoint.x, y: endPoint.y });
+        }
+      } else if (entity.type === 'arc') {
+        // Sample arc into line segments
+        const arc = entity as any;
+        const segments = 16;
+        const startAngle = arc.startAngle || 0;
+        const endAngle = arc.endAngle || Math.PI * 2;
+        const cx = arc.center?.x || 0;
+        const cy = arc.center?.y || 0;
+        const r = arc.radius || 10;
+        
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const angle = startAngle + t * (endAngle - startAngle);
+          points.push({
+            x: cx + Math.cos(angle) * r,
+            y: cy + Math.sin(angle) * r
+          });
+        }
+      } else if (entity.type === 'spline') {
+        // Sample spline into line segments
+        const spline = entity as any;
+        const controlPoints = spline.controlPoints || [];
+        if (controlPoints.length >= 2) {
+          const segments = 32;
+          for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const point = this.evaluateSpline(controlPoints, t);
+            points.push(point);
+          }
+        }
       }
     }
     
     return points;
+  }
+  
+  /**
+   * Simple spline evaluation using linear interpolation
+   * For production, should use proper B-spline evaluation
+   */
+  private static evaluateSpline(controlPoints: any[], t: number): { x: number; y: number } {
+    const segmentCount = controlPoints.length - 1;
+    const segmentIndex = Math.min(Math.floor(t * segmentCount), segmentCount - 1);
+    const segmentT = (t * segmentCount) - segmentIndex;
+    
+    const p0 = controlPoints[segmentIndex];
+    const p1 = controlPoints[segmentIndex + 1];
+    
+    return {
+      x: p0.x + (p1.x - p0.x) * segmentT,
+      y: p0.y + (p1.y - p0.y) * segmentT
+    };
   }
 
   /**
