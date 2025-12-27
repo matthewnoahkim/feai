@@ -837,28 +837,27 @@ function resolveAxisWorld(
 // Transform sketch local 2D coordinates to world 3D coordinates
 function sketchLocalToWorld(
   point2D: { x: number, y: number },
-  plane: { origin: { x: number, y: number, z: number }, normal: { x: number, y: number, z: number } }
+  plane: { origin: number[], normal: number[], xAxis: number[] }
 ): [number, number, number] {
-  // For now, assume sketch is on XY plane (Z = plane.origin.z)
-  // A full implementation would use the plane's transformation matrix
-  const origin = plane.origin
-  const normal = plane.normal
+  // Extract plane properties
+  const [ox, oy, oz] = plane.origin
+  const [nx, ny, nz] = plane.normal
   
   // Simple case: if plane is aligned with XY (normal is Z)
-  if (Math.abs(normal.z - 1) < 1e-6) {
+  if (Math.abs(nz - 1) < 1e-6) {
     return [
-      origin.x + point2D.x,
-      origin.y + point2D.y,
-      origin.z
+      ox + point2D.x,
+      oy + point2D.y,
+      oz
     ]
   }
   
   // For other orientations, we need to compute the plane's coordinate frame
   // For now, use a simplified approach
   return [
-    origin.x + point2D.x,
-    origin.y + point2D.y,
-    origin.z
+    ox + point2D.x,
+    oy + point2D.y,
+    oz
   ]
 }
 
