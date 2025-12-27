@@ -31,8 +31,6 @@ export default defineConfig({
           'calculix-wasm': [
             './src/services/calculixWasmSolver.ts',
             './src/services/calculix-worker.ts',
-            './src/services/inpGenerator.ts',
-            './src/services/frdParser.ts',
           ],
           // Three.js and heavy visualization libraries
           'three': ['three'],
