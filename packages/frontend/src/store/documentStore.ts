@@ -797,10 +797,6 @@ function getAxisVector(
       return { origin: [0, 0, 0], direction: [0, 1, 0] }
   }
 }
-      // Default to Y axis for unknown axes
-      return { origin: [0, 0, 0], direction: [0, 1, 0] }
-  }
-}
 
 // Create revolved rectangle mesh (creates a box-like shape revolved around axis)
 function createRevolvedRectangleMesh(
