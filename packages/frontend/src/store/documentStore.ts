@@ -757,7 +757,112 @@ interface RevolveParams {
   directionType: 'full' | 'one-direction' | 'symmetric'
 }
 
-// Get axis vector from axis ID
+// Resolve axis in WORLD coordinates from axis reference
+function resolveAxisWorld(
+  axisId: string,
+  sketch: Sketch,
+  partStudio?: PartStudio
+): { pointWorld: [number, number, number], directionWorld: [number, number, number] } | null {
+  // Case 1: Reference axes (already in world coords)
+  switch (axisId) {
+    case 'x-axis':
+      return { pointWorld: [0, 0, 0], directionWorld: [1, 0, 0] }
+    case 'y-axis':
+      return { pointWorld: [0, 0, 0], directionWorld: [0, 1, 0] }
+    case 'z-axis':
+      return { pointWorld: [0, 0, 0], directionWorld: [0, 0, 1] }
+  }
+  
+  // Case 2: Sketch construction line (transform from sketch local to world)
+  if (partStudio) {
+    for (const [, sketchItem] of partStudio.sketches) {
+      const entity = sketchItem.entities.find(e => e.id === axisId)
+      if (entity && entity.type === 'line') {
+        const data = entity.data
+        if (data.start && data.end) {
+          // Get line endpoints in sketch local coordinates
+          const start2D = { x: data.start.x, y: data.start.y }
+          const end2D = { x: data.end.x, y: data.end.y }
+          
+          // Transform to world coordinates using sketch plane
+          const plane = sketchItem.plane
+          const startWorld = sketchLocalToWorld(start2D, plane)
+          const endWorld = sketchLocalToWorld(end2D, plane)
+          
+          // Calculate direction and normalize
+          const dx = endWorld[0] - startWorld[0]
+          const dy = endWorld[1] - startWorld[1]
+          const dz = endWorld[2] - startWorld[2]
+          const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+          
+          if (length > 1e-6) {
+            return {
+              pointWorld: startWorld,
+              directionWorld: [dx / length, dy / length, dz / length]
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Case 3: Check in current sketch
+  const entity = sketch.entities.find(e => e.id === axisId)
+  if (entity && entity.type === 'line') {
+    const data = entity.data
+    if (data.start && data.end) {
+      const start2D = { x: data.start.x, y: data.start.y }
+      const end2D = { x: data.end.x, y: data.end.y }
+      
+      const startWorld = sketchLocalToWorld(start2D, sketch.plane)
+      const endWorld = sketchLocalToWorld(end2D, sketch.plane)
+      
+      const dx = endWorld[0] - startWorld[0]
+      const dy = endWorld[1] - startWorld[1]
+      const dz = endWorld[2] - startWorld[2]
+      const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+      
+      if (length > 1e-6) {
+        return {
+          pointWorld: startWorld,
+          directionWorld: [dx / length, dy / length, dz / length]
+        }
+      }
+    }
+  }
+  
+  return null
+}
+
+// Transform sketch local 2D coordinates to world 3D coordinates
+function sketchLocalToWorld(
+  point2D: { x: number, y: number },
+  plane: { origin: { x: number, y: number, z: number }, normal: { x: number, y: number, z: number } }
+): [number, number, number] {
+  // For now, assume sketch is on XY plane (Z = plane.origin.z)
+  // A full implementation would use the plane's transformation matrix
+  const origin = plane.origin
+  const normal = plane.normal
+  
+  // Simple case: if plane is aligned with XY (normal is Z)
+  if (Math.abs(normal.z - 1) < 1e-6) {
+    return [
+      origin.x + point2D.x,
+      origin.y + point2D.y,
+      origin.z
+    ]
+  }
+  
+  // For other orientations, we need to compute the plane's coordinate frame
+  // For now, use a simplified approach
+  return [
+    origin.x + point2D.x,
+    origin.y + point2D.y,
+    origin.z
+  ]
+}
+
+// Get axis vector from axis ID (legacy function, use resolveAxisWorld instead)
 function getAxisVector(
   axisId: string, 
   partStudio?: PartStudio

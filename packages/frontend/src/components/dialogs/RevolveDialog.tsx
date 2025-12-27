@@ -225,16 +225,34 @@ export function RevolveDialog() {
     
     // Find the sketch containing the selected profile
     let sketchId: string | null = null
+    let profileSketch: any = null
     for (const profile of availableProfiles) {
       if (profile.entityId === selectedProfile) {
         sketchId = profile.sketchId
+        activePartStudio.sketches.forEach((sketch) => {
+          if (sketch.id === sketchId) {
+            profileSketch = sketch
+          }
+        })
         break
       }
     }
     
-    if (!sketchId) {
+    if (!sketchId || !profileSketch) {
       addNotification('error', 'Could not find sketch for selected profile')
       return
+    }
+    
+    // Validate profile is closed for solid revolve
+    const profileEntity = profileSketch.entities.find((e: any) => e.id === selectedProfile)
+    if (profileEntity && revolveType === 'solid') {
+      const isClosedShape = profileEntity.type === 'rectangle' || 
+                           profileEntity.type === 'circle' || 
+                           profileEntity.type === 'polygon'
+      if (!isClosedShape) {
+        addNotification('error', 'Revolve requires a closed profile.')
+        return
+      }
     }
     
     // Build revolve parameters

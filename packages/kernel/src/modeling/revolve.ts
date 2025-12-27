@@ -29,6 +29,65 @@ export interface RevolveValidationResult {
 export class RevolveOperation {
   private static readonly EPSILON = 1e-6;
   private static readonly MIN_DISTANCE_TO_AXIS = 1e-4;
+  private static readonly DIST_TOL = 1e-6;  // Distance tolerance for coplanarity
+  private static readonly ANGLE_TOL = 1e-6; // Angle tolerance for perpendicularity
+  
+  /**
+   * Validate that axis lies in the sketch plane (strict coplanarity check)
+   */
+  private static validateAxisCoplanarity(
+    sketchPlane: Plane,
+    axis: { point: Vector3; direction: Vector3 }
+  ): { valid: boolean; error?: string } {
+    // Normalize plane normal and axis direction
+    const planeNormal = new Vec3(
+      sketchPlane.normal.x,
+      sketchPlane.normal.y,
+      sketchPlane.normal.z
+    ).normalize();
+    
+    const axisDir = new Vec3(
+      axis.direction.x,
+      axis.direction.y,
+      axis.direction.z
+    ).normalize();
+    
+    const planeOrigin = new Vec3(
+      sketchPlane.origin.x,
+      sketchPlane.origin.y,
+      sketchPlane.origin.z
+    );
+    
+    const axisPoint = new Vec3(
+      axis.point.x,
+      axis.point.y,
+      axis.point.z
+    );
+    
+    // Condition A: Axis direction must be perpendicular to plane normal
+    // If dot ≈ ±1, the axis is normal to the plane (invalid for revolve)
+    const dotProduct = Math.abs(axisDir.dot(planeNormal));
+    if (dotProduct > this.ANGLE_TOL) {
+      return {
+        valid: false,
+        error: "Revolve axis must lie in the sketch plane."
+      };
+    }
+    
+    // Condition B: A point on the axis must satisfy plane equation
+    // Distance from axisPoint to plane
+    const pointToPlane = axisPoint.sub(planeOrigin);
+    const distanceToPlane = Math.abs(pointToPlane.dot(planeNormal));
+    
+    if (distanceToPlane > this.DIST_TOL) {
+      return {
+        valid: false,
+        error: "Revolve axis must lie in the sketch plane."
+      };
+    }
+    
+    return { valid: true };
+  }
   
   /**
    * Validate revolve parameters and profile
@@ -41,12 +100,26 @@ export class RevolveOperation {
     const errors: string[] = [];
     const warnings: string[] = [];
     
+    // Validate axis coplanarity FIRST
+    const coplanarityCheck = this.validateAxisCoplanarity(sketch.plane, options.axis);
+    if (!coplanarityCheck.valid) {
+      errors.push(coplanarityCheck.error!);
+      return { valid: false, errors, warnings };
+    }
+    
     // Normalize axis
     const axisDir = new Vec3(
       options.axis.direction.x,
       options.axis.direction.y,
       options.axis.direction.z
     ).normalize();
+    
+    // Check axis direction is valid (non-zero)
+    if (axisDir.length() < this.EPSILON) {
+      errors.push('Revolve axis direction cannot be zero');
+      return { valid: false, errors, warnings };
+    }
+    
     const axisPoint = new Vec3(
       options.axis.point.x,
       options.axis.point.y,
@@ -70,6 +143,23 @@ export class RevolveOperation {
       return { valid: false, errors, warnings };
     }
     
+    // Check if profile is closed (for solid revolve)
+    if (!options.surfaceOnly) {
+      const firstPoint = profilePoints2D[0];
+      const lastPoint = profilePoints2D[profilePoints2D.length - 1];
+      const isClosed = Math.abs(firstPoint.x - lastPoint.x) < this.EPSILON &&
+                      Math.abs(firstPoint.y - lastPoint.y) < this.EPSILON;
+      
+      if (!isClosed && region.outerLoop.length > 0) {
+        // Check if it's truly a closed region
+        const hasClosedLoop = region.outerLoop.length >= 3;
+        if (!hasClosedLoop) {
+          errors.push('Revolve requires a closed profile.');
+          return { valid: false, errors, warnings };
+        }
+      }
+    }
+    
     // Convert profile to 3D
     const profilePoints3D: Vec3[] = [];
     for (const p2d of profilePoints2D) {
@@ -85,7 +175,7 @@ export class RevolveOperation {
     for (const point of profilePoints3D) {
       // Vector from axis point to profile point
       const toPoint = point.sub(axisPoint);
-      // Distance to axis
+      // Distance to axis (perpendicular distance)
       const projOnAxis = toPoint.dot(axisDir);
       const nearestOnAxis = axisPoint.add(axisDir.mul(projOnAxis));
       const distToAxis = point.sub(nearestOnAxis).length();
@@ -94,31 +184,20 @@ export class RevolveOperation {
       
       // Check which side of axis
       const perpVec = point.sub(nearestOnAxis);
-      const cross = perpVec.cross(axisDir);
-      const side = Math.sign(cross.length());
-      
-      if (firstSide === null) {
-        firstSide = side;
-      } else if (Math.abs(side - firstSide) > this.EPSILON) {
-        allOnSameSide = false;
+      if (perpVec.length() > this.EPSILON) {
+        const side = Math.sign(perpVec.x + perpVec.y + perpVec.z);
+        
+        if (firstSide === null) {
+          firstSide = side;
+        } else if (Math.abs(side - firstSide) > this.EPSILON) {
+          allOnSameSide = false;
+        }
       }
     }
     
     // Check if profile is too close to axis
     if (minDistToAxis < this.MIN_DISTANCE_TO_AXIS) {
       warnings.push('Profile is very close to revolve axis - may produce degenerate geometry');
-    }
-    
-    // Check sketch plane orientation vs axis
-    const sketchNormal = new Vec3(
-      sketch.plane.normal.x,
-      sketch.plane.normal.y,
-      sketch.plane.normal.z
-    ).normalize();
-    const parallelness = Math.abs(sketchNormal.dot(axisDir));
-    
-    if (parallelness > 1 - this.EPSILON) {
-      errors.push('Sketch plane normal is parallel to revolve axis');
     }
     
     return {
