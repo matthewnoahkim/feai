@@ -5,8 +5,6 @@
 
 import type { FEMesh, SimulationSetup, FEAResults } from '@feai/shared';
 import { CalculiXInputWriter, FRDParser } from '@feai/kernel';
-import { inpGenerator } from './inpGenerator';
-import { frdParser } from './frdParser';
 
 export interface SolverProgress {
   stage: 'initializing' | 'factorizing' | 'solving' | 'parsing' | 'complete' | 'error';
