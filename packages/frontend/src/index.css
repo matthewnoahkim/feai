@@ -17,6 +17,113 @@
   --sketch-preview: #1a4d8f;
 }
 
+/* ============================================================================
+   PUBLIC THEME (Dark-first, scoped to .public-theme)
+   Only affects public pages, does not cascade to private/auth areas
+   ============================================================================ */
+
+.public-theme {
+  /* Dark-first color palette */
+  --public-bg: #0a0a0a;
+  --public-bg-elevated: #141414;
+  --public-surface: #1a1a1a;
+  --public-border: #2a2a2a;
+  --public-text-primary: #ffffff;
+  --public-text-secondary: #a0a0a0;
+  --public-text-tertiary: #6a6a6a;
+  --public-accent: #3b82f6;
+  --public-accent-hover: #2563eb;
+  --public-accent-subtle: rgba(59, 130, 246, 0.1);
+  
+  /* Typography scale */
+  --public-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --public-font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', 'Source Code Pro', monospace;
+  
+  /* Spacing scale */
+  --public-space-xs: 0.25rem;
+  --public-space-sm: 0.5rem;
+  --public-space-md: 1rem;
+  --public-space-lg: 1.5rem;
+  --public-space-xl: 2rem;
+  --public-space-2xl: 3rem;
+  --public-space-3xl: 4rem;
+  
+  /* Border radius */
+  --public-radius-sm: 0.25rem;
+  --public-radius-md: 0.375rem;
+  --public-radius-lg: 0.5rem;
+  
+  /* Shadows */
+  --public-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --public-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --public-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  
+  /* Transitions */
+  --public-transition-fast: 150ms ease;
+  --public-transition-base: 200ms ease;
+  
+  /* Container max-widths */
+  --public-container-sm: 640px;
+  --public-container-md: 768px;
+  --public-container-lg: 1024px;
+  --public-container-xl: 1280px;
+  --public-container-2xl: 1536px;
+}
+
+/* Public theme base styles */
+.public-theme {
+  background: var(--public-bg);
+  color: var(--public-text-primary);
+  font-family: var(--public-font-sans);
+  min-height: 100vh;
+}
+
+/* Public theme scrollbar */
+.public-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.public-theme ::-webkit-scrollbar-track {
+  background: var(--public-bg);
+}
+
+.public-theme ::-webkit-scrollbar-thumb {
+  background: var(--public-border);
+  border-radius: 4px;
+}
+
+.public-theme ::-webkit-scrollbar-thumb:hover {
+  background: var(--public-text-tertiary);
+}
+
+/* Public theme selection */
+.public-theme ::selection {
+  background: var(--public-accent);
+  color: var(--public-text-primary);
+}
+
+/* Public theme focus states */
+.public-theme input:focus,
+.public-theme select:focus,
+.public-theme textarea:focus,
+.public-theme button:focus {
+  outline: 2px solid var(--public-accent);
+  outline-offset: 2px;
+}
+
+/* Public theme links */
+.public-theme a {
+  color: var(--public-accent);
+  text-decoration: none;
+  transition: color var(--public-transition-fast);
+}
+
+.public-theme a:hover {
+  color: var(--public-accent-hover);
+  text-decoration: underline;
+}
+
 * {
   box-sizing: border-box;
 }

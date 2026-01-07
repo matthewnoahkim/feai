@@ -1,12 +1,13 @@
 /**
  * Auth Callback Page
  * Handles OAuth redirect and completes authentication
- * Minimalistic design matching the navy/white theme
+ * Dark-first modern developer tool theme
  */
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore, setAuthToken } from '../store/authStore';
+import { PublicLayout } from '../components/PublicLayout';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -93,61 +94,100 @@ export function AuthCallbackPage() {
   }, [searchParams, setUser, setError, navigate]);
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-8">
-      <div className="max-w-md w-full">
-        <div className="border-2 border-cad-border p-12">
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 flex items-center justify-center bg-cad-accent">
-              <span className="text-white font-serif font-bold text-2xl">F</span>
+    <PublicLayout>
+      <div className="min-h-screen flex items-center justify-center px-8" style={{ background: 'var(--public-bg)' }}>
+        <div className="max-w-md w-full">
+          <div 
+            className="p-12"
+            style={{ 
+              border: '1px solid var(--public-border)',
+              borderRadius: 'var(--public-radius-lg)',
+              background: 'var(--public-surface)'
+            }}
+          >
+            {/* Logo */}
+            <div className="flex justify-center mb-8">
+              <div 
+                className="w-16 h-16 flex items-center justify-center"
+                style={{ background: 'var(--public-accent)' }}
+              >
+                <span style={{ color: 'var(--public-text-primary)', fontWeight: 700, fontSize: '1.5rem' }}>F</span>
+              </div>
             </div>
+
+            {/* Status Content */}
+            {status === 'processing' && (
+              <div className="text-center">
+                <div className="mb-4">
+                  <div 
+                    className="inline-block w-8 h-8 border-2 border-t-transparent animate-spin"
+                    style={{ 
+                      borderColor: 'var(--public-accent)',
+                      borderRadius: '50%'
+                    }}
+                  />
+                </div>
+                <h2 
+                  style={{ 
+                    fontSize: '1.25rem', 
+                    fontWeight: 600, 
+                    color: 'var(--public-text-primary)', 
+                    marginBottom: '0.5rem' 
+                  }}
+                >
+                  Processing Sign In
+                </h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)' }}>{message}</p>
+              </div>
+            )}
+
+            {status === 'success' && (
+              <div className="text-center">
+                <div className="mb-4">
+                  <svg className="inline-block w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--public-accent)' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 
+                  style={{ 
+                    fontSize: '1.25rem', 
+                    fontWeight: 600, 
+                    color: 'var(--public-text-primary)', 
+                    marginBottom: '0.5rem' 
+                  }}
+                >
+                  Welcome!
+                </h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)' }}>{message}</p>
+              </div>
+            )}
+
+            {status === 'error' && (
+              <div className="text-center">
+                <div className="mb-4">
+                  <svg className="inline-block w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#ef4444' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+                <h2 
+                  style={{ 
+                    fontSize: '1.25rem', 
+                    fontWeight: 600, 
+                    color: 'var(--public-text-primary)', 
+                    marginBottom: '0.5rem' 
+                  }}
+                >
+                  Authentication Failed
+                </h2>
+                <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)', marginBottom: '0.75rem' }}>{message}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--public-text-tertiary)' }}>
+                  Redirecting to login page...
+                </p>
+              </div>
+            )}
           </div>
-
-          {/* Status Content */}
-          {status === 'processing' && (
-            <div className="text-center">
-              <div className="mb-4">
-                <div className="inline-block w-8 h-8 border-2 border-cad-accent border-t-transparent animate-spin" />
-              </div>
-              <h2 className="font-serif text-xl text-cad-text mb-2">
-                Processing Sign In
-              </h2>
-              <p className="font-sans text-sm text-gray-600">{message}</p>
-            </div>
-          )}
-
-          {status === 'success' && (
-            <div className="text-center">
-              <div className="mb-4">
-                <svg className="inline-block w-12 h-12 text-cad-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="font-serif text-xl text-cad-text mb-2">
-                Welcome!
-              </h2>
-              <p className="font-sans text-sm text-gray-600">{message}</p>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="text-center">
-              <div className="mb-4">
-                <svg className="inline-block w-12 h-12 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h2 className="font-serif text-xl text-cad-text mb-2">
-                Authentication Failed
-              </h2>
-              <p className="font-sans text-sm text-gray-600 mb-3">{message}</p>
-              <p className="font-sans text-xs text-gray-500">
-                Redirecting to login page...
-              </p>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

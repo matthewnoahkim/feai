@@ -1,11 +1,12 @@
 /**
  * Login Page - Google OAuth authentication
- * Minimalistic design matching the navy/white theme
+ * Dark-first modern developer tool theme
  */
 
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { PublicLayout } from '../components/PublicLayout';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -36,21 +37,44 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <PublicLayout>
+      <div className="min-h-screen flex flex-col" style={{ background: 'var(--public-bg)' }}>
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-cad-border">
+      <nav 
+        className="flex items-center justify-between px-8 py-6"
+        style={{ 
+          borderBottom: '1px solid var(--public-border)',
+          background: 'var(--public-bg)'
+        }}
+      >
         <button 
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2"
+          style={{ 
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'opacity var(--public-transition-fast)'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
-          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-            <span className="text-white font-serif font-bold text-sm">F</span>
+          <div 
+            className="w-8 h-8 flex items-center justify-center"
+            style={{ background: 'var(--public-accent)' }}
+          >
+            <span style={{ color: 'var(--public-text-primary)', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
           </div>
-          <span className="font-serif font-semibold text-cad-text text-lg">FeAI</span>
+          <span style={{ fontWeight: 600, fontSize: '1.125rem', color: 'var(--public-text-primary)' }}>FeAI</span>
         </button>
         
         {/* Invisible spacer to match HomePage nav height */}
-        <button className="px-4 py-2 text-sm font-sans text-white bg-transparent opacity-0 cursor-default border border-transparent leading-none">Spacer</button>
+        <button 
+          className="px-4 py-2 text-sm font-sans bg-transparent opacity-0 cursor-default border border-transparent leading-none"
+          style={{ color: 'var(--public-text-primary)' }}
+        >
+          Spacer
+        </button>
       </nav>
 
       {/* Main Content */}
@@ -58,27 +82,54 @@ export function LoginPage() {
         <div className="max-w-md w-full">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="font-serif text-5xl text-cad-text mb-3">
+            <h1 
+              style={{ 
+                fontSize: '3rem', 
+                fontWeight: 700, 
+                color: 'var(--public-text-primary)', 
+                marginBottom: '0.75rem',
+                letterSpacing: '-0.02em'
+              }}
+            >
               Sign In
             </h1>
-            <p className="font-sans text-base text-gray-600">
+            <p style={{ fontSize: '1rem', color: 'var(--public-text-secondary)' }}>
               Continue to FeAI with your Google account
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 border border-red-600 bg-red-50 p-4">
+            <div 
+              className="mb-6 p-4"
+              style={{ 
+                border: '1px solid #ef4444',
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: 'var(--public-radius-md)'
+              }}
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="font-sans text-sm text-red-800 font-semibold mb-1">
+                  <p 
+                    className="font-sans text-sm font-semibold mb-1"
+                    style={{ color: '#fca5a5' }}
+                  >
                     Authentication Error
                   </p>
-                  <p className="font-sans text-sm text-red-700">{error}</p>
+                  <p className="font-sans text-sm" style={{ color: '#fca5a5' }}>{error}</p>
                 </div>
                 <button
                   onClick={clearError}
-                  className="text-red-600 hover:text-red-800 ml-4"
+                  style={{
+                    color: '#fca5a5',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    marginLeft: '1rem',
+                    transition: 'color var(--public-transition-fast)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#fca5a5'}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -92,10 +143,30 @@ export function LoginPage() {
           <button
             onClick={handleSignIn}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: 'var(--public-surface)',
+              border: '1px solid var(--public-border)',
+              color: 'var(--public-text-primary)',
+              borderRadius: 'var(--public-radius-md)',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all var(--public-transition-fast)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.background = 'var(--public-bg-elevated)';
+                e.currentTarget.style.borderColor = 'var(--public-accent)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.background = 'var(--public-surface)';
+                e.currentTarget.style.borderColor = 'var(--public-border)';
+              }
+            }}
           >
             {isLoading ? (
-              <span className="font-sans text-sm">Connecting...</span>
+              <span className="font-sans text-sm" style={{ color: 'var(--public-text-primary)' }}>Connecting...</span>
             ) : (
               <>
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -104,23 +175,35 @@ export function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <span className="font-sans text-sm font-medium">Sign in with Google</span>
+                <span className="font-sans text-sm font-medium" style={{ color: 'var(--public-text-primary)' }}>Sign in with Google</span>
               </>
             )}
           </button>
 
-          <p className="font-sans text-xs text-gray-500 text-center mt-6">
+          <p className="font-sans text-xs text-center mt-6" style={{ color: 'var(--public-text-tertiary)' }}>
             By signing in, you agree to our{' '}
             <button 
               onClick={() => navigate('/terms')} 
-              className="text-cad-accent hover:underline"
+              style={{
+                color: 'var(--public-accent)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
             >
               Terms of Service
             </button>
             {' '}and{' '}
             <button 
               onClick={() => navigate('/privacy')} 
-              className="text-cad-accent hover:underline"
+              style={{
+                color: 'var(--public-accent)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
             >
               Privacy Policy
             </button>
@@ -128,7 +211,7 @@ export function LoginPage() {
 
           {/* Info */}
           <div className="mt-8 text-center">
-            <p className="font-sans text-sm text-gray-600">
+            <p className="font-sans text-sm" style={{ color: 'var(--public-text-secondary)' }}>
               Don't have an account? One will be created automatically when you sign in.
             </p>
           </div>
@@ -136,34 +219,62 @@ export function LoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="px-8 py-4 border-t border-cad-border">
+      <footer 
+        className="px-8 py-4"
+        style={{ 
+          borderTop: '1px solid var(--public-border)',
+          background: 'var(--public-bg)'
+        }}
+      >
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-              <span className="text-white font-serif font-bold text-sm">F</span>
+            <div 
+              className="w-8 h-8 flex items-center justify-center"
+              style={{ background: 'var(--public-accent)' }}
+            >
+              <span style={{ color: 'var(--public-text-primary)', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
             </div>
-            <span className="font-serif font-semibold text-cad-text text-lg">FeAI</span>
+            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: 'var(--public-text-primary)' }}>FeAI</span>
           </div>
           
           <div className="flex items-center gap-6">
             <button
               onClick={() => navigate('/terms')}
-              className="font-sans text-xs text-gray-500 hover:text-cad-accent transition-colors"
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--public-text-tertiary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color var(--public-transition-fast)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--public-accent)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--public-text-tertiary)'}
             >
               Terms of Service
             </button>
             <button
               onClick={() => navigate('/privacy')}
-              className="font-sans text-xs text-gray-500 hover:text-cad-accent transition-colors"
+              style={{
+                fontSize: '0.75rem',
+                color: 'var(--public-text-tertiary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color var(--public-transition-fast)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--public-accent)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--public-text-tertiary)'}
             >
               Privacy Policy
             </button>
-            <p className="font-sans text-xs text-gray-500">
+            <p style={{ fontSize: '0.75rem', color: 'var(--public-text-tertiary)' }}>
               © 2024 FeAI. Open source under MIT license.
             </p>
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </PublicLayout>
   );
 }

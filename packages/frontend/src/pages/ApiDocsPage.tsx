@@ -1,11 +1,13 @@
 /**
  * API Documentation Page
  * Complete reference for all API endpoints
+ * Dark-first modern developer tool theme
  */
 
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { PublicLayout } from '../components/PublicLayout'
 import { Book, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
 
 interface Endpoint {
@@ -1012,64 +1014,95 @@ export function ApiDocsPage() {
     }
   ]
 
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case 'GET': return 'bg-blue-100 text-blue-800'
-      case 'POST': return 'bg-green-100 text-green-800'
-      case 'PUT': return 'bg-yellow-100 text-yellow-800'
-      case 'PATCH': return 'bg-orange-100 text-orange-800'
-      case 'DELETE': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-cad-border">
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+    <PublicLayout>
+      <div className="min-h-screen flex flex-col" style={{ background: 'var(--public-bg)' }}>
+        {/* Navigation */}
+        <nav 
+          className="flex items-center justify-between px-8 py-6"
+          style={{ 
+            borderBottom: '1px solid var(--public-border)',
+            background: 'var(--public-bg)'
+          }}
         >
-          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-            <span className="text-white font-serif font-bold text-sm">F</span>
-          </div>
-          <span className="font-serif font-semibold text-cad-text text-lg">FeAI</span>
-        </button>
-        
-        <div className="flex items-center gap-6">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 text-sm font-sans text-cad-text hover:text-cad-accent transition-colors"
+          <button 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2"
+            style={{ 
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'opacity var(--public-transition-fast)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
           >
-            ← Back to Dashboard
+            <div 
+              className="w-8 h-8 flex items-center justify-center"
+              style={{ background: 'var(--public-accent)' }}
+            >
+              <span style={{ color: 'var(--public-text-primary)', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
+            </div>
+            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: 'var(--public-text-primary)' }}>FeAI</span>
           </button>
-          {user && (
-            <>
-              <div className="flex items-center gap-3">
-                {user.photoURL ? (
-                  <img 
-                    src={user.photoURL} 
-                    alt={user.name} 
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <div className="w-8 h-8 flex items-center justify-center bg-cad-accent text-white text-sm font-sans">
-                    {user.name?.charAt(0) || 'U'}
-                  </div>
-                )}
-                <span className="font-sans text-sm text-cad-text leading-none">{user.name}</span>
-              </div>
-              <button
-                onClick={signOut}
-                className="px-4 py-2 text-sm font-sans text-cad-text border border-cad-border hover:bg-gray-50 transition-colors leading-none"
-              >
-                Sign Out
-              </button>
-            </>
-          )}
-        </div>
-      </nav>
+          
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                color: 'var(--public-text-secondary)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'color var(--public-transition-fast)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--public-accent)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--public-text-secondary)'}
+            >
+              ← Back to Dashboard
+            </button>
+            {user && (
+              <>
+                <div className="flex items-center gap-3">
+                  {user.photoURL ? (
+                    <img 
+                      src={user.photoURL} 
+                      alt={user.name} 
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <div 
+                      className="w-8 h-8 flex items-center justify-center text-sm font-sans"
+                      style={{ background: 'var(--public-accent)', color: 'var(--public-text-primary)' }}
+                    >
+                      {user.name?.charAt(0) || 'U'}
+                    </div>
+                  )}
+                  <span style={{ fontSize: '0.875rem', color: 'var(--public-text-primary)' }}>{user.name}</span>
+                </div>
+                <button
+                  onClick={signOut}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    color: 'var(--public-text-primary)',
+                    border: '1px solid var(--public-border)',
+                    background: 'var(--public-surface)',
+                    borderRadius: 'var(--public-radius-md)',
+                    cursor: 'pointer',
+                    transition: 'background var(--public-transition-fast)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--public-bg-elevated)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--public-surface)'}
+                >
+                  Sign Out
+                </button>
+              </>
+            )}
+          </div>
+        </nav>
 
       {/* Main Content */}
       <main className="flex-1 px-8 py-10">
@@ -1077,98 +1110,201 @@ export function ApiDocsPage() {
           {/* Header */}
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-4">
-              <Book size={32} className="text-cad-accent" />
-              <h1 className="font-serif text-4xl text-cad-text">
+              <Book size={32} style={{ color: 'var(--public-accent)' }} />
+              <h1 
+                style={{ 
+                  fontSize: '2.25rem', 
+                  fontWeight: 700, 
+                  color: 'var(--public-text-primary)',
+                  letterSpacing: '-0.01em'
+                }}
+              >
                 API Documentation
               </h1>
             </div>
-            <p className="font-sans text-base text-gray-600 mb-6">
+            <p style={{ fontSize: '1rem', color: 'var(--public-text-secondary)', marginBottom: '1.5rem' }}>
               Complete reference for the FeAI REST API. All endpoints return JSON unless otherwise specified.
             </p>
             
             {/* Base URL */}
-            <div className="bg-gray-50 border border-cad-border p-4 font-mono text-sm">
-              <div className="text-gray-600 mb-1">Base URL:</div>
-              <div className="text-cad-text flex items-center justify-between">
+            <div 
+              className="p-4 font-mono text-sm"
+              style={{ 
+                background: 'var(--public-surface)',
+                border: '1px solid var(--public-border)',
+                borderRadius: 'var(--public-radius-md)'
+              }}
+            >
+              <div style={{ color: 'var(--public-text-secondary)', marginBottom: '0.25rem' }}>Base URL:</div>
+              <div className="flex items-center justify-between" style={{ color: 'var(--public-text-primary)' }}>
                 <span>{window.location.origin}</span>
                 <button
                   onClick={() => copyToClipboard(window.location.origin, 'base-url')}
-                  className="p-1 hover:bg-gray-200 rounded"
+                  className="p-1 rounded"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background var(--public-transition-fast)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--public-bg-elevated)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   {copiedEndpoint === 'base-url' ? (
-                    <Check size={16} className="text-green-600" />
+                    <Check size={16} style={{ color: '#22c55e' }} />
                   ) : (
-                    <Copy size={16} className="text-gray-600" />
+                    <Copy size={16} style={{ color: 'var(--public-text-secondary)' }} />
                   )}
                 </button>
               </div>
             </div>
 
             {/* Authentication Note */}
-            <div className="mt-4 border border-cad-border p-4">
-              <div className="font-sans text-sm text-cad-text">
+            <div 
+              className="mt-4 p-4"
+              style={{ 
+                border: '1px solid var(--public-border)',
+                borderRadius: 'var(--public-radius-md)',
+                background: 'var(--public-surface)'
+              }}
+            >
+              <div className="font-sans text-sm" style={{ color: 'var(--public-text-primary)' }}>
                 <strong>🔐 Authentication:</strong> Endpoints marked with 🔒 require authentication. 
-                Include the JWT token in the Authorization header: <code className="bg-gray-100 border border-cad-border px-2 py-1">Authorization: Bearer YOUR_TOKEN</code>
+                Include the JWT token in the Authorization header: <code 
+                  style={{ 
+                    background: 'var(--public-bg-elevated)',
+                    border: '1px solid var(--public-border)',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: 'var(--public-radius-sm)',
+                    fontSize: '0.875rem',
+                    fontFamily: 'var(--public-font-mono)'
+                  }}
+                >
+                  Authorization: Bearer YOUR_TOKEN
+                </code>
               </div>
             </div>
           </div>
 
           {/* API Sections */}
           {apiSections.map((section, sectionIdx) => (
-            <div key={sectionIdx} className="mb-8 border border-cad-border">
+            <div 
+              key={sectionIdx} 
+              className="mb-8"
+              style={{ 
+                border: '1px solid var(--public-border)',
+                borderRadius: 'var(--public-radius-md)',
+                overflow: 'hidden'
+              }}
+            >
               {/* Section Header */}
               <button
                 onClick={() => toggleSection(section.title)}
-                className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="w-full flex items-center justify-between px-6 py-4 transition-colors"
+                style={{
+                  background: 'var(--public-surface)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background var(--public-transition-fast)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--public-bg-elevated)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--public-surface)'}
               >
                 <div className="text-left">
-                  <h2 className="font-serif text-2xl text-cad-text mb-1">
+                  <h2 
+                    style={{ 
+                      fontSize: '1.5rem', 
+                      fontWeight: 600, 
+                      color: 'var(--public-text-primary)', 
+                      marginBottom: '0.25rem',
+                      letterSpacing: '-0.01em'
+                    }}
+                  >
                     {section.title}
                   </h2>
-                  <p className="font-sans text-sm text-gray-600">
+                  <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)' }}>
                     {section.description}
                   </p>
                 </div>
                 {expandedSections[section.title] ? (
-                  <ChevronDown size={24} className="text-cad-text" />
+                  <ChevronDown size={24} style={{ color: 'var(--public-text-primary)' }} />
                 ) : (
-                  <ChevronRight size={24} className="text-cad-text" />
+                  <ChevronRight size={24} style={{ color: 'var(--public-text-primary)' }} />
                 )}
               </button>
 
               {/* Endpoints */}
               {expandedSections[section.title] && (
-                <div className="divide-y divide-cad-border">
+                <div style={{ borderTop: '1px solid var(--public-border)' }}>
                   {section.endpoints.map((endpoint, endpointIdx) => {
                     const endpointId = `${section.title}-${endpointIdx}`
                     const fullUrl = `${window.location.origin}${endpoint.path}`
 
                     return (
-                      <div key={endpointIdx} className="p-6">
+                      <div 
+                        key={endpointIdx} 
+                        className="p-6"
+                        style={{ 
+                          borderTop: endpointIdx > 0 ? '1px solid var(--public-border)' : 'none',
+                          background: 'var(--public-bg)'
+                        }}
+                      >
                         {/* Method and Path */}
                         <div className="flex items-start gap-3 mb-3">
-                          <span className={`px-3 py-1 text-xs font-mono font-semibold ${getMethodColor(endpoint.method)}`}>
+                          <span 
+                            className="px-3 py-1 text-xs font-mono font-semibold"
+                            style={{
+                              borderRadius: 'var(--public-radius-sm)',
+                              ...(endpoint.method === 'GET' ? { background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa' } :
+                                  endpoint.method === 'POST' ? { background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80' } :
+                                  endpoint.method === 'PUT' ? { background: 'rgba(234, 179, 8, 0.2)', color: '#facc15' } :
+                                  endpoint.method === 'PATCH' ? { background: 'rgba(249, 115, 22, 0.2)', color: '#fb923c' } :
+                                  endpoint.method === 'DELETE' ? { background: 'rgba(239, 68, 68, 0.2)', color: '#f87171' } :
+                                  { background: 'var(--public-surface)', color: 'var(--public-text-secondary)' })
+                            }}
+                          >
                             {endpoint.method}
                           </span>
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <code className="font-mono text-sm text-cad-text bg-gray-50 px-3 py-1 flex-1">
+                              <code 
+                                className="font-mono text-sm px-3 py-1 flex-1"
+                                style={{ 
+                                  color: 'var(--public-text-primary)',
+                                  background: 'var(--public-surface)',
+                                  borderRadius: 'var(--public-radius-sm)',
+                                  fontFamily: 'var(--public-font-mono)'
+                                }}
+                              >
                                 {endpoint.path}
                               </code>
                               <button
                                 onClick={() => copyToClipboard(fullUrl, endpointId)}
-                                className="ml-2 p-1 hover:bg-gray-100 rounded"
+                                className="ml-2 p-1 rounded"
                                 title="Copy full URL"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'background var(--public-transition-fast)'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--public-bg-elevated)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                               >
                                 {copiedEndpoint === endpointId ? (
-                                  <Check size={16} className="text-green-600" />
+                                  <Check size={16} style={{ color: '#22c55e' }} />
                                 ) : (
-                                  <Copy size={16} className="text-gray-600" />
+                                  <Copy size={16} style={{ color: 'var(--public-text-secondary)' }} />
                                 )}
                               </button>
                             </div>
                             {endpoint.auth && (
-                              <span className="inline-block mt-2 text-xs text-blue-700 font-sans">
+                              <span style={{ 
+                                display: 'inline-block', 
+                                marginTop: '0.5rem', 
+                                fontSize: '0.75rem', 
+                                color: 'var(--public-accent)' 
+                              }}>
                                 🔒 Requires authentication
                               </span>
                             )}
@@ -1176,23 +1312,35 @@ export function ApiDocsPage() {
                         </div>
 
                         {/* Description */}
-                        <p className="font-sans text-sm text-gray-700 mb-4">
+                        <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)', marginBottom: '1rem' }}>
                           {endpoint.description}
                         </p>
 
                         {/* Query Parameters */}
                         {endpoint.queryParams && (
                           <div className="mb-4">
-                            <h4 className="font-sans text-sm font-semibold text-cad-text mb-2">
+                            <h4 style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: 600, 
+                              color: 'var(--public-text-primary)', 
+                              marginBottom: '0.5rem' 
+                            }}>
                               Query Parameters:
                             </h4>
-                            <div className="bg-gray-50 border border-cad-border p-3 space-y-2">
+                            <div 
+                              className="p-3 space-y-2"
+                              style={{ 
+                                background: 'var(--public-surface)',
+                                border: '1px solid var(--public-border)',
+                                borderRadius: 'var(--public-radius-md)'
+                              }}
+                            >
                               {endpoint.queryParams.map((param, paramIdx) => (
-                                <div key={paramIdx} className="font-mono text-xs">
-                                  <span className="text-cad-accent">{param.name}</span>
-                                  <span className="text-gray-500"> ({param.type})</span>
-                                  {param.required && <span className="text-red-600 ml-1">*required</span>}
-                                  <span className="text-gray-700 ml-2">- {param.description}</span>
+                                <div key={paramIdx} style={{ fontFamily: 'var(--public-font-mono)', fontSize: '0.75rem' }}>
+                                  <span style={{ color: 'var(--public-accent)' }}>{param.name}</span>
+                                  <span style={{ color: 'var(--public-text-tertiary)' }}> ({param.type})</span>
+                                  {param.required && <span style={{ color: '#ef4444', marginLeft: '0.25rem' }}>*required</span>}
+                                  <span style={{ color: 'var(--public-text-secondary)', marginLeft: '0.5rem' }}>- {param.description}</span>
                                 </div>
                               ))}
                             </div>
@@ -1202,10 +1350,24 @@ export function ApiDocsPage() {
                         {/* Request Body */}
                         {endpoint.requestBody && (
                           <div className="mb-4">
-                            <h4 className="font-sans text-sm font-semibold text-cad-text mb-2">
+                            <h4 style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: 600, 
+                              color: 'var(--public-text-primary)', 
+                              marginBottom: '0.5rem' 
+                            }}>
                               Request Body:
                             </h4>
-                            <pre className="bg-white border border-cad-border text-cad-text p-4 text-xs overflow-x-auto font-mono">
+                            <pre 
+                              className="p-4 text-xs overflow-x-auto font-mono"
+                              style={{ 
+                                background: 'var(--public-surface)',
+                                border: '1px solid var(--public-border)',
+                                borderRadius: 'var(--public-radius-md)',
+                                color: 'var(--public-text-primary)',
+                                fontFamily: 'var(--public-font-mono)'
+                              }}
+                            >
                               {JSON.stringify(endpoint.requestBody, null, 2)}
                             </pre>
                           </div>
@@ -1214,15 +1376,37 @@ export function ApiDocsPage() {
                         {/* Response Example */}
                         {endpoint.responseExample && (
                           <div>
-                            <h4 className="font-sans text-sm font-semibold text-cad-text mb-2">
+                            <h4 style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: 600, 
+                              color: 'var(--public-text-primary)', 
+                              marginBottom: '0.5rem' 
+                            }}>
                               Response Example:
                             </h4>
                             {typeof endpoint.responseExample === 'string' ? (
-                              <div className="bg-gray-50 border border-cad-border p-3 font-sans text-sm text-gray-700">
+                              <div 
+                                className="p-3 font-sans text-sm"
+                                style={{ 
+                                  background: 'var(--public-surface)',
+                                  border: '1px solid var(--public-border)',
+                                  borderRadius: 'var(--public-radius-md)',
+                                  color: 'var(--public-text-secondary)'
+                                }}
+                              >
                                 {endpoint.responseExample}
                               </div>
                             ) : (
-                              <pre className="bg-white border border-cad-border text-cad-text p-4 text-xs overflow-x-auto font-mono">
+                              <pre 
+                                className="p-4 text-xs overflow-x-auto font-mono"
+                                style={{ 
+                                  background: 'var(--public-surface)',
+                                  border: '1px solid var(--public-border)',
+                                  borderRadius: 'var(--public-radius-md)',
+                                  color: 'var(--public-text-primary)',
+                                  fontFamily: 'var(--public-font-mono)'
+                                }}
+                              >
                                 {JSON.stringify(endpoint.responseExample, null, 2)}
                               </pre>
                             )}
@@ -1237,7 +1421,8 @@ export function ApiDocsPage() {
           ))}
         </div>
       </main>
-    </div>
+      </div>
+    </PublicLayout>
   )
 }
 
