@@ -9,8 +9,15 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { tokenStore, getValidAccessToken } from './googleOAuth';
 
-// JWT Secret from environment
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'change-this-secret-in-production';
+// JWT Secret from environment - fail fast in production
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('CRITICAL: JWT_SECRET must be set in production');
+}
+
+// Use default only in development
+const JWT_SECRET_FINAL = JWT_SECRET || 'change-this-secret-in-production';
 
 interface JWTPayload {
   userId: string;
@@ -63,13 +70,44 @@ export async function requireAuth(
     let userId: string | undefined;
     let userPayload: JWTPayload | undefined;
 
-    // Method 1: JWT Token from Authorization header (Production/Serverless)
+    // Method 1: JWT Token from httpOnly cookie (preferred)
+    const cookieToken = req.cookies?.auth_token;
+    if (cookieToken) {
+      try {
+        const decoded = jwt.verify(cookieToken, JWT_SECRET_FINAL, {
+          algorithms: ['HS256'], // Explicitly whitelist algorithm (reject alg=none)
+          issuer: 'feai-backend',
+          audience: 'feai-frontend',
+        }) as JWTPayload;
+        userId = decoded.userId;
+        userPayload = decoded;
+      } catch (err) {
+        // Clear invalid cookie
+        res.clearCookie('auth_token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+        });
+        res.status(401).json({
+          error: 'INVALID_TOKEN',
+          message: 'Authentication token is invalid or expired. Please sign in again.',
+        });
+        return;
+      }
+    }
+
+    // Method 2: JWT Token from Authorization header (fallback for API clients)
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (!userId && authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+        const decoded = jwt.verify(token, JWT_SECRET_FINAL, {
+          algorithms: ['HS256'],
+          issuer: 'feai-backend',
+          audience: 'feai-frontend',
+        }) as JWTPayload;
         userId = decoded.userId;
         userPayload = decoded;
       } catch (err) {
@@ -81,7 +119,7 @@ export async function requireAuth(
       }
     }
     
-    // Method 2: Session-based auth (Local Development fallback)
+    // Method 3: Session-based auth (Local Development fallback)
     if (!userId && req.session) {
       userId = (req.session as any)?.userId;
     }
@@ -170,13 +208,33 @@ export async function optionalAuth(
   try {
     let userId: string | undefined;
 
-    // Method 1: JWT Token from Authorization header
+    // Method 1: JWT Token from httpOnly cookie
+    const cookieToken = req.cookies?.auth_token;
+    if (cookieToken) {
+      try {
+        const decoded = jwt.verify(cookieToken, JWT_SECRET_FINAL, {
+          algorithms: ['HS256'],
+          issuer: 'feai-backend',
+          audience: 'feai-frontend',
+        }) as JWTPayload;
+        userId = decoded.userId;
+      } catch (err) {
+        // Invalid token, but don't fail the request
+        console.warn('⚠️  Invalid JWT token in optionalAuth');
+      }
+    }
+
+    // Method 2: JWT Token from Authorization header
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (!userId && authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+        const decoded = jwt.verify(token, JWT_SECRET_FINAL, {
+          algorithms: ['HS256'],
+          issuer: 'feai-backend',
+          audience: 'feai-frontend',
+        }) as JWTPayload;
         userId = decoded.userId;
       } catch (err) {
         // Invalid token, but don't fail the request
@@ -184,7 +242,7 @@ export async function optionalAuth(
       }
     }
     
-    // Method 2: Session-based auth (Local Development fallback)
+    // Method 3: Session-based auth (Local Development fallback)
     if (!userId && req.session) {
       userId = (req.session as any)?.userId;
     }

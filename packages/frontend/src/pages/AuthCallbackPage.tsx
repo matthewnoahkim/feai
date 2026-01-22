@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuthStore, setAuthToken } from '../store/authStore';
+import { useAuthStore } from '../store/authStore';
 import { PublicLayout } from '../components/PublicLayout';
 
 export function AuthCallbackPage() {
@@ -35,26 +35,21 @@ export function AuthCallbackPage() {
           return;
         }
 
-        // Extract authentication data from URL params
-        const token = searchParams.get('token');
+        // Extract user data from URL params (token is now in httpOnly cookie)
         const userId = searchParams.get('userId');
         const email = searchParams.get('email');
         const name = searchParams.get('name');
         const photoURL = searchParams.get('photoURL');
 
         // Validate required parameters
-        if (!token) {
-          throw new Error('No authentication token received');
-        }
-
         if (!userId || !email || !name) {
           throw new Error('Incomplete user information received');
         }
 
         console.log('✅ Authentication successful for:', email);
 
-        // Store authentication token
-        setAuthToken(token);
+        // Token is now in httpOnly cookie, automatically sent with requests
+        // No need to store in localStorage
 
         // Update user state
         setUser({

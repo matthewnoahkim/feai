@@ -6,10 +6,12 @@
 
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import {
   getGoogleAuthUrl,
   handleGoogleCallback,
   generateState,
+  generatePKCE,
   revokeTokens,
   tokenStore,
   StoredUserSession,
@@ -19,12 +21,40 @@ import { db } from '../db';
 
 const router = express.Router();
 
-// JWT Secret from environment
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'change-this-secret-in-production';
+// JWT Secret from environment - fail fast in production
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
 
-if (!JWT_SECRET || JWT_SECRET === 'change-this-secret-in-production') {
-  console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure default.');
-  console.warn('⚠️  Set JWT_SECRET environment variable in production!');
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CRITICAL: JWT_SECRET must be set in production');
+  }
+  console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.');
+  console.warn('⚠️  Set JWT_SECRET environment variable before deploying to production!');
+}
+
+// Use default only in development
+const JWT_SECRET_FINAL = JWT_SECRET || 'change-this-secret-in-production';
+
+// Allowed redirect origins for security
+const ALLOWED_REDIRECT_ORIGINS = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  process.env.CLIENT_URL || 'http://localhost:3001',
+  'https://feai.vercel.app',
+  // Add other production domains here
+].filter(Boolean);
+
+/**
+ * Validate redirect URI against allowlist
+ * Prevents open redirect attacks
+ */
+function validateRedirectUri(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const origin = `${parsed.protocol}//${parsed.host}`;
+    return ALLOWED_REDIRECT_ORIGINS.includes(origin);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -39,11 +69,33 @@ if (!JWT_SECRET || JWT_SECRET === 'change-this-secret-in-production') {
  */
 router.get('/google', (req: Request, res: Response) => {
   try {
-    // Generate and store CSRF state token
+    // Generate CSRF state token
     const state = generateState();
     
-    // For serverless: Store state in a signed cookie instead of session
+    // Generate PKCE code verifier and challenge
+    const { codeVerifier, codeChallenge } = generatePKCE();
+    
+    // Generate nonce for OIDC replay protection
+    const nonce = randomBytes(16).toString('hex');
+    
+    // Store state, code verifier, and nonce in signed cookies
     res.cookie('oauth_state', state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000, // 10 minutes
+      signed: true,
+    });
+    
+    res.cookie('oauth_code_verifier', codeVerifier, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 10 * 60 * 1000, // 10 minutes
+      signed: true,
+    });
+    
+    res.cookie('oauth_nonce', nonce, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -54,10 +106,12 @@ router.get('/google', (req: Request, res: Response) => {
     // Also store in session if available (for local development)
     if (req.session) {
       (req.session as any).oauthState = state;
+      (req.session as any).oauthCodeVerifier = codeVerifier;
+      (req.session as any).oauthNonce = nonce;
     }
 
-    // Generate auth URL using the state directly
-    const authUrl = getGoogleAuthUrl(state);
+    // Generate auth URL with PKCE and nonce
+    const authUrl = getGoogleAuthUrl(state, codeChallenge, nonce);
 
     console.log('🔐 Redirecting to Google OAuth...');
     res.redirect(authUrl);
@@ -99,23 +153,44 @@ router.get('/google/callback', async (req: Request, res: Response) => {
       throw new Error('No state parameter provided');
     }
 
-    // Get state from signed cookie or session
+    // Get state, code verifier, and nonce from signed cookies or session
     const cookieState = req.signedCookies?.oauth_state;
+    const cookieCodeVerifier = req.signedCookies?.oauth_code_verifier;
+    const cookieNonce = req.signedCookies?.oauth_nonce;
     const sessionState = (req.session as any)?.oauthState;
+    const sessionCodeVerifier = (req.session as any)?.oauthCodeVerifier;
+    const sessionNonce = (req.session as any)?.oauthNonce;
+    
     const storedState = cookieState || sessionState;
+    const storedCodeVerifier = cookieCodeVerifier || sessionCodeVerifier;
+    const storedNonce = cookieNonce || sessionNonce;
 
     if (!storedState) {
       throw new Error('No stored state found - session may have expired');
     }
 
-    // Clear the state
-    res.clearCookie('oauth_state');
-    if (req.session) {
-      delete (req.session as any).oauthState;
+    if (!storedCodeVerifier) {
+      throw new Error('No code verifier found - PKCE validation failed');
     }
 
-    // Handle OAuth callback and get user + tokens
-    const { user: googleUser, tokens } = await handleGoogleCallback(code, storedState, state);
+    // Clear cookies
+    res.clearCookie('oauth_state');
+    res.clearCookie('oauth_code_verifier');
+    res.clearCookie('oauth_nonce');
+    if (req.session) {
+      delete (req.session as any).oauthState;
+      delete (req.session as any).oauthCodeVerifier;
+      delete (req.session as any).oauthNonce;
+    }
+
+    // Handle OAuth callback with PKCE and nonce validation
+    const { user: googleUser, tokens } = await handleGoogleCallback(
+      code,
+      storedState,
+      state,
+      storedCodeVerifier,
+      storedNonce
+    );
 
     // Find or create user in database
     let dbUser = await db.user.findUnique({
@@ -174,27 +249,56 @@ router.get('/google/callback', async (req: Request, res: Response) => {
       createdAt: new Date(),
     };
     
+    // Regenerate session ID to prevent session fixation
+    if (req.session) {
+      await new Promise<void>((resolve, reject) => {
+        req.session!.regenerate((err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
+    }
+    
     await tokenStore.saveTokens(dbUser.id, session);
 
-    // Create JWT token (instead of session)
+    // Create JWT token with proper claims
     const jwtToken = jwt.sign(
       {
         userId: dbUser.id,
         email: dbUser.email,
         googleId: googleUser.sub,
       },
-      JWT_SECRET,
+      JWT_SECRET_FINAL,
       {
         expiresIn: '7d', // 7 days
         issuer: 'feai-backend',
+        audience: 'feai-frontend',
+        algorithm: 'HS256', // Explicit algorithm
       }
     );
 
+    // Set JWT in httpOnly cookie (secure, not exposed in URL)
+    res.cookie('auth_token', jwtToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+
     console.log(`✅ Authentication successful for: ${googleUser.email}`);
     
-    // Redirect to frontend callback page with user data
+    // Validate redirect URI before redirecting
     const callbackUrl = new URL('/auth/callback', `${req.protocol}://${req.get('host')}`);
-    callbackUrl.searchParams.set('token', jwtToken);
+    
+    if (!validateRedirectUri(callbackUrl.toString())) {
+      throw new Error('Invalid redirect URI');
+    }
+    
+    // Redirect to callback with only non-sensitive data (token is in cookie)
     callbackUrl.searchParams.set('userId', dbUser.id);
     callbackUrl.searchParams.set('email', dbUser.email);
     callbackUrl.searchParams.set('name', dbUser.name);
@@ -288,6 +392,14 @@ router.post('/logout', requireAuth, async (req: Request, res: Response) => {
     // Revoke tokens
     await revokeTokens(userId);
 
+    // Clear auth cookie
+    res.clearCookie('auth_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
     // Destroy session
     req.session.destroy((err) => {
       if (err) {
@@ -295,7 +407,8 @@ router.post('/logout', requireAuth, async (req: Request, res: Response) => {
       }
     });
 
-    console.log(`👋 User signed out: ${userId}`);
+    // Sanitize logging - don't expose full user IDs
+    console.log(`👋 User signed out: ${userId.substring(0, 8)}...`);
 
     res.json({
       success: true,
@@ -304,7 +417,13 @@ router.post('/logout', requireAuth, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('❌ Logout error:', error);
     
-    // Even if revocation fails, destroy the session
+    // Even if revocation fails, clear cookie and destroy session
+    res.clearCookie('auth_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
     req.session.destroy(() => {});
     
     res.status(500).json({

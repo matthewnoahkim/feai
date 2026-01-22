@@ -14,7 +14,8 @@
  */
 
 import { google, Auth } from 'googleapis';
-import { randomBytes } from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
+import { randomBytes, createHash } from 'crypto';
 import { Request } from 'express';
 
 // ============================================================================
@@ -88,7 +89,8 @@ class InMemoryTokenStore implements TokenStore {
   async saveTokens(userId: string, session: StoredUserSession): Promise<void> {
     this.store.set(userId, session);
     this.googleIdIndex.set(session.googleId, userId);
-    console.log(`💾 Saved tokens for user ${userId} (Google ID: ${session.googleId})`);
+    // Sanitize logging - don't expose full user IDs
+    console.log(`💾 Saved tokens for user ${userId.substring(0, 8)}...`);
   }
 
   async getTokens(userId: string): Promise<StoredUserSession | null> {
@@ -196,6 +198,80 @@ export function generateState(): string {
   return randomBytes(32).toString('hex');
 }
 
+/**
+ * Generate PKCE code verifier and challenge
+ * Returns { codeVerifier, codeChallenge }
+ * 
+ * PKCE (Proof Key for Code Exchange) prevents authorization code interception attacks
+ */
+export function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
+  // Generate 43-128 character code verifier (base64url encoded)
+  const codeVerifier = randomBytes(32).toString('base64url');
+  
+  // Generate code challenge (SHA256 hash, base64url encoded)
+  const codeChallenge = createHash('sha256')
+    .update(codeVerifier)
+    .digest('base64url');
+  
+  return { codeVerifier, codeChallenge };
+}
+
+/**
+ * Validate ID token from Google
+ * Verifies signature, issuer, audience, expiration, and nonce
+ */
+async function validateIdToken(
+  idToken: string,
+  expectedNonce?: string
+): Promise<GoogleUserProfile> {
+  const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+  
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: idToken,
+      audience: GOOGLE_CLIENT_ID, // Must match our client ID
+    });
+    
+    const payload = ticket.getPayload();
+    if (!payload) {
+      throw new Error('Invalid ID token payload');
+    }
+
+    // Validate required claims
+    if (!payload.sub) {
+      throw new Error('Missing sub claim in ID token');
+    }
+    if (!payload.email) {
+      throw new Error('Missing email claim in ID token');
+    }
+    if (payload.iss !== 'https://accounts.google.com' && payload.iss !== 'accounts.google.com') {
+      throw new Error(`Invalid issuer: ${payload.iss}`);
+    }
+    if (payload.aud !== GOOGLE_CLIENT_ID) {
+      throw new Error(`Invalid audience: ${payload.aud}`);
+    }
+
+    // Validate nonce if provided
+    if (expectedNonce && payload.nonce !== expectedNonce) {
+      throw new Error('Nonce mismatch - possible replay attack');
+    }
+
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      email_verified: payload.email_verified || false,
+      name: payload.name || '',
+      given_name: payload.given_name,
+      family_name: payload.family_name,
+      picture: payload.picture,
+      locale: payload.locale,
+    };
+  } catch (error) {
+    console.error('ID token validation failed:', error);
+    throw new Error('Invalid ID token');
+  }
+}
+
 // ============================================================================
 // OAuth Flow Functions
 // ============================================================================
@@ -206,16 +282,15 @@ export function generateState(): string {
  * This creates the URL to redirect users to Google's consent screen
  * 
  * @param stateOrReq - Either a state string or Express request with session
+ * @param codeChallenge - PKCE code challenge (optional but recommended)
+ * @param nonce - OIDC nonce for replay protection (optional)
  * @returns Authorization URL
  * 
  * Usage:
  * ```ts
- * // With state string (serverless-friendly)
- * const authUrl = getGoogleAuthUrl(state);
- * res.redirect(authUrl);
- * 
- * // With request (traditional session-based)
- * const authUrl = getGoogleAuthUrl(req);
+ * // With state string and PKCE (recommended)
+ * const { codeVerifier, codeChallenge } = generatePKCE();
+ * const authUrl = getGoogleAuthUrl(state, codeChallenge, nonce);
  * res.redirect(authUrl);
  * ```
  * 
@@ -225,8 +300,14 @@ export function generateState(): string {
  *   - Only use this on first login or when you need a NEW refresh token
  *   - Otherwise, use prompt=select_account or omit it
  * - state: CSRF protection token (must be validated on callback)
+ * - code_challenge: PKCE challenge for code exchange security
+ * - nonce: OIDC nonce for replay protection
  */
-export function getGoogleAuthUrl(stateOrReq: string | Request): string {
+export function getGoogleAuthUrl(
+  stateOrReq: string | Request,
+  codeChallenge?: string,
+  nonce?: string
+): string {
   const oauth2Client = createOAuth2Client();
   
   // Get state from either string parameter or request session
@@ -240,33 +321,26 @@ export function getGoogleAuthUrl(stateOrReq: string | Request): string {
     }
   }
 
-  const authUrl = oauth2Client.generateAuthUrl({
+  const authUrlOptions: any = {
     access_type: 'offline',  // Request refresh token
-    
-    /**
-     * prompt parameter controls the consent screen behavior:
-     * 
-     * - 'consent': ALWAYS show consent screen
-     *   Use this: First time login, or when you need a NEW refresh token
-     *   Note: Google only returns refresh_token when user consents
-     * 
-     * - 'select_account': Let user select which Google account to use
-     *   Use this: For subsequent logins when you already have a refresh token
-     * 
-     * - 'none': Don't show any UI, fail if not already authorized
-     *   Use this: When you want silent auth (rarely needed)
-     * 
-     * Best practice: Use 'consent' only when needed, otherwise use 'select_account'
-     */
     prompt: 'select_account',  // Change to 'consent' if you need a NEW refresh token
-    
     scope: SCOPES,
     state: state,
-    
-    // Additional recommended parameters
     include_granted_scopes: true,  // Enable incremental authorization
-  });
+  };
 
+  // Add PKCE if code challenge provided
+  if (codeChallenge) {
+    authUrlOptions.code_challenge = codeChallenge;
+    authUrlOptions.code_challenge_method = 'S256';
+  }
+
+  // Add nonce for OIDC if provided
+  if (nonce) {
+    authUrlOptions.nonce = nonce;
+  }
+
+  const authUrl = oauth2Client.generateAuthUrl(authUrlOptions);
   console.log(`🔐 Generated auth URL with state: ${state.substring(0, 10)}...`);
   return authUrl;
 }
@@ -280,22 +354,27 @@ export function getGoogleAuthUrl(stateOrReq: string | Request): string {
  * @param code - Authorization code from Google
  * @param storedState - State stored in cookie/session
  * @param receivedState - State received from Google callback
+ * @param codeVerifier - PKCE code verifier (optional but recommended)
+ * @param expectedNonce - Expected nonce value for OIDC (optional)
  * @returns User profile and tokens
  * 
  * Usage:
  * ```ts
- * const { user, tokens } = await handleGoogleCallback(code, storedState, receivedState);
+ * const { user, tokens } = await handleGoogleCallback(code, storedState, receivedState, codeVerifier, nonce);
  * ```
  * 
  * Error handling:
  * - Throws if state validation fails (CSRF attack)
  * - Throws if code exchange fails
  * - Throws if user profile fetch fails
+ * - Throws if ID token validation fails
  */
 export async function handleGoogleCallback(
   code: string,
   storedState: string,
-  receivedState: string
+  receivedState: string,
+  codeVerifier?: string,
+  expectedNonce?: string
 ): Promise<{
   user: GoogleUserProfile;
   tokens: GoogleTokens;
@@ -316,7 +395,9 @@ export async function handleGoogleCallback(req: Request): Promise<{
 export async function handleGoogleCallback(
   codeOrReq: string | Request,
   storedState?: string,
-  receivedState?: string
+  receivedState?: string,
+  codeVerifier?: string,
+  expectedNonce?: string
 ): Promise<{
   user: GoogleUserProfile;
   tokens: GoogleTokens;
@@ -324,15 +405,19 @@ export async function handleGoogleCallback(
   let code: string;
   let state: string;
   let sessionState: string;
+  let verifier: string | undefined;
+  let nonce: string | undefined;
 
   // Handle both function signatures
   if (typeof codeOrReq === 'string') {
-    // New signature: (code, storedState, receivedState)
+    // New signature: (code, storedState, receivedState, codeVerifier?, expectedNonce?)
     code = codeOrReq;
     sessionState = storedState!;
     state = receivedState!;
+    verifier = codeVerifier;
+    nonce = expectedNonce;
   } else {
-    // Old signature: (req)
+    // Old signature: (req) - for backward compatibility
     const req = codeOrReq;
     const { code: queryCode, state: queryState, error } = req.query;
 
@@ -349,10 +434,14 @@ export async function handleGoogleCallback(
     code = queryCode;
     state = typeof queryState === 'string' ? queryState : '';
     sessionState = (req.session as any)?.oauthState || '';
+    verifier = (req.session as any)?.oauthCodeVerifier;
+    nonce = (req.session as any)?.oauthNonce;
 
     // Clear the state from session (one-time use)
     if (req.session) {
       delete (req.session as any).oauthState;
+      delete (req.session as any).oauthCodeVerifier;
+      delete (req.session as any).oauthNonce;
     }
   }
 
@@ -364,9 +453,14 @@ export async function handleGoogleCallback(
   const oauth2Client = createOAuth2Client();
 
   try {
-    // Exchange authorization code for tokens
+    // Exchange authorization code for tokens (with PKCE if verifier provided)
     console.log('🔄 Exchanging authorization code for tokens...');
-    const { tokens } = await oauth2Client.getToken(code);
+    const tokenOptions: any = { code };
+    if (verifier) {
+      tokenOptions.codeVerifier = verifier;
+    }
+    
+    const { tokens } = await oauth2Client.getToken(tokenOptions);
     
     if (!tokens.access_token) {
       throw new Error('No access token received from Google');
@@ -374,24 +468,28 @@ export async function handleGoogleCallback(
 
     console.log(`✅ Received tokens (has refresh: ${!!tokens.refresh_token})`);
 
-    // Set credentials on client for API calls
-    oauth2Client.setCredentials(tokens);
+    // Validate ID token if present (preferred over userinfo endpoint)
+    let user: GoogleUserProfile;
+    if (tokens.id_token) {
+      // Prefer ID token for user info (more secure, cryptographically signed)
+      user = await validateIdToken(tokens.id_token, nonce);
+    } else {
+      // Fallback to userinfo endpoint if no ID token
+      oauth2Client.setCredentials(tokens);
+      const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+      const { data: userInfo } = await oauth2.userinfo.get();
 
-    // Fetch user profile using the access token
-    console.log('👤 Fetching user profile...');
-    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
-    const { data: userInfo } = await oauth2.userinfo.get();
-
-    const user: GoogleUserProfile = {
-      sub: userInfo.id!,
-      email: userInfo.email!,
-      email_verified: userInfo.verified_email || false,
-      name: userInfo.name!,
-      given_name: userInfo.given_name,
-      family_name: userInfo.family_name,
-      picture: userInfo.picture,
-      locale: userInfo.locale,
-    };
+      user = {
+        sub: userInfo.id!,
+        email: userInfo.email!,
+        email_verified: userInfo.verified_email || false,
+        name: userInfo.name!,
+        given_name: userInfo.given_name,
+        family_name: userInfo.family_name,
+        picture: userInfo.picture,
+        locale: userInfo.locale,
+      };
+    }
 
     console.log(`✅ Authenticated user: ${user.email}`);
 
@@ -433,7 +531,8 @@ export async function handleGoogleCallback(
  * - Max limit of refresh tokens reached (50 per user per client)
  */
 export async function refreshGoogleAccessToken(userId: string): Promise<GoogleTokens> {
-  console.log(`🔄 Refreshing access token for user: ${userId}`);
+  // Sanitize logging - don't expose full user IDs
+  console.log(`🔄 Refreshing access token for user ${userId.substring(0, 8)}...`);
 
   // Get stored tokens
   const session = await tokenStore.getTokens(userId);
@@ -471,11 +570,13 @@ export async function refreshGoogleAccessToken(userId: string): Promise<GoogleTo
     session.lastRefreshed = new Date();
     await tokenStore.saveTokens(userId, session);
 
-    console.log(`✅ Access token refreshed for user: ${userId}`);
+    // Sanitize logging - don't expose full user IDs
+    console.log(`✅ Access token refreshed for user ${userId.substring(0, 8)}...`);
     return newTokens;
 
   } catch (error) {
-    console.error(`❌ Failed to refresh token for user ${userId}:`, error);
+    // Sanitize logging - don't expose full user IDs
+    console.error(`❌ Failed to refresh token for user ${userId.substring(0, 8)}...:`, error);
     throw new Error('Failed to refresh access token - user must re-authenticate');
   }
 }
@@ -535,7 +636,8 @@ export async function getValidAccessToken(userId: string): Promise<string> {
  * @param userId - Internal user ID
  */
 export async function revokeTokens(userId: string): Promise<void> {
-  console.log(`🔓 Revoking tokens for user: ${userId}`);
+  // Sanitize logging - don't expose full user IDs
+  console.log(`🔓 Revoking tokens for user ${userId.substring(0, 8)}...`);
 
   const session = await tokenStore.getTokens(userId);
   if (session && session.tokens.access_token) {
@@ -544,7 +646,8 @@ export async function revokeTokens(userId: string): Promise<void> {
 
     try {
       await oauth2Client.revokeCredentials();
-      console.log(`✅ Revoked tokens with Google for user: ${userId}`);
+      // Sanitize logging - don't expose full user IDs
+      console.log(`✅ Revoked tokens with Google for user ${userId.substring(0, 8)}...`);
     } catch (error) {
       console.warn(`⚠️  Failed to revoke tokens with Google:`, error);
       // Continue to delete locally even if Google revocation fails
@@ -553,7 +656,8 @@ export async function revokeTokens(userId: string): Promise<void> {
 
   // Delete tokens from local storage
   await tokenStore.deleteTokens(userId);
-  console.log(`✅ Deleted local tokens for user: ${userId}`);
+  // Sanitize logging - don't expose full user IDs
+  console.log(`✅ Deleted local tokens for user ${userId.substring(0, 8)}...`);
 }
 
 // Export token store for external use

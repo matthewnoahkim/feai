@@ -62,22 +62,18 @@ export const useAuthStore = create<AuthState>()(
        * Clears local storage and state
        */
       signOut: async () => {
-        const token = getAuthToken();
-
-        if (token) {
-          try {
-            // Notify backend of sign out
-            await fetch('/auth/logout', {
-              method: 'POST',
-              credentials: 'include', // Include session cookie
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            });
-          } catch (error) {
-            console.warn('Failed to notify backend of sign out:', error);
-            // Continue with local sign out even if backend call fails
-          }
+        try {
+          // Notify backend of sign out (cookie will be cleared server-side)
+          await fetch('/auth/logout', {
+            method: 'POST',
+            credentials: 'include', // Include auth cookie
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+        } catch (error) {
+          console.warn('Failed to notify backend of sign out:', error);
+          // Continue with local sign out even if backend call fails
         }
 
         // Clear local storage and state
@@ -119,49 +115,53 @@ export const useAuthStore = create<AuthState>()(
 
 /**
  * Get the authentication token from localStorage
+ * NOTE: Token is now stored in httpOnly cookie, not accessible from JS
+ * This function is kept for backward compatibility but returns null
  */
 export function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  // Token is in httpOnly cookie, not accessible from JavaScript
+  // This is intentional for security (prevents XSS attacks)
+  return null;
 }
 
 /**
  * Set the authentication token in localStorage
+ * NOTE: Token is now set server-side in httpOnly cookie
+ * This function is kept for backward compatibility but does nothing
  */
 export function setAuthToken(token: string): void {
-  localStorage.setItem('auth_token', token);
+  // No-op: token is set server-side in httpOnly cookie
+  // This function kept for backward compatibility
 }
 
 /**
  * Remove the authentication token from localStorage
+ * NOTE: Token is cleared server-side via /auth/logout endpoint
  */
 export function removeAuthToken(): void {
-  localStorage.removeItem('auth_token');
+  // Token is in httpOnly cookie, cleared server-side
+  // This function kept for backward compatibility
 }
 
 /**
  * Make an authenticated API request
- * Automatically includes the auth token in headers
+ * Automatically includes the auth token from httpOnly cookie
  */
 export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = getAuthToken();
-
-  if (!token) {
-    throw new Error('No authentication token available');
-  }
-
   const response = await fetch(url, {
     ...options,
+    credentials: 'include', // Include httpOnly auth cookie
     headers: {
       ...options.headers,
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      // Note: Token is in cookie, not Authorization header
+      // Backend middleware will read from cookie first, then fall back to Authorization header
     },
   });
 
   // Handle authentication errors
   if (response.status === 401) {
     // Token is invalid or expired, clear auth state
-    removeAuthToken();
     useAuthStore.getState().setUser(null);
     throw new Error('Session expired. Please sign in again.');
   }
@@ -172,32 +172,27 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
 /**
  * Verify the current auth token is still valid
  * Returns user data if valid, null otherwise
+ * Token is read from httpOnly cookie automatically
  */
 export async function verifyAuthToken(): Promise<User | null> {
-  const token = getAuthToken();
-
-  if (!token) {
-    return null;
-  }
-
   try {
     const response = await fetchWithAuth('/auth/me');
 
     if (!response.ok) {
-      removeAuthToken();
+      useAuthStore.getState().setUser(null);
       return null;
     }
 
     const data = await response.json();
     
-    if (data.success && data.data) {
-      return data.data as User;
+    if (data.success && data.user) {
+      return data.user as User;
     }
 
     return null;
   } catch (error) {
     console.error('Token verification failed:', error);
-    removeAuthToken();
+    useAuthStore.getState().setUser(null);
     return null;
   }
 }
