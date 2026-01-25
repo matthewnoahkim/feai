@@ -127,21 +127,6 @@ export function LoginPage() {
             <span>Continue with Google</span>
           </button>
           
-          {/* Divider */}
-          <div className="my-8 flex items-center gap-4">
-            <div className="flex-1 h-px bg-cad-border" />
-            <span className="text-xs text-gray-500 font-sans">or</span>
-            <div className="flex-1 h-px bg-cad-border" />
-          </div>
-          
-          {/* Guest Access */}
-          <button
-            onClick={() => navigate('/')}
-            className="w-full px-4 py-3 text-sm font-sans text-cad-text border border-cad-border hover:bg-gray-50 transition-colors"
-          >
-            Explore without signing in
-          </button>
-          
           {/* Terms */}
           <p className="mt-8 text-center text-xs text-gray-500 font-sans">
             By signing in, you agree to our{' '}

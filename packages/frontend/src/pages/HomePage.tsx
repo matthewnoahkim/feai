@@ -48,21 +48,15 @@ export function HomePage() {
                   style={{
                     padding: '0.5rem 1rem',
                     fontSize: '0.875rem',
-                    color: '#1a4d8f',
-                    background: 'transparent',
+                    color: 'white',
+                    background: '#1a4d8f',
                     border: '1px solid #1a4d8f',
                     cursor: 'pointer',
                     fontWeight: 500,
-                    transition: 'all 0.2s'
+                    transition: 'background 0.2s'
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#1a4d8f'
-                    e.currentTarget.style.color = 'white'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = '#1a4d8f'
-                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#0d2a4d'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#1a4d8f'}
                 >
                   Dashboard
                 </button>
@@ -75,39 +69,23 @@ export function HomePage() {
                 )}
               </>
             ) : (
-              <>
-                <button
-                  onClick={() => navigate('/login')}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    fontSize: '0.875rem',
-                    color: '#1a4d8f',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => navigate('/login')}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    fontSize: '0.875rem',
-                    color: 'white',
-                    background: '#1a4d8f',
-                    border: '1px solid #1a4d8f',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#0d2a4d'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = '#1a4d8f'}
-                >
-                  Get Started
-                </button>
-              </>
+              <button
+                onClick={() => navigate('/login')}
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  color: 'white',
+                  background: '#1a4d8f',
+                  border: '1px solid #1a4d8f',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#0d2a4d'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#1a4d8f'}
+              >
+                Sign In
+              </button>
             )}
           </div>
         </nav>
