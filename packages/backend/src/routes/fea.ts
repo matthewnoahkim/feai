@@ -1,5 +1,5 @@
 /**
- * FEA API Routes - Finite Element Analysis with CalculiX
+ * FEA API Routes - Finite Element Analysis
  */
 
 import { Router } from 'express';
@@ -519,7 +519,7 @@ async function processSimulation(jobId: string, setup: any, partStudioId: string
     fs.mkdirSync(workDir, { recursive: true });
     job.workDir = workDir;
 
-    // Generate CalculiX input file
+    // Generate FEA input file
     const inpContent = generateInputFile(setup);
     const inpPath = path.join(workDir, 'model.inp');
     fs.writeFileSync(inpPath, inpContent);
@@ -529,20 +529,12 @@ async function processSimulation(jobId: string, setup: any, partStudioId: string
     // Update status: Solving
     job.status = 'solving';
     job.progress = 50;
-    job.message = 'Running CalculiX solver...';
+    job.message = 'Running FEA solver...';
 
-    // Try to run CalculiX if available
-    const ccxPath = findCalculiX();
-    
-    if (ccxPath) {
-      // Run actual CalculiX
-      await runCalculiX(ccxPath, workDir, job);
-    } else {
-      // Generate mock results for demo
-      await delay(1500);
-      job.progress = 80;
-      job.message = 'Processing results...';
-    }
+    // Generate mock results for demo
+    await delay(1500);
+    job.progress = 80;
+    job.message = 'Processing results...';
 
     // Update status: Post-processing
     job.status = 'postProcessing';
@@ -583,73 +575,7 @@ async function processSimulation(jobId: string, setup: any, partStudioId: string
 }
 
 /**
- * Find CalculiX executable
- */
-function findCalculiX(): string | null {
-  const possiblePaths = [
-    'ccx',
-    '/usr/bin/ccx',
-    '/usr/local/bin/ccx',
-    'C:\\Program Files\\CalculiX\\ccx.exe',
-    path.join(process.cwd(), 'bin', 'ccx'),
-  ];
-
-  for (const p of possiblePaths) {
-    try {
-      if (fs.existsSync(p)) {
-        return p;
-      }
-    } catch {
-      // Skip
-    }
-  }
-
-  return null;
-}
-
-/**
- * Run CalculiX solver
- */
-async function runCalculiX(ccxPath: string, workDir: string, job: SimulationJob): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const process = spawn(ccxPath, ['-i', 'model'], {
-      cwd: workDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    job.process = process;
-
-    let stdout = '';
-    let stderr = '';
-
-    process.stdout.on('data', (data) => {
-      stdout += data.toString();
-      // Update progress based on output
-      if (stdout.includes('step 1')) {
-        job.progress = 60;
-      }
-    });
-
-    process.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    process.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`CalculiX exited with code ${code}: ${stderr}`));
-      }
-    });
-
-    process.on('error', (err) => {
-      reject(err);
-    });
-  });
-}
-
-/**
- * Generate CalculiX input file
+ * Generate FEA input file
  */
 function generateInputFile(setup: any): string {
   const lines: string[] = [];

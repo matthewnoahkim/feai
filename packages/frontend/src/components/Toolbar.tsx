@@ -839,6 +839,13 @@ export function Toolbar() {
         label="Simulate" 
         active={isSimulationMode}
         onClick={handleSimulation}
+        title="Local FEA simulation"
+      />
+      <ToolButton 
+        icon={<Activity size={16} />} 
+        label="FEA API" 
+        onClick={() => navigate('/fea-solver')}
+        title="External FEA Solver (Cloud)"
       />
 
       {/* Spacer */}

@@ -6,5 +6,6 @@ export { EditorPage } from './EditorPage'
 export { TermsPage } from './TermsPage'
 export { PrivacyPage } from './PrivacyPage'
 export { ApiDocsPage } from './ApiDocsPage'
+export { FEASolverPage } from './FEASolverPage'
 
 

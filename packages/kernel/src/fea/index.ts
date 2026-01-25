@@ -1,9 +1,7 @@
 /**
- * FEA Module - Finite Element Analysis with CalculiX integration
+ * FEA Module - Finite Element Analysis
  */
 
 export { MeshGenerator, meshGenerator } from './mesh-generator';
 export { ResultParser, resultParser } from './result-parser';
-export { CalculiXInputWriter } from './inp-writer';
-export { FRDParser } from './frd-parser';
 

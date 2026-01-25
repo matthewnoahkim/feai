@@ -142,8 +142,6 @@ const GOOGLE_REDIRECT_URI = getRedirectUri();
 if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
   console.warn('⚠️  WARNING: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET not set');
   console.warn('⚠️  OAuth will not work until these are configured');
-} else {
-  console.log('✅ Google OAuth configured with redirect URI:', GOOGLE_REDIRECT_URI);
 }
 
 /**

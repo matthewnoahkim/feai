@@ -1,6 +1,6 @@
 /**
- * CalculiX Result File Parser
- * Parses .frd (results) and .dat (log) files
+ * FEA Result File Parser
+ * Parses result files from FEA solvers
  */
 
 import {
@@ -48,7 +48,7 @@ export class ResultParser {
   private stresses: Map<number, ParsedStress[]> = new Map(); // nodeId -> stresses
 
   /**
-   * Parse CalculiX .frd result file (ASCII format)
+   * Parse .frd result file (ASCII format)
    */
   parseFrdFile(content: string): {
     displacements: ParsedDisplacement[];

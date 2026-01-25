@@ -1,6 +1,6 @@
 # FeAI - Professional 3D CAD Powered by AI
 
-AI-assisted Finite Element Analysis software with integrated CAD modeling, structural analysis, and real-time collaboration.
+AI-assisted CAD software with integrated modeling, analysis, and real-time collaboration.
 
 ## Architecture
 
@@ -8,7 +8,6 @@ AI-assisted Finite Element Analysis software with integrated CAD modeling, struc
 - Frontend: React + Vite (built and served as static files)
 - Backend: Express.js REST API + Google OAuth
 - Database: PostgreSQL (Neon.tech) via Prisma ORM
-- FEA Solver: CalculiX (WebAssembly)
 
 ```
 ┌─────────────────────────────────────┐
@@ -74,15 +73,10 @@ feai/
 - Google OAuth 2.0
 - JWT authentication
 
-**FEA:**
-- CalculiX (WebAssembly)
-- Custom mesh generator
-- Structural analysis engine
-
 ## License
 
 MIT License - Open source under MIT license.
 
 ## Contributing
 
-Contributions welcome! Please contact mattnoahkim@gmail.com.
+Contributions welcome! Please contact finite.element.ai@gmail.com.

@@ -1,5 +1,5 @@
 // ============================================================================
-// FEA TYPES - Finite Element Analysis types for CalculiX integration
+// FEA TYPES - Finite Element Analysis types
 // ============================================================================
 
 import { Vector3 } from './geometry';
@@ -703,9 +703,6 @@ export type Vector3D = { x: number; y: number; z: number };
 export type ColorMap = ColormapStop[];
 export type DisplacementResult = NodalField;
 export type StressResult = ElementField;
-export type CalculiXInput = string;  // .inp file content
-export type CalculiXOutput = string;  // .frd or .dat file content
-export type CalculiXLog = string;  // .dat log file content
 export type DeformationVisualization = ResultsViewSettings;
 export type NodeValue = { nodeId: number; values: number[] };
 export type ResultSummary = ResultsSummary;

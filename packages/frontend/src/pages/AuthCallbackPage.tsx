@@ -1,7 +1,7 @@
 /**
  * Auth Callback Page
  * Handles OAuth redirect and completes authentication
- * Dark-first modern developer tool theme
+ * Simple white/navy blue theme
  */
 
 import React, { useEffect, useState } from 'react';
@@ -68,7 +68,7 @@ export function AuthCallbackPage() {
         // Redirect to dashboard with longer delay
         setTimeout(() => {
           navigate('/dashboard', { replace: true });
-        }, 2000); // Increased from 1000ms to 2000ms
+        }, 2000);
         
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
@@ -90,23 +90,22 @@ export function AuthCallbackPage() {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen flex items-center justify-center px-8" style={{ background: 'var(--public-bg)' }}>
+      <div className="min-h-screen flex items-center justify-center px-8" style={{ background: 'white' }}>
         <div className="max-w-md w-full">
           <div 
             className="p-12"
             style={{ 
-              border: '1px solid var(--public-border)',
-              borderRadius: 'var(--public-radius-lg)',
-              background: 'var(--public-surface)'
+              border: '1px solid #1a4d8f',
+              background: 'white'
             }}
           >
             {/* Logo */}
             <div className="flex justify-center mb-8">
               <div 
                 className="w-16 h-16 flex items-center justify-center"
-                style={{ background: 'var(--public-accent)' }}
+                style={{ background: '#1a4d8f' }}
               >
-                <span style={{ color: 'var(--public-text-primary)', fontWeight: 700, fontSize: '1.5rem' }}>F</span>
+                <span style={{ color: 'white', fontWeight: 700, fontSize: '1.5rem' }}>F</span>
               </div>
             </div>
 
@@ -117,65 +116,45 @@ export function AuthCallbackPage() {
                   <div 
                     className="inline-block w-8 h-8 border-2 border-t-transparent animate-spin"
                     style={{ 
-                      borderColor: 'var(--public-accent)',
+                      borderColor: '#1a4d8f',
+                      borderTopColor: 'transparent',
                       borderRadius: '50%'
                     }}
                   />
                 </div>
-                <h2 
-                  style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: 600, 
-                    color: 'var(--public-text-primary)', 
-                    marginBottom: '0.5rem' 
-                  }}
-                >
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '0.5rem' }}>
                   Processing Sign In
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)' }}>{message}</p>
+                <p style={{ fontSize: '0.875rem', color: '#1a4d8f' }}>{message}</p>
               </div>
             )}
 
             {status === 'success' && (
               <div className="text-center">
                 <div className="mb-4">
-                  <svg className="inline-block w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--public-accent)' }}>
+                  <svg className="inline-block w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="#1a4d8f">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 
-                  style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: 600, 
-                    color: 'var(--public-text-primary)', 
-                    marginBottom: '0.5rem' 
-                  }}
-                >
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '0.5rem' }}>
                   Welcome!
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)' }}>{message}</p>
+                <p style={{ fontSize: '0.875rem', color: '#1a4d8f' }}>{message}</p>
               </div>
             )}
 
             {status === 'error' && (
               <div className="text-center">
                 <div className="mb-4">
-                  <svg className="inline-block w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#ef4444' }}>
+                  <svg className="inline-block w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="#ef4444">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>
-                <h2 
-                  style={{ 
-                    fontSize: '1.25rem', 
-                    fontWeight: 600, 
-                    color: 'var(--public-text-primary)', 
-                    marginBottom: '0.5rem' 
-                  }}
-                >
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '0.5rem' }}>
                   Authentication Failed
                 </h2>
-                <p style={{ fontSize: '0.875rem', color: 'var(--public-text-secondary)', marginBottom: '0.75rem' }}>{message}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--public-text-tertiary)' }}>
+                <p style={{ fontSize: '0.875rem', color: '#1a4d8f', marginBottom: '0.75rem' }}>{message}</p>
+                <p style={{ fontSize: '0.75rem', color: '#1a4d8f' }}>
                   Redirecting to login page...
                 </p>
               </div>

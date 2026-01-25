@@ -880,7 +880,7 @@ export function ApiDocsPage() {
     },
     {
       title: 'FEA (Finite Element Analysis)',
-      description: 'Run structural simulations using CalculiX',
+      description: 'Run structural simulations',
       endpoints: [
         {
           method: 'POST',

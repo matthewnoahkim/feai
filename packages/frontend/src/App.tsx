@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage, TermsPage, PrivacyPage, ApiDocsPage } from './pages'
+import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage, TermsPage, PrivacyPage, ApiDocsPage, FEASolverPage } from './pages'
 import { useAuthStore } from './store/authStore'
 
 // Protected route wrapper
@@ -42,6 +42,12 @@ function App() {
         <Route 
           path="/api-docs" 
           element={<ApiDocsPage />} 
+        />
+        
+        {/* FEA Solver - can be accessed without auth for demo */}
+        <Route 
+          path="/fea-solver" 
+          element={<FEASolverPage />} 
         />
         
         {/* Editor - can be accessed without auth for demo, with auth for saved projects */}

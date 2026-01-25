@@ -85,11 +85,6 @@ export type {
   ResultsSummary,
   ResultsViewSettings,
   
-  // CalculiX I/O
-  CalculiXInput,
-  CalculiXOutput,
-  CalculiXLog,
-  
   // Visualization
   ColorMap,
   ColormapStop,

@@ -27,23 +27,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Separate WASM-related code into its own chunk for lazy loading
-          'calculix-wasm': [
-            './src/services/calculixWasmSolver.ts',
-            './src/services/calculix-worker.ts',
-          ],
           // Three.js and heavy visualization libraries
           'three': ['three'],
           'vendor': ['react', 'react-dom', 'zustand'],
         },
       },
     },
-    // Increase chunk size warning limit for WASM
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
     exclude: ['@feai/shared', '@feai/kernel'],
   },
-  // Ensure WASM files are treated as assets
-  assetsInclude: ['**/*.wasm'],
 });
