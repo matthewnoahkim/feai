@@ -3,7 +3,6 @@
  */
 
 import { create } from 'zustand'
-import { fetchWithAuth } from './authStore'
 
 export interface Project {
   id: string
@@ -32,6 +31,16 @@ interface ProjectState {
   setCurrentProject: (project: Project | null) => void
 }
 
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  })
+}
+
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
   currentProject: null,
@@ -42,7 +51,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ isLoading: true, error: null })
     
     try {
-      const response = await fetchWithAuth('/api/projects')
+      const response = await apiFetch('/api/projects')
       
       if (!response.ok) {
         throw new Error('Failed to fetch projects')
@@ -62,7 +71,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ isLoading: true, error: null })
     
     try {
-      const response = await fetchWithAuth(`/api/projects/${id}`)
+      const response = await apiFetch(`/api/projects/${id}`)
       
       if (!response.ok) {
         throw new Error('Failed to fetch project')
@@ -84,7 +93,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ isLoading: true, error: null })
     
     try {
-      const response = await fetchWithAuth('/api/projects', {
+      const response = await apiFetch('/api/projects', {
         method: 'POST',
         body: JSON.stringify({ name, description }),
       })
@@ -112,7 +121,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ isLoading: true, error: null })
     
     try {
-      const response = await fetchWithAuth(`/api/projects/${id}`, {
+      const response = await apiFetch(`/api/projects/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(updates),
       })
@@ -140,7 +149,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ isLoading: true, error: null })
     
     try {
-      const response = await fetchWithAuth(`/api/projects/${id}`, {
+      const response = await apiFetch(`/api/projects/${id}`, {
         method: 'DELETE',
       })
       
@@ -164,7 +173,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   saveProjectData: async (id: string, data: any) => {
     try {
-      const response = await fetchWithAuth(`/api/projects/${id}/data`, {
+      const response = await apiFetch(`/api/projects/${id}/data`, {
         method: 'PUT',
         body: JSON.stringify({ data }),
       })
@@ -190,4 +199,3 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setCurrentProject: (project) => set({ currentProject: project }),
 }))
-

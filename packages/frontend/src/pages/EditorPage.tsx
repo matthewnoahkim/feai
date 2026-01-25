@@ -37,13 +37,11 @@ import { MeasurementsPanel } from '../components/MeasurementsPanel'
 import { useDocumentStore } from '../store/documentStore'
 import { useUIStore } from '../store/uiStore'
 import { useProjectStore } from '../store/projectStore'
-import { useAuthStore } from '../store/authStore'
 import { useChatStore } from '../store/chatStore'
 
 export function EditorPage() {
   const { projectId } = useParams<{ projectId?: string }>()
   const navigate = useNavigate()
-  const { user } = useAuthStore()
   const { fetchProject, currentProject, saveProjectData } = useProjectStore()
   const { document, createNewDocument, loadDocumentFromData } = useDocumentStore()
   const { 
@@ -76,7 +74,7 @@ export function EditorPage() {
 
   // Load project if projectId is provided
   useEffect(() => {
-    if (projectId && user) {
+    if (projectId) {
       // Load project-specific chats
       loadProjectChats(projectId)
       
@@ -91,11 +89,11 @@ export function EditorPage() {
       createNewDocument('New Part')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, user])
+  }, [projectId])
 
   // Auto-save project data periodically
   useEffect(() => {
-    if (!projectId || !document || !user) return
+    if (!projectId || !document) return
     
     const saveInterval = setInterval(() => {
       // Convert Maps to plain objects for JSON serialization
@@ -111,11 +109,11 @@ export function EditorPage() {
     }, 30000) // Save every 30 seconds
     
     return () => clearInterval(saveInterval)
-  }, [projectId, document, user, saveProjectData])
+  }, [projectId, document, saveProjectData])
   
   // Save on window unload/close
   useEffect(() => {
-    if (!projectId || !document || !user) return
+    if (!projectId || !document) return
     
     const handleBeforeUnload = () => {
       const serializableDoc = {
@@ -133,7 +131,7 @@ export function EditorPage() {
     
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [projectId, document, user])
+  }, [projectId, document])
 
   // Sketch mode handlers
   const handleConfirmSketch = useCallback(() => {

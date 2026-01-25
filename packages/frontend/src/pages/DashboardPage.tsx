@@ -5,33 +5,30 @@
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
 import { useProjectStore } from '../store/projectStore'
-import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, Book } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
+import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, Book, ArrowLeft, LogOut } from 'lucide-react'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuthStore()
   const { projects, isLoading, fetchProjects, createProject, deleteProject, updateProject } = useProjectStore()
+  const { user, logout } = useAuthStore()
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [renamingProject, setRenamingProject] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!user) {
-      navigate('/login')
-    }
-  }, [user, navigate])
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  
+  const handleLogout = async () => {
+    await logout()
+    navigate('/')
+  }
 
   // Fetch projects on mount
   useEffect(() => {
-    if (user) {
-      fetchProjects()
-    }
-  }, [user, fetchProjects])
+    fetchProjects()
+  }, [fetchProjects])
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return
@@ -95,8 +92,6 @@ export function DashboardPage() {
     }).format(new Date(date))
   }
 
-  if (!user) return null
-
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Navigation */}
@@ -111,29 +106,64 @@ export function DashboardPage() {
           <span className="font-serif font-semibold text-cad-text text-lg">FeAI</span>
         </button>
         
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            {user.photoURL ? (
-              <img 
-                src={user.photoURL} 
-                alt={user.name} 
-                className="w-8 h-8 rounded-full"
-              />
-            ) : (
-              <div className="w-8 h-8 flex items-center justify-center bg-cad-accent text-white text-sm font-sans">
-                {user.name?.charAt(0) || 'U'}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-sans text-cad-text border border-cad-border hover:bg-gray-50 transition-colors leading-none"
+          >
+            <ArrowLeft size={16} />
+            Back to Home
+          </button>
+          
+          {/* User Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 hover:bg-gray-50 p-1 transition-colors"
+            >
+              {user?.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full border border-cad-border"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-cad-accent flex items-center justify-center text-white text-sm font-medium">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
+            </button>
+            
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-cad-border shadow-lg z-50">
+                <div className="px-4 py-3 border-b border-cad-border">
+                  <p className="font-sans text-sm font-medium text-cad-text truncate">
+                    {user?.name}
+                  </p>
+                  <p className="font-sans text-xs text-gray-500 truncate">
+                    {user?.email}
+                  </p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-sans text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut size={16} />
+                  Sign Out
+                </button>
               </div>
             )}
-            <span className="font-sans text-sm text-cad-text leading-none">{user.name}</span>
           </div>
-          <button
-            onClick={signOut}
-            className="px-4 py-2 text-sm font-sans text-cad-text border border-cad-border hover:bg-gray-50 transition-colors leading-none"
-          >
-            Sign Out
-          </button>
         </div>
       </nav>
+      
+      {/* Click outside to close user menu */}
+      {showUserMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowUserMenu(false)}
+        />
+      )}
 
       {/* Main Content */}
       <main className="flex-1 px-8 py-10">
@@ -340,4 +370,3 @@ export function DashboardPage() {
     </div>
   )
 }
-

@@ -1,279 +1,110 @@
 /**
  * Authentication Middleware
- * 
- * Provides JWT-based authentication for serverless environments
- * Falls back to session-based auth for local development
+ * Handles session validation and route protection
  */
 
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { tokenStore, getValidAccessToken } from './googleOAuth';
+import { verifySessionToken, SessionUser } from './service';
 
-// JWT Secret from environment - fail fast in production
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET;
+// Cookie name for session token
+export const SESSION_COOKIE_NAME = 'feai_session';
 
-if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('CRITICAL: JWT_SECRET must be set in production');
-}
+// Cookie name for OAuth state (CSRF protection)
+export const STATE_COOKIE_NAME = 'feai_oauth_state';
 
-// Use default only in development
-const JWT_SECRET_FINAL = JWT_SECRET || 'change-this-secret-in-production';
-
-interface JWTPayload {
-  userId: string;
-  email: string;
-  googleId: string;
-  iat?: number;
-  exp?: number;
-}
-
-/**
- * Extend Express Request to include user
- */
+// Extend Express Request to include authenticated user
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        userId: string;
-        googleId: string;
-        email: string;
-        name: string;
-        picture?: string;
-      };
+      user?: SessionUser;
     }
   }
 }
 
 /**
- * Require authentication middleware
- * 
- * This middleware:
- * 1. Checks for JWT token in Authorization header
- * 2. Falls back to session-based auth (for local development)
- * 3. Validates tokens are still valid
- * 4. Automatically refreshes expired Google OAuth tokens
- * 5. Attaches user info to req.user
- * 
- * Usage:
- * ```ts
- * app.get('/api/protected', requireAuth, (req, res) => {
- *   res.json({ user: req.user });
- * });
- * ```
+ * Authentication middleware - requires valid session
+ * Use this to protect routes that require authentication
  */
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  const token = req.cookies?.[SESSION_COOKIE_NAME];
+  
+  if (!token) {
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required',
+      },
+    });
+    return;
+  }
+  
   try {
-    let userId: string | undefined;
-    let userPayload: JWTPayload | undefined;
-
-    // Method 1: JWT Token from httpOnly cookie (preferred)
-    const cookieToken = req.cookies?.auth_token;
-    if (cookieToken) {
-      try {
-        const decoded = jwt.verify(cookieToken, JWT_SECRET_FINAL, {
-          algorithms: ['HS256'], // Explicitly whitelist algorithm (reject alg=none)
-          issuer: 'feai-backend',
-          audience: 'feai-frontend',
-        }) as JWTPayload;
-        userId = decoded.userId;
-        userPayload = decoded;
-      } catch (err) {
-        // Clear invalid cookie
-        res.clearCookie('auth_token', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-        });
-        res.status(401).json({
-          error: 'INVALID_TOKEN',
-          message: 'Authentication token is invalid or expired. Please sign in again.',
-        });
-        return;
-      }
-    }
-
-    // Method 2: JWT Token from Authorization header (fallback for API clients)
-    const authHeader = req.headers.authorization;
-    if (!userId && authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET_FINAL, {
-          algorithms: ['HS256'],
-          issuer: 'feai-backend',
-          audience: 'feai-frontend',
-        }) as JWTPayload;
-        userId = decoded.userId;
-        userPayload = decoded;
-      } catch (err) {
-        res.status(401).json({
-          error: 'INVALID_TOKEN',
-          message: 'Authentication token is invalid or expired. Please sign in again.',
-        });
-        return;
-      }
-    }
-    
-    // Method 3: Session-based auth (Local Development fallback)
-    if (!userId && req.session) {
-      userId = (req.session as any)?.userId;
-    }
-    
-    if (!userId) {
-      res.status(401).json({
-        error: 'UNAUTHORIZED',
-        message: 'Authentication required. Please sign in.',
-      });
-      return;
-    }
-
-    // Get user session with Google OAuth tokens
-    const session = await tokenStore.getTokens(userId);
-    
-    if (!session) {
-      // Session exists but no tokens found - invalid state
-      if (req.session) {
-        delete (req.session as any).userId;
-      }
-      res.status(401).json({
-        error: 'INVALID_SESSION',
-        message: 'Session invalid. Please sign in again.',
-      });
-      return;
-    }
-
-    // Ensure we have a valid Google access token (auto-refresh if expired)
-    try {
-      await getValidAccessToken(userId);
-    } catch (error) {
-      // Token refresh failed - user must re-authenticate
-      if (req.session) {
-        delete (req.session as any).userId;
-      }
-      await tokenStore.deleteTokens(userId);
-      
-      res.status(401).json({
-        error: 'TOKEN_EXPIRED',
-        message: 'Session expired. Please sign in again.',
-      });
-      return;
-    }
-
-    // Attach user info to request
-    req.user = {
-      userId: session.userId,
-      googleId: session.googleId,
-      email: session.email,
-      name: session.name,
-      picture: session.picture,
-    };
-
+    const user = verifySessionToken(token);
+    req.user = user;
     next();
   } catch (error) {
-    console.error('❌ Auth middleware error:', error);
-    res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: 'Authentication check failed',
+    // SECURITY: Don't expose token validation details
+    console.error('Session validation failed:', error instanceof Error ? error.message : 'Unknown error');
+    
+    // Clear invalid session cookie
+    res.clearCookie(SESSION_COOKIE_NAME);
+    
+    res.status(401).json({
+      success: false,
+      error: {
+        code: 'INVALID_SESSION',
+        message: 'Session expired or invalid',
+      },
     });
   }
 }
 
 /**
  * Optional authentication middleware
- * 
- * Attaches user if authenticated, but doesn't require it
- * Useful for routes that have different behavior for authenticated users
- * 
- * Usage:
- * ```ts
- * app.get('/api/data', optionalAuth, (req, res) => {
- *   if (req.user) {
- *     // User is authenticated
- *   } else {
- *     // Anonymous user
- *   }
- * });
- * ```
+ * Attaches user to request if valid session exists, but doesn't require it
+ * Use this for routes that work for both authenticated and anonymous users
  */
-export async function optionalAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    let userId: string | undefined;
-
-    // Method 1: JWT Token from httpOnly cookie
-    const cookieToken = req.cookies?.auth_token;
-    if (cookieToken) {
-      try {
-        const decoded = jwt.verify(cookieToken, JWT_SECRET_FINAL, {
-          algorithms: ['HS256'],
-          issuer: 'feai-backend',
-          audience: 'feai-frontend',
-        }) as JWTPayload;
-        userId = decoded.userId;
-      } catch (err) {
-        // Invalid token, but don't fail the request
-        console.warn('⚠️  Invalid JWT token in optionalAuth');
-      }
-    }
-
-    // Method 2: JWT Token from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!userId && authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET_FINAL, {
-          algorithms: ['HS256'],
-          issuer: 'feai-backend',
-          audience: 'feai-frontend',
-        }) as JWTPayload;
-        userId = decoded.userId;
-      } catch (err) {
-        // Invalid token, but don't fail the request
-        console.warn('⚠️  Invalid JWT token in optionalAuth');
-      }
-    }
-    
-    // Method 3: Session-based auth (Local Development fallback)
-    if (!userId && req.session) {
-      userId = (req.session as any)?.userId;
-    }
-    
-    if (userId) {
-      const session = await tokenStore.getTokens(userId);
-      
-      if (session) {
-        try {
-          await getValidAccessToken(userId);
-          req.user = {
-            userId: session.userId,
-            googleId: session.googleId,
-            email: session.email,
-            name: session.name,
-            picture: session.picture,
-          };
-        } catch (error) {
-          // Token invalid, but don't fail the request
-          if (req.session) {
-            delete (req.session as any).userId;
-          }
-        }
-      }
-    }
-    
+export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
+  const token = req.cookies?.[SESSION_COOKIE_NAME];
+  
+  if (!token) {
     next();
-  } catch (error) {
-    // Don't fail the request, just continue without user
-    console.error('⚠️  Optional auth error:', error);
-    next();
+    return;
   }
+  
+  try {
+    const user = verifySessionToken(token);
+    req.user = user;
+  } catch (error) {
+    // Invalid session, clear cookie but continue
+    res.clearCookie(SESSION_COOKIE_NAME);
+  }
+  
+  next();
 }
 
+/**
+ * Validate OAuth state parameter against stored cookie
+ * SECURITY: Prevents CSRF attacks during OAuth flow
+ * @param receivedState - State parameter from Google callback
+ * @param storedState - State from secure cookie
+ */
+export function validateOAuthState(receivedState: string | undefined, storedState: string | undefined): boolean {
+  if (!receivedState || !storedState) {
+    return false;
+  }
+  
+  // SECURITY: Use timing-safe comparison to prevent timing attacks
+  if (receivedState.length !== storedState.length) {
+    return false;
+  }
+  
+  // Simple constant-time comparison
+  let result = 0;
+  for (let i = 0; i < receivedState.length; i++) {
+    result |= receivedState.charCodeAt(i) ^ storedState.charCodeAt(i);
+  }
+  
+  return result === 0;
+}

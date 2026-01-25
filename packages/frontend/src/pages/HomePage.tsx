@@ -3,14 +3,19 @@
  * Clean white/navy theme with visual interest
  */
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
 import { PublicLayout } from '../components/PublicLayout'
+import { useAuthStore } from '../store/authStore'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { isAuthenticated, user, isLoading, checkAuthStatus } = useAuthStore()
+  
+  // Check auth status on mount
+  useEffect(() => {
+    checkAuthStatus()
+  }, [checkAuthStatus])
 
   return (
     <PublicLayout>
@@ -35,25 +40,74 @@ export function HomePage() {
             <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
           </div>
           
-          <div className="flex items-center gap-6">
-            {user && (
-              <button
-                onClick={() => navigate('/dashboard')}
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  color: 'white',
-                  background: '#1a4d8f',
-                  border: '1px solid #1a4d8f',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  transition: 'background 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#0d2a4d'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#1a4d8f'}
-              >
-                Dashboard
-              </button>
+          <div className="flex items-center gap-4">
+            {!isLoading && isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    color: '#1a4d8f',
+                    background: 'transparent',
+                    border: '1px solid #1a4d8f',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#1a4d8f'
+                    e.currentTarget.style.color = 'white'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.color = '#1a4d8f'
+                  }}
+                >
+                  Dashboard
+                </button>
+                {user?.photoURL && (
+                  <img 
+                    src={user.photoURL} 
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full border border-cad-border"
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    color: '#1a4d8f',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    color: 'white',
+                    background: '#1a4d8f',
+                    border: '1px solid #1a4d8f',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#0d2a4d'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#1a4d8f'}
+                >
+                  Get Started
+                </button>
+              </>
             )}
           </div>
         </nav>
@@ -97,55 +151,29 @@ export function HomePage() {
               "The most accessible and efficient way to design metamaterials."
             </p>
             
-            {!user ? (
-              <button
-                onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
-                style={{
-                  padding: '1rem 3rem',
-                  fontSize: '1rem',
-                  color: 'white',
-                  background: '#1a4d8f',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#0d2a4d'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#1a4d8f'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                Join the Waitlist
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate('/dashboard')}
-                style={{
-                  padding: '1rem 3rem',
-                  fontSize: '1rem',
-                  color: 'white',
-                  background: '#1a4d8f',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#0d2a4d'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#1a4d8f'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                Open Dashboard
-              </button>
-            )}
+            <button
+              onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
+              style={{
+                padding: '1rem 3rem',
+                fontSize: '1rem',
+                color: 'white',
+                background: '#1a4d8f',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 500,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#0d2a4d'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#1a4d8f'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              Join the Waitlist
+            </button>
           </div>
         </section>
 
@@ -350,51 +378,49 @@ export function HomePage() {
         </section>
 
         {/* CTA Section */}
-        {!user && (
-          <section 
-            className="px-8 py-20 relative z-10"
-            style={{ background: '#1a4d8f', color: 'white' }}
-          >
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 
-                className="mb-6"
-                style={{ fontSize: '2rem', fontWeight: 300 }}
-              >
-                Ready to explore?
-              </h2>
-              <p 
-                className="mb-10"
-                style={{ fontSize: '1.1rem', opacity: 0.85, lineHeight: 1.7 }}
-              >
-                FeAI is currently in development. Join the waitlist to get early 
-                access and help shape the future of AI-assisted engineering.
-              </p>
-              <button
-                onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
-                style={{
-                  padding: '1rem 3rem',
-                  fontSize: '1rem',
-                  color: '#1a4d8f',
-                  background: 'white',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f0f4f8'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'white'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                Join the Waitlist
-              </button>
-            </div>
-          </section>
-        )}
+        <section 
+          className="px-8 py-20 relative z-10"
+          style={{ background: '#1a4d8f', color: 'white' }}
+        >
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 
+              className="mb-6"
+              style={{ fontSize: '2rem', fontWeight: 300 }}
+            >
+              Ready to explore?
+            </h2>
+            <p 
+              className="mb-10"
+              style={{ fontSize: '1.1rem', opacity: 0.85, lineHeight: 1.7 }}
+            >
+              FeAI is currently in development. Join the waitlist to get early 
+              access and help shape the future of AI-assisted engineering.
+            </p>
+            <button
+              onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
+              style={{
+                padding: '1rem 3rem',
+                fontSize: '1rem',
+                color: '#1a4d8f',
+                background: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 500,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f0f4f8'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'white'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              Join the Waitlist
+            </button>
+          </div>
+        </section>
 
         {/* Footer */}
         <footer className="px-8 py-8 relative z-10" style={{ borderTop: '1px solid #1a4d8f', background: 'white' }}>

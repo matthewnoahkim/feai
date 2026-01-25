@@ -6,9 +6,8 @@
 
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
 import { PublicLayout } from '../components/PublicLayout'
-import { Book, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react'
+import { Book, ChevronDown, ChevronRight, Copy, Check, ArrowLeft } from 'lucide-react'
 
 interface Endpoint {
   method: string
@@ -28,7 +27,6 @@ interface ApiSection {
 
 export function ApiDocsPage() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuthStore()
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null)
 
@@ -1048,7 +1046,8 @@ export function ApiDocsPage() {
           
           <div className="flex items-center gap-6">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2"
               style={{
                 padding: '0.5rem 1rem',
                 fontSize: '0.875rem',
@@ -1061,46 +1060,9 @@ export function ApiDocsPage() {
               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--public-accent)'}
               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--public-text-secondary)'}
             >
-              ← Back to Dashboard
+              <ArrowLeft size={16} />
+              Back to Home
             </button>
-            {user && (
-              <>
-                <div className="flex items-center gap-3">
-                  {user.photoURL ? (
-                    <img 
-                      src={user.photoURL} 
-                      alt={user.name} 
-                      className="w-8 h-8 rounded-full"
-                    />
-                  ) : (
-                    <div 
-                      className="w-8 h-8 flex items-center justify-center text-sm font-sans"
-                      style={{ background: 'var(--public-accent)', color: 'var(--public-text-primary)' }}
-                    >
-                      {user.name?.charAt(0) || 'U'}
-                    </div>
-                  )}
-                  <span style={{ fontSize: '0.875rem', color: 'var(--public-text-primary)' }}>{user.name}</span>
-                </div>
-                <button
-                  onClick={signOut}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    fontSize: '0.875rem',
-                    color: 'var(--public-text-primary)',
-                    border: '1px solid var(--public-border)',
-                    background: 'var(--public-surface)',
-                    borderRadius: 'var(--public-radius-md)',
-                    cursor: 'pointer',
-                    transition: 'background var(--public-transition-fast)'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--public-bg-elevated)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'var(--public-surface)'}
-                >
-                  Sign Out
-                </button>
-              </>
-            )}
           </div>
         </nav>
 

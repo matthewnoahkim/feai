@@ -1,35 +1,42 @@
 /**
- * Projects Routes - CRUD operations for user projects
+ * Projects Routes - CRUD operations for projects
+ * Uses in-memory store (no authentication required)
  */
 
 import express from 'express';
-import { requireAuth } from '../auth/middleware';
-import { db } from '../db';
 
 const router = express.Router();
 
-// All project routes require authentication
-router.use(requireAuth);
+// In-memory project store
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  thumbnail?: string;
+  data?: any;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+}
+
+const projects: Map<string, Project> = new Map();
+
+function generateId(): string {
+  return `proj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 /**
- * GET /api/projects - List user's projects
+ * GET /api/projects - List all projects
  */
 router.get('/', async (req, res) => {
   try {
-    const projects = await db.project.findMany({
-      where: { userId: req.user!.userId },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        thumbnail: true,
-        createdAt: true,
-        updatedAt: true,
-      }
-    });
+    const projectList = Array.from(projects.values())
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .map(({ id, name, description, thumbnail, createdAt, updatedAt }) => ({
+        id, name, description, thumbnail, createdAt, updatedAt
+      }));
     
-    res.json(projects);
+    res.json(projectList);
     
   } catch (error) {
     console.error('List projects error:', error);
@@ -45,12 +52,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
   try {
-    const project = await db.project.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user!.userId
-      }
-    });
+    const project = projects.get(req.params.id);
     
     if (!project) {
       return res.status(404).json({
@@ -84,13 +86,17 @@ router.post('/', async (req, res) => {
       });
     }
     
-    const project = await db.project.create({
-      data: {
-        name: name.trim(),
-        description: description?.trim() || null,
-        userId: req.user!.userId,
-      }
-    });
+    const now = new Date();
+    const project: Project = {
+      id: generateId(),
+      name: name.trim(),
+      description: description?.trim() || undefined,
+      userId: 'anonymous',
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    projects.set(project.id, project);
     
     res.status(201).json(project);
     
@@ -110,30 +116,21 @@ router.patch('/:id', async (req, res) => {
   try {
     const { name, description, thumbnail } = req.body;
     
-    // Verify ownership
-    const existing = await db.project.findFirst({
-      where: {
-        id: req.params.id,
-        userId: (req as any).userId
-      }
-    });
+    const project = projects.get(req.params.id);
     
-    if (!existing) {
+    if (!project) {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Project not found' }
       });
     }
     
-    const project = await db.project.update({
-      where: { id: req.params.id },
-      data: {
-        ...(name !== undefined && { name: name.trim() }),
-        ...(description !== undefined && { description: description?.trim() || null }),
-        ...(thumbnail !== undefined && { thumbnail }),
-        updatedAt: new Date(),
-      }
-    });
+    if (name !== undefined) project.name = name.trim();
+    if (description !== undefined) project.description = description?.trim() || undefined;
+    if (thumbnail !== undefined) project.thumbnail = thumbnail;
+    project.updatedAt = new Date();
+    
+    projects.set(project.id, project);
     
     res.json(project);
     
@@ -160,28 +157,19 @@ router.put('/:id/data', async (req, res) => {
       });
     }
     
-    // Verify ownership
-    const existing = await db.project.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user!.userId
-      }
-    });
+    const project = projects.get(req.params.id);
     
-    if (!existing) {
+    if (!project) {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Project not found' }
       });
     }
     
-    const project = await db.project.update({
-      where: { id: req.params.id },
-      data: {
-        data: data,
-        updatedAt: new Date(),
-      }
-    });
+    project.data = data;
+    project.updatedAt = new Date();
+    
+    projects.set(project.id, project);
     
     res.json({ success: true, updatedAt: project.updatedAt });
     
@@ -199,24 +187,16 @@ router.put('/:id/data', async (req, res) => {
  */
 router.delete('/:id', async (req, res) => {
   try {
-    // Verify ownership
-    const existing = await db.project.findFirst({
-      where: {
-        id: req.params.id,
-        userId: req.user!.userId
-      }
-    });
+    const project = projects.get(req.params.id);
     
-    if (!existing) {
+    if (!project) {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Project not found' }
       });
     }
     
-    await db.project.delete({
-      where: { id: req.params.id }
-    });
+    projects.delete(req.params.id);
     
     res.json({ success: true });
     
@@ -230,4 +210,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 export const projectsRouter = router;
-

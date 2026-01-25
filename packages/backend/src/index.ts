@@ -12,7 +12,6 @@ if (process.env.NODE_ENV !== 'production') {
 
 import express from 'express';
 import cors from 'cors';
-import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { documentsRouter } from './routes/documents';
@@ -24,8 +23,8 @@ import { exportRouter } from './routes/export';
 import { importRouter } from './routes/import';
 import { analysisRouter } from './routes/analysis';
 import { feaRouter } from './routes/fea';
-import { authRouter } from './routes/auth-oauth';
 import { projectsRouter } from './routes/projects';
+import { authRouter } from './auth';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,29 +36,8 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Cookie parser (required for OAuth state management)
-app.use(cookieParser(process.env.SESSION_SECRET || 'change-this-secret-in-production'));
-
-// Session middleware (optional - used for local development)
-// In production/Vercel, we use JWT tokens instead
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'change-this-secret-in-production',
-    resave: false,
-    saveUninitialized: false,
-    name: 'feai.sid',
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
-  }));
-  console.log('📝 Session middleware enabled (local development)');
-} else {
-  console.log('🔐 Using JWT authentication (serverless/production)');
-}
+// Cookie parser for session management
+app.use(cookieParser());
 
 // Request logging
 app.use((req, res, next) => {
@@ -104,11 +82,8 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Auth Routes (BEFORE static files - OAuth needs to work)
-// New OAuth 2.0 implementation with refresh tokens
-app.use('/auth', authRouter);
-
 // API Routes
+app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/parts', partsRouter);
@@ -178,12 +153,11 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 ╠══════════════════════════════════════════════════════════════╣
 ║  Features:                                                   ║
 ║    ✅ Frontend & Backend combined on one port                ║
-║    ✅ Google OAuth 2.0 with refresh tokens                   ║
-║    ✅ Secure session management                              ║
 ║    ✅ CAD operations & FEA analysis                          ║
 ║    ✅ WebAssembly FEA solver support                         ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Available Endpoints:                                        ║
+║    Auth:         GET /api/auth/google (OAuth login)          ║
 ║    Documents:    GET|POST /api/documents                     ║
 ║    Part Studios: GET /api/documents/:id/partstudios/:psId    ║
 ║    Features:     GET|POST /api/documents/:id/partstudios/... ║
@@ -193,7 +167,6 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 ║    Import:       POST /api/import/:docId                     ║
 ║    Analysis:     GET /api/analysis/:docId/:elementId/...     ║
 ║    FEA:          POST /api/fea/mesh, /api/fea/run            ║
-║    Auth:         GET /auth/google, /auth/google/callback     ║
 ║    Projects:     GET|POST /api/projects                      ║
 ╚══════════════════════════════════════════════════════════════╝
   `);
