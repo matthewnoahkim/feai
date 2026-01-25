@@ -1,6 +1,6 @@
 /**
- * Home Page - Informative landing page
- * Clean, content-focused design
+ * Home Page - Modern, engaging landing page
+ * Clean white/navy theme with visual interest
  */
 
 import React from 'react'
@@ -14,12 +14,9 @@ export function HomePage() {
 
   return (
     <PublicLayout>
-      <div style={{ background: 'white', color: '#1a4d8f' }}>
+      <div className="min-h-screen" style={{ background: 'white', color: '#1a4d8f' }}>
         {/* Navigation */}
-        <nav 
-          className="flex items-center justify-between px-8 py-6"
-          style={{ borderBottom: '1px solid #1a4d8f' }}
-        >
+        <nav className="flex items-center justify-between px-8 py-6" style={{ borderBottom: '1px solid #1a4d8f' }}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
@@ -38,14 +35,11 @@ export function HomePage() {
                   background: '#1a4d8f',
                   border: '1px solid #1a4d8f',
                   cursor: 'pointer',
-                  fontWeight: 500
+                  fontWeight: 500,
+                  transition: 'background 0.2s'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#0d2a4d'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#1a4d8f'
-                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#0d2a4d'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#1a4d8f'}
               >
                 Dashboard
               </button>
@@ -53,226 +47,403 @@ export function HomePage() {
           </div>
         </nav>
 
-        {/* Main Content */}
-        <main className="px-8 py-16">
-          <article className="max-w-3xl mx-auto">
-            
-            {/* Introduction */}
-            <header style={{ marginBottom: '3rem' }}>
-              <h1 style={{ fontSize: '2.25rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1.5rem', lineHeight: 1.3 }}>
-                AI-Assisted Finite Element Analysis for Metamaterial Design
-              </h1>
-              <p style={{ fontSize: '1.125rem', color: '#1a4d8f', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-                FeAI is a browser-based platform that combines finite element analysis with 
-                natural language AI assistance, specifically designed for researchers and engineers 
-                working with metamaterials and architected structures.
-              </p>
-            </header>
-
-            {/* What is FeAI */}
-            <section style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                What is FeAI?
-              </h2>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                Traditional finite element software requires significant expertise to set up 
-                simulations—defining geometry, meshing, applying boundary conditions, and 
-                interpreting results. FeAI simplifies this process by allowing you to describe 
-                what you want to analyze in plain English. The AI assistant interprets your 
-                request, generates the appropriate geometry, configures the simulation, and 
-                presents the results in an understandable format.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8 }}>
-                The platform runs entirely in your web browser—no software installation, 
-                license management, or server configuration required. The finite element 
-                solver executes locally using WebAssembly technology, meaning your simulation 
-                data stays on your machine rather than being uploaded to external servers.
-              </p>
-            </section>
-
-            {/* Focus on Metamaterials */}
-            <section style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                Metamaterial Design Focus
-              </h2>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                Metamaterials are engineered structures that derive their mechanical properties 
-                from their architecture rather than their chemical composition. By carefully 
-                designing the geometry of a repeating unit cell, engineers can create materials 
-                with unusual properties—negative Poisson's ratio (auxetic behavior), ultra-low 
-                density with high stiffness, or programmable deformation characteristics.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                FeAI is built specifically for this workflow. You can describe a unit cell 
-                geometry—a lattice structure, a chiral pattern, a re-entrant honeycomb—and 
-                the platform will generate the 3D model, apply periodic boundary conditions 
-                appropriate for homogenization, run the finite element analysis, and compute 
-                effective elastic properties like the homogenized stiffness tensor.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8 }}>
-                This enables rapid iteration: propose a design modification, see the impact 
-                on effective properties within seconds, and refine until you achieve target 
-                material behavior. The AI assistant can suggest modifications based on your 
-                goals—"make this structure more auxetic" or "increase the stiffness-to-weight 
-                ratio while maintaining isotropy."
-              </p>
-            </section>
-
-            {/* Technical Capabilities */}
-            <section style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                Technical Capabilities
-              </h2>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                The finite element solver supports linear static analysis for stress, strain, 
-                and displacement fields. Material models include isotropic linear elasticity, 
-                suitable for metals, polymers, and ceramics in their elastic regime. The mesh 
-                generator creates tetrahedral elements with adaptive refinement near geometric 
-                features that concentrate stress.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                For metamaterial analysis, the platform implements periodic boundary conditions 
-                that allow simulation of an effectively infinite periodic structure using only 
-                a single unit cell. This is the standard approach for computational homogenization, 
-                where six independent load cases (three normal, three shear) are applied to 
-                extract the full elasticity tensor of the effective medium.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8 }}>
-                Results visualization includes color-mapped stress and displacement fields, 
-                deformed shape plots with adjustable scale factors, and numerical output of 
-                maximum values and their locations. Results can be exported for further 
-                analysis or documentation.
-              </p>
-            </section>
-
-            {/* Use Cases */}
-            <section style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                Intended Use Cases
-              </h2>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                <strong>Academic research:</strong> Graduate students and researchers exploring 
-                new metamaterial topologies can use FeAI for rapid screening of design concepts 
-                before committing to detailed analysis in commercial FEA software or experimental 
-                fabrication.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                <strong>Education:</strong> Students learning finite element methods or 
-                metamaterial mechanics can interact with the AI to understand how different 
-                boundary conditions, mesh densities, and geometric parameters affect results, 
-                building intuition without getting lost in software complexity.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8 }}>
-                <strong>Design exploration:</strong> Engineers evaluating architected materials 
-                for additive manufacturing applications can quickly assess whether a candidate 
-                geometry meets stiffness, strength, or weight targets before detailed design 
-                optimization.
-              </p>
-            </section>
-
-            {/* Limitations */}
-            <section style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                Current Limitations
-              </h2>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1rem' }}>
-                FeAI is designed for preliminary analysis and design exploration, not for 
-                final certification or safety-critical applications. The current version 
-                supports only linear static analysis—nonlinear material behavior, large 
-                deformations, dynamic/vibration analysis, and thermal problems are not 
-                yet implemented.
-              </p>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8 }}>
-                Mesh resolution and problem size are constrained by browser memory and 
-                computational limits. Complex geometries with fine features may require 
-                simplification. For production engineering analysis with regulatory requirements, 
-                results should be validated against established commercial software.
-              </p>
-            </section>
-
-            {/* Waitlist CTA */}
-            {!user && (
-              <section style={{ 
-                marginBottom: '3rem', 
-                padding: '2rem', 
-                border: '1px solid #1a4d8f', 
-                background: '#f8fafc' 
-              }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                  Request Access
-                </h2>
-                <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8, marginBottom: '1.5rem' }}>
-                  FeAI is currently in development. If you're interested in using the platform 
-                  for metamaterial research or education, you can join the waitlist. We'll 
-                  notify you when access becomes available and may reach out to understand 
-                  your use case to help prioritize features.
-                </p>
-                <button
-                  onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    fontSize: '1rem',
-                    color: 'white',
-                    background: '#1a4d8f',
-                    border: '1px solid #1a4d8f',
-                    cursor: 'pointer',
-                    fontWeight: 500
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#0d2a4d'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#1a4d8f'
-                  }}
-                >
-                  Join the Waitlist
-                </button>
-              </section>
-            )}
-
-            {/* Contact */}
-            <section style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1a4d8f', marginBottom: '1rem' }}>
-                Contact
-              </h2>
-              <p style={{ fontSize: '1rem', color: '#1a4d8f', lineHeight: 1.8 }}>
-                For questions about FeAI, collaboration inquiries, or feedback, contact{' '}
-                <a 
-                  href="mailto:finite.element.ai@gmail.com" 
-                  style={{ color: '#1a4d8f', textDecoration: 'underline' }}
-                >
-                  finite.element.ai@gmail.com
-                </a>.
-              </p>
-            </section>
-
-          </article>
-        </main>
-
-        {/* Footer */}
-        <footer className="px-8 py-4" style={{ borderTop: '1px solid #1a4d8f' }}>
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
-                <span style={{ color: 'white', fontWeight: 600, fontSize: '0.75rem' }}>F</span>
-              </div>
-              <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1a4d8f' }}>FeAI</span>
+        {/* Hero Section */}
+        <section className="px-8 py-24 relative overflow-hidden">
+          {/* Geometric background pattern */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30L30 0z' fill='none' stroke='%231a4d8f' stroke-width='1'/%3E%3C/svg%3E")`,
+            backgroundSize: '60px 60px'
+          }} />
+          
+          <div className="max-w-4xl mx-auto text-center relative">
+            <div 
+              className="inline-block mb-6 px-4 py-2"
+              style={{ 
+                border: '1px solid #1a4d8f',
+                fontSize: '0.75rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase'
+              }}
+            >
+              Engineneering Simulation Software
             </div>
             
-            <div className="flex items-center gap-4">
+            <h1 
+              className="mb-8"
+              style={{ 
+                fontSize: 'clamp(2.5rem, 6vw, 4rem)', 
+                fontWeight: 300,
+                lineHeight: 1.1,
+                letterSpacing: '-0.02em'
+              }}
+            >
+              Finite Element Analysis<br />
+              <span style={{ fontWeight: 600 }}>assisted with artificial intelligence.</span>
+            </h1>
+            
+            <p 
+              className="max-w-2xl mx-auto mb-12"
+              style={{ 
+                fontSize: '1.25rem', 
+                lineHeight: 1.7,
+                opacity: 0.8
+              }}
+            >
+              "The most accessible and efficient way to design metamaterials."
+            </p>
+            
+            {!user ? (
               <button
-                onClick={() => navigate('/terms')}
-                style={{ fontSize: '0.75rem', color: '#1a4d8f', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
+                style={{
+                  padding: '1rem 3rem',
+                  fontSize: '1rem',
+                  color: 'white',
+                  background: '#1a4d8f',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#0d2a4d'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#1a4d8f'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
               >
-                Terms
+                Join the Waitlist
               </button>
+            ) : (
               <button
-                onClick={() => navigate('/privacy')}
-                style={{ fontSize: '0.75rem', color: '#1a4d8f', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                onClick={() => navigate('/dashboard')}
+                style={{
+                  padding: '1rem 3rem',
+                  fontSize: '1rem',
+                  color: 'white',
+                  background: '#1a4d8f',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#0d2a4d'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#1a4d8f'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
               >
-                Privacy
+                Open Dashboard
               </button>
-              <span style={{ fontSize: '0.75rem', color: '#1a4d8f' }}>
+            )}
+          </div>
+        </section>
+
+        {/* Visual Divider */}
+        <div className="flex justify-center py-12">
+          <div className="flex items-center gap-4">
+            <div style={{ width: '60px', height: '1px', background: '#1a4d8f', opacity: 0.3 }} />
+            <div style={{ 
+              width: '8px', 
+              height: '8px', 
+              background: '#1a4d8f',
+              transform: 'rotate(45deg)'
+            }} />
+            <div style={{ width: '60px', height: '1px', background: '#1a4d8f', opacity: 0.3 }} />
+          </div>
+        </div>
+
+        {/* Can AI do FEA Section */}
+        <section className="px-8 py-16">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 
+              className="mb-6"
+              style={{ 
+                fontSize: '1.75rem', 
+                fontWeight: 300,
+                fontStyle: 'italic'
+              }}
+            >
+              "Can AI do Finite Element Analysis?"
+            </h2>
+            <p 
+              style={{ 
+                fontSize: '1.1rem', 
+                lineHeight: 1.8,
+                opacity: 0.85
+              }}
+            >
+              Traditionally... <span style={{ fontWeight: 600 }}>no</span>. And regular AI{' '}
+              <span style={{ fontStyle: 'italic' }}>still</span> can't. But FeAI is a specially 
+              trained model that uses scientific research and data to deliver accurate results.
+            </p>
+            <button
+              onClick={() => navigate('/api-docs')}
+              style={{
+                marginTop: '1.5rem',
+                padding: '0.75rem 1.5rem',
+                fontSize: '0.9rem',
+                color: '#1a4d8f',
+                background: 'transparent',
+                border: '1px solid #1a4d8f',
+                cursor: 'pointer',
+                fontWeight: 500,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#1a4d8f'
+                e.currentTarget.style.color = 'white'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent'
+                e.currentTarget.style.color = '#1a4d8f'
+              }}
+            >
+              Learn about our technical approach →
+            </button>
+          </div>
+        </section>
+
+        {/* Workflow Section */}
+        <section className="px-8 py-20" style={{ background: '#f8fafc' }}>
+          <div className="max-w-4xl mx-auto">
+            <h2 
+              className="text-center mb-16"
+              style={{ 
+                fontSize: '2rem', 
+                fontWeight: 300,
+                letterSpacing: '-0.01em'
+              }}
+            >
+              From idea to results in <span style={{ fontWeight: 600 }}>seconds</span>
+            </h2>
+            
+            <div className="space-y-12">
+              {/* Step 1 */}
+              <div className="flex items-start gap-8">
+                <div 
+                  className="w-12 h-12 flex-shrink-0 flex items-center justify-center"
+                  style={{ background: '#1a4d8f', color: 'white', fontWeight: 600 }}
+                >
+                  1
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                    Describe your structure
+                  </h3>
+                  <p style={{ fontSize: '1rem', lineHeight: 1.7, opacity: 0.8 }}>
+                    "Create an auxetic lattice with 20% porosity" or "Design a chiral 
+                    honeycomb optimized for shear stiffness"
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex items-start gap-8">
+                <div 
+                  className="w-12 h-12 flex-shrink-0 flex items-center justify-center"
+                  style={{ background: '#1a4d8f', color: 'white', fontWeight: 600 }}
+                >
+                  2
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                    AI generates & meshes
+                  </h3>
+                  <p style={{ fontSize: '1rem', lineHeight: 1.7, opacity: 0.8 }}>
+                    The model interprets your request, creates precise geometry, and 
+                    generates an optimized finite element mesh automatically.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex items-start gap-8">
+                <div 
+                  className="w-12 h-12 flex-shrink-0 flex items-center justify-center"
+                  style={{ background: '#1a4d8f', color: 'white', fontWeight: 600 }}
+                >
+                  3
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                    Analyze & iterate
+                  </h3>
+                  <p style={{ fontSize: '1rem', lineHeight: 1.7, opacity: 0.8 }}>
+                    View stress fields, displacement maps, and effective properties. 
+                    Ask the AI to refine: "Make it stiffer" or "Reduce stress concentrations."
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Use Cases */}
+        <section className="px-8 py-20">
+          <div className="max-w-5xl mx-auto">
+            <h2 
+              className="text-center mb-4"
+              style={{ fontSize: '2rem', fontWeight: 300 }}
+            >
+              Built for <span style={{ fontWeight: 600 }}>researchers</span>
+            </h2>
+            <p 
+              className="text-center max-w-2xl mx-auto mb-16"
+              style={{ fontSize: '1.1rem', opacity: 0.7 }}
+            >
+              Whether you're exploring new topologies or teaching FEA fundamentals
+            </p>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-8" style={{ background: '#f8fafc' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                  Academic Research
+                </h3>
+                <p style={{ fontSize: '0.95rem', lineHeight: 1.7, opacity: 0.8 }}>
+                  Rapidly screen metamaterial concepts before committing to detailed 
+                  analysis or experimental fabrication.
+                </p>
+              </div>
+              
+              <div className="p-8" style={{ background: '#f8fafc' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                  Education
+                </h3>
+                <p style={{ fontSize: '0.95rem', lineHeight: 1.7, opacity: 0.8 }}>
+                  Build intuition about FEA without getting lost in complex softwares. 
+                  See how parameters affect results instantly.
+                </p>
+              </div>
+              
+              <div className="p-8" style={{ background: '#f8fafc' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                  Design Exploration
+                </h3>
+                <p style={{ fontSize: '0.95rem', lineHeight: 1.7, opacity: 0.8 }}>
+                  Evaluate architected materials for additive manufacturing. Assess 
+                  stiffness, strength, and weight targets quickly.
+                </p>
+              </div>
+              
+              <div className="p-8" style={{ background: '#f8fafc' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                  Concept Validation
+                </h3>
+                <p style={{ fontSize: '0.95rem', lineHeight: 1.7, opacity: 0.8 }}>
+                  Test mechanical hypotheses interactively. Get quick answers before 
+                  investing in detailed commercial simulations.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        {!user && (
+          <section 
+            className="px-8 py-20"
+            style={{ background: '#1a4d8f', color: 'white' }}
+          >
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 
+                className="mb-6"
+                style={{ fontSize: '2rem', fontWeight: 300 }}
+              >
+                Ready to explore?
+              </h2>
+              <p 
+                className="mb-10"
+                style={{ fontSize: '1.1rem', opacity: 0.85, lineHeight: 1.7 }}
+              >
+                FeAI is currently in development. Join the waitlist to get early 
+                access and help shape the future of AI-assisted engineering.
+              </p>
+              <button
+                onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
+                style={{
+                  padding: '1rem 3rem',
+                  fontSize: '1rem',
+                  color: '#1a4d8f',
+                  background: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f0f4f8'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                Join the Waitlist
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Footer */}
+        <footer className="px-8 py-8" style={{ borderTop: '1px solid #1a4d8f' }}>
+          <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
+                  <span style={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>F</span>
+                </div>
+                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>FeAI</span>
+              </div>
+              
+              <div className="flex items-center gap-6" style={{ fontSize: '0.875rem' }}>
+                <a 
+                  href="mailto:finite.element.ai@gmail.com"
+                  style={{ color: '#1a4d8f', textDecoration: 'none', opacity: 0.7 }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                >
+                  Contact
+                </a>
+                <button
+                  onClick={() => navigate('/terms')}
+                  style={{ 
+                    color: '#1a4d8f', 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer',
+                    opacity: 0.7,
+                    fontSize: '0.875rem'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                >
+                  Terms
+                </button>
+                <button
+                  onClick={() => navigate('/privacy')}
+                  style={{ 
+                    color: '#1a4d8f', 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer',
+                    opacity: 0.7,
+                    fontSize: '0.875rem'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                >
+                  Privacy
+                </button>
+              </div>
+              
+              <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
                 © 2024 FeAI
               </span>
             </div>
