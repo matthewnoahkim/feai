@@ -7,5 +7,6 @@ export { TermsPage } from './TermsPage'
 export { PrivacyPage } from './PrivacyPage'
 export { ApiDocsPage } from './ApiDocsPage'
 export { FEASolverPage } from './FEASolverPage'
+export { TechnicalApproachPage } from './TechnicalApproachPage'
 
 

@@ -14,9 +14,20 @@ export function HomePage() {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen" style={{ background: 'white', color: '#1a4d8f' }}>
+      <div className="min-h-screen relative" style={{ background: 'white', color: '#1a4d8f' }}>
+        {/* Full-page geometric background pattern */}
+        <div 
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30L30 0z' fill='none' stroke='%231a4d8f' stroke-width='1'/%3E%3C/svg%3E")`,
+            backgroundSize: '60px 60px',
+            opacity: 0.03,
+            zIndex: 0
+          }}
+        />
+        
         {/* Navigation */}
-        <nav className="flex items-center justify-between px-8 py-6" style={{ borderBottom: '1px solid #1a4d8f' }}>
+        <nav className="flex items-center justify-between px-8 py-6 relative z-10" style={{ borderBottom: '1px solid #1a4d8f', background: 'white' }}>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
@@ -48,14 +59,8 @@ export function HomePage() {
         </nav>
 
         {/* Hero Section */}
-        <section className="px-8 py-24 relative overflow-hidden">
-          {/* Geometric background pattern */}
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30L30 0z' fill='none' stroke='%231a4d8f' stroke-width='1'/%3E%3C/svg%3E")`,
-            backgroundSize: '60px 60px'
-          }} />
-          
-          <div className="max-w-4xl mx-auto text-center relative">
+        <section className="px-8 py-24 relative">
+          <div className="max-w-4xl mx-auto text-center relative z-10">
             <div 
               className="inline-block mb-6 px-4 py-2"
               style={{ 
@@ -78,7 +83,7 @@ export function HomePage() {
               }}
             >
               Finite Element Analysis<br />
-              <span style={{ fontWeight: 600 }}>assisted with artificial intelligence.</span>
+              <span style={{ fontWeight: 600 }}>assisted with AI.</span>
             </h1>
             
             <p 
@@ -145,7 +150,7 @@ export function HomePage() {
         </section>
 
         {/* Visual Divider */}
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12 relative z-10">
           <div className="flex items-center gap-4">
             <div style={{ width: '60px', height: '1px', background: '#1a4d8f', opacity: 0.3 }} />
             <div style={{ 
@@ -159,7 +164,7 @@ export function HomePage() {
         </div>
 
         {/* Can AI do FEA Section */}
-        <section className="px-8 py-16">
+        <section className="px-8 py-16 relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 
               className="mb-6"
@@ -183,7 +188,7 @@ export function HomePage() {
               trained model that uses scientific research and data to deliver accurate results.
             </p>
             <button
-              onClick={() => navigate('/api-docs')}
+              onClick={() => navigate('/technical-approach')}
               style={{
                 marginTop: '1.5rem',
                 padding: '0.75rem 1.5rem',
@@ -210,7 +215,7 @@ export function HomePage() {
         </section>
 
         {/* Workflow Section */}
-        <section className="px-8 py-20" style={{ background: '#f8fafc' }}>
+        <section className="px-8 py-20 relative z-10" style={{ background: '#f8fafc' }}>
           <div className="max-w-4xl mx-auto">
             <h2 
               className="text-center mb-16"
@@ -285,7 +290,7 @@ export function HomePage() {
         </section>
 
         {/* Use Cases */}
-        <section className="px-8 py-20">
+        <section className="px-8 py-20 relative z-10" style={{ background: 'white' }}>
           <div className="max-w-5xl mx-auto">
             <h2 
               className="text-center mb-4"
@@ -347,7 +352,7 @@ export function HomePage() {
         {/* CTA Section */}
         {!user && (
           <section 
-            className="px-8 py-20"
+            className="px-8 py-20 relative z-10"
             style={{ background: '#1a4d8f', color: 'white' }}
           >
             <div className="max-w-3xl mx-auto text-center">
@@ -392,7 +397,7 @@ export function HomePage() {
         )}
 
         {/* Footer */}
-        <footer className="px-8 py-8" style={{ borderTop: '1px solid #1a4d8f' }}>
+        <footer className="px-8 py-8 relative z-10" style={{ borderTop: '1px solid #1a4d8f', background: 'white' }}>
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-2">

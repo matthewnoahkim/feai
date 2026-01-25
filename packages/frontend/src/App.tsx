@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage, TermsPage, PrivacyPage, ApiDocsPage, FEASolverPage } from './pages'
+import { HomePage, LoginPage, AuthCallbackPage, DashboardPage, EditorPage, TermsPage, PrivacyPage, ApiDocsPage, FEASolverPage, TechnicalApproachPage } from './pages'
 import { useAuthStore } from './store/authStore'
 
 // Protected route wrapper
@@ -28,6 +28,7 @@ function App() {
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/technical-approach" element={<TechnicalApproachPage />} />
         
         {/* Protected routes */}
         <Route 
