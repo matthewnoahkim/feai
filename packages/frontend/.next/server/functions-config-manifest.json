@@ -1,4 +1,1 @@
-{
-  "version": 1,
-  "functions": {}
-}
+{"version":1,"functions":{"/auth/callback":{},"/login":{},"/_not-found":{},"/dashboard":{},"/privacy":{},"/api-docs":{},"/terms":{},"/technical-approach":{},"/":{}}}

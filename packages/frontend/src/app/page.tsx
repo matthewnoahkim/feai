@@ -1,6 +1,8 @@
-'use client';
-
 import Link from 'next/link';
+import HomeClient from './HomeClient';
+
+// Force dynamic rendering to prevent SSR issues with SessionProvider in layout
+export const dynamic = 'force-dynamic';
 
 export default function HomePage() {
   return (
@@ -66,21 +68,7 @@ export default function HomePage() {
               &ldquo;The most accessible and efficient way to design metamaterials.&rdquo;
             </p>
             
-            <button
-              onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
-              style={{
-                padding: '1rem 3rem',
-                fontSize: '1rem',
-                color: 'white',
-                background: '#1a4d8f',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 500,
-                transition: 'all 0.2s'
-              }}
-            >
-              Join the Waitlist
-            </button>
+            <HomeClient variant="primary" />
           </div>
         </section>
 
@@ -296,20 +284,7 @@ export default function HomePage() {
               FeAI is currently in development. Join the waitlist to get early 
               access and help shape the future of AI-assisted engineering.
             </p>
-            <button
-              onClick={() => window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank')}
-              style={{
-                padding: '1rem 3rem',
-                fontSize: '1rem',
-                color: '#1a4d8f',
-                background: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 500,
-              }}
-            >
-              Join the Waitlist
-            </button>
+            <HomeClient variant="secondary" />
           </div>
         </section>
 

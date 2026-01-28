@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+// Force dynamic rendering to prevent SSR issues with SessionProvider in layout
+export const dynamic = 'force-dynamic';
+
 export default function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-white" style={{ color: '#1a4d8f' }}>
