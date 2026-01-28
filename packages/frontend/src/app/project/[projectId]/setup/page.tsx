@@ -425,7 +425,7 @@ export default function SetupPage() {
                                 >
                                   {bc.enabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                                 </button>
-                                <Icon className={`w-4 h-4 ${bc.enabled ? 'text-cad-accent' : 'text-gray-400'}`} />
+                                <span className={`w-4 h-4 ${bc.enabled ? 'text-cad-accent' : 'text-gray-400'}`}><Icon /></span>
                                 <span className={`text-sm font-sans ${bc.enabled ? 'text-cad-text' : 'text-gray-400'}`}>
                                   {bc.name}
                                 </span>
@@ -649,8 +649,8 @@ export default function SetupPage() {
                                 >
                                   {load.enabled ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                                 </button>
-                                <span className="w-4 h-4">
-                                  {typeof Icon === 'function' ? <Icon /> : <Icon className={`w-4 h-4 ${load.enabled ? 'text-orange-500' : 'text-gray-400'}`} />}
+                                <span className={`w-4 h-4 ${load.enabled ? 'text-orange-500' : 'text-gray-400'}`}>
+                                  <Icon />
                                 </span>
                                 <span className={`text-sm font-sans ${load.enabled ? 'text-cad-text' : 'text-gray-400'}`}>
                                   {load.name}

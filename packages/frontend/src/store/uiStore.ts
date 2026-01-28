@@ -1200,10 +1200,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     const { document } = require('./documentStore').useDocumentStore.getState()
     if (!document) return
     
-    const partStudio = document.partStudios.find(ps => ps.id === partStudioId)
+    const partStudio = document.partStudios.find((ps: any) => ps.id === partStudioId)
     if (!partStudio) return
     
-    const feature = partStudio.features.find(f => f.id === featureId)
+    const feature = partStudio.features.find((f: any) => f.id === featureId)
     if (!feature) return
     
     // Open the appropriate dialog based on feature type

@@ -1830,7 +1830,7 @@ export function SketchCanvas() {
         
         if (!found) {
           // Apply the offset - create new entities
-          drawing.selectedEntityIds.forEach(id => {
+          drawing.selectedEntityIds.forEach((id: string) => {
             const entityIndex = entityIds.indexOf(id)
             if (entityIndex >= 0) {
               const entity = entities[entityIndex]
@@ -1938,7 +1938,7 @@ export function SketchCanvas() {
         const mirrorLineEntity = entities.find((_, idx) => entityIds[idx] === drawing.mirrorLineId)
         
         if (mirrorLineEntity && mirrorLineEntity.data.start && mirrorLineEntity.data.end) {
-          drawing.selectedEntityIds.forEach(id => {
+          drawing.selectedEntityIds.forEach((id: string) => {
             if (id === drawing.mirrorLineId) return // Don't mirror the mirror line
             
             const entityIndex = entityIds.indexOf(id)
@@ -2262,7 +2262,7 @@ export function SketchCanvas() {
         const entities = sketch?.entities || []
         const entityIds = sketch?.entities?.map(e => e.id) || []
         
-        drawing.selectedEntityIds.forEach(id => {
+        drawing.selectedEntityIds.forEach((id: string) => {
           const entityIndex = entityIds.indexOf(id)
           if (entityIndex >= 0) {
             const entity = entities[entityIndex]
@@ -2304,7 +2304,7 @@ export function SketchCanvas() {
         const mirrorLineEntity = entities.find((_, idx) => entityIds[idx] === drawing.mirrorLineId)
         
         if (mirrorLineEntity && mirrorLineEntity.data.start && mirrorLineEntity.data.end) {
-          drawing.selectedEntityIds.forEach(id => {
+          drawing.selectedEntityIds.forEach((id: string) => {
             if (id === drawing.mirrorLineId) return
             
             const entityIndex = entityIds.indexOf(id)
@@ -3851,7 +3851,7 @@ function drawDrawingPreview(
     if (drawing.selectedEntityIds.length > 0 && entities.length > 0) {
       const entityIds = entities.map((e: any) => e?.id).filter(Boolean) as string[]
       
-      drawing.selectedEntityIds.forEach(id => {
+      drawing.selectedEntityIds.forEach((id: string) => {
         // Find entity by ID
         let entity: any = null
         for (let i = 0; i < entityIds.length; i++) {
@@ -4022,7 +4022,7 @@ function drawDrawingPreview(
     if (drawing.selectedEntityIds.length > 0 && entities.length > 0) {
       const entityIds = entities.map((e: any) => e?.id).filter(Boolean) as string[]
       
-      drawing.selectedEntityIds.forEach(id => {
+      drawing.selectedEntityIds.forEach((id: string) => {
         let entity: any = null
         for (let i = 0; i < entityIds.length; i++) {
           if (entityIds[i] === id) {
@@ -4097,7 +4097,7 @@ function drawDrawingPreview(
         
         // Draw mirrored previews
         if (drawing.selectedEntityIds.length > 0) {
-          drawing.selectedEntityIds.forEach(id => {
+          drawing.selectedEntityIds.forEach((id: string) => {
             if (id === drawing.mirrorLineId) return
             
             let entity: any = null

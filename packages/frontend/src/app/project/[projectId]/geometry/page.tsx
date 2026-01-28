@@ -96,7 +96,7 @@ function GeometryEditorContent() {
   useEffect(() => {
     if (document) {
       const activePartStudio = document.partStudios.find(ps => ps.id === document.activeElementId);
-      const hasParts = activePartStudio?.parts && activePartStudio.parts.length > 0;
+      const hasParts = !!(activePartStudio?.parts && activePartStudio.parts.length > 0);
       setGeometryReady(hasParts);
     }
   }, [document, setGeometryReady]);

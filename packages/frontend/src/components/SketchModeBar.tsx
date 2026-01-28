@@ -41,7 +41,7 @@ export function SketchModeBar({ onConfirm, onCancel, onViewNormal }: SketchModeB
   
   // Get current sketch info
   const activePartStudio = document?.partStudios.find(ps => ps.id === sketchMode.partStudioId)
-  const sketch = activePartStudio?.sketches.get(sketchMode.sketchId)
+  const sketch = sketchMode.sketchId ? activePartStudio?.sketches.get(sketchMode.sketchId) : undefined
   
   if (!sketch) return null
   

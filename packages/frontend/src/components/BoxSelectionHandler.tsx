@@ -174,15 +174,18 @@ function calculateSelectedEntities(
       }
     })
     
-    if (!partMesh || !partMesh.geometry.boundingBox) continue
+    if (!partMesh) continue
+    const mesh = partMesh as THREE.Mesh
     
     // Compute bounding box in world space
-    if (!partMesh.geometry.boundingBox) {
-      partMesh.geometry.computeBoundingBox()
+    if (!mesh.geometry.boundingBox) {
+      mesh.geometry.computeBoundingBox()
     }
     
-    const boundingBox = partMesh.geometry.boundingBox!.clone()
-    boundingBox.applyMatrix4(partMesh.matrixWorld)
+    if (!mesh.geometry.boundingBox) continue
+    
+    const boundingBox = mesh.geometry.boundingBox.clone()
+    boundingBox.applyMatrix4(mesh.matrixWorld)
     
     // Get 8 corners of bounding box
     const corners = [

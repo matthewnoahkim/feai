@@ -443,7 +443,7 @@ export function Toolbar() {
   
   // Get current sketch info for sketch mode
   const activePartStudio = document?.partStudios.find(ps => ps.id === document.activeElementId)
-  const currentSketch = sketchMode && activePartStudio?.sketches.get(sketchMode.sketchId)
+  const currentSketch = sketchMode?.sketchId ? activePartStudio?.sketches.get(sketchMode.sketchId) : undefined
   
   // Calculate accurate entity count (filter out construction entities if needed)
   const entityCount = currentSketch?.entities?.filter(e => !e.construction).length || 0

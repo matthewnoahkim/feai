@@ -9,7 +9,14 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     // Get projects - if authenticated, get user's projects; otherwise, return empty
-    let projects;
+    let projects: {
+      id: string;
+      name: string;
+      description: string | null;
+      thumbnail: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }[];
     if (session?.user?.id) {
       projects = await prisma.project.findMany({
         where: { userId: session.user.id },

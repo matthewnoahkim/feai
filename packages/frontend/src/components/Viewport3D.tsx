@@ -1465,7 +1465,7 @@ function FilletPreview() {
   const previewElements: JSX.Element[] = []
   
   // For each selected edge, create a small torus-like indicator
-  selectedEdges.forEach((edgeId, index) => {
+  selectedEdges.forEach((edgeId: string, index: number) => {
     // Parse edge position from ID (simplified demo)
     const parts = edgeId.split('-edge-')
     if (parts.length < 2) return
@@ -1509,7 +1509,7 @@ function FilletPreview() {
   })
   
   // For face selections, highlight the face
-  selectedFaces.forEach((faceId, index) => {
+  selectedFaces.forEach((faceId: string, index: number) => {
     const parts = faceId.split('-face-')
     if (parts.length < 2) return
     
@@ -1568,7 +1568,7 @@ function ChamferPreview() {
   const previewElements: JSX.Element[] = []
   
   // For each selected edge, create a beveled indicator
-  selectedEdges.forEach((edgeId, index) => {
+  selectedEdges.forEach((edgeId: string, index: number) => {
     const parts = edgeId.split('-edge-')
     if (parts.length < 2) return
     
@@ -1606,7 +1606,7 @@ function ChamferPreview() {
   })
   
   // For face selections, highlight the face
-  selectedFaces.forEach((faceId) => {
+  selectedFaces.forEach((faceId: string) => {
     const parts = faceId.split('-face-')
     if (parts.length < 2) return
     
@@ -1673,7 +1673,7 @@ function ShellPreview() {
   ]
   
   // Show faces to be removed with X pattern
-  facesToRemove.forEach((faceId) => {
+  facesToRemove.forEach((faceId: string) => {
     const parts = faceId.split('-face-')
     if (parts.length < 2) return
     

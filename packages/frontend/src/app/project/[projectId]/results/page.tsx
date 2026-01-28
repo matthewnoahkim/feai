@@ -322,11 +322,13 @@ export default function ResultsPage() {
     const csv = rows.map(row => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `analysis_results_${analysisResults.jobId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (typeof window !== 'undefined') {
+      const a = window.document.createElement('a');
+      a.href = url;
+      a.download = `analysis_results_${analysisResults.jobId}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }, [analysisResults]);
 
   const downloadVTK = useCallback(async () => {
@@ -335,11 +337,13 @@ export default function ResultsPage() {
     try {
       const blob = await feaSolverClient.downloadFile(analysisResults.jobId, 'results.vtu');
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${analysisResults.jobId}_results.vtu`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (typeof window !== 'undefined') {
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = `${analysisResults.jobId}_results.vtu`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Failed to download VTK:', error);
     }
