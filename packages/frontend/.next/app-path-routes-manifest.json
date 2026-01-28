@@ -1,1 +1,24 @@
-{"/_not-found/page":"/_not-found","/api/auth/update-name/route":"/api/auth/update-name","/api/auth/[...nextauth]/route":"/api/auth/[...nextauth]","/api/projects/[id]/route":"/api/projects/[id]","/api-docs/page":"/api-docs","/api/health/route":"/api/health","/api/projects/[id]/data/route":"/api/projects/[id]/data","/editor/[[...projectId]]/page":"/editor/[[...projectId]]","/login/page":"/login","/dashboard/page":"/dashboard","/page":"/","/auth/callback/page":"/auth/callback","/api/projects/route":"/api/projects","/privacy/page":"/privacy","/terms/page":"/terms","/technical-approach/page":"/technical-approach","/project/[projectId]/engineering-data/page":"/project/[projectId]/engineering-data","/project/[projectId]/mesh/page":"/project/[projectId]/mesh","/project/[projectId]/geometry/page":"/project/[projectId]/geometry","/project/[projectId]/schematic/page":"/project/[projectId]/schematic","/project/[projectId]/results/page":"/project/[projectId]/results","/project/[projectId]/setup/page":"/project/[projectId]/setup"}
+{
+  "/_not-found/page": "/_not-found",
+  "/api-docs/page": "/api-docs",
+  "/api/auth/[...nextauth]/route": "/api/auth/[...nextauth]",
+  "/api/health/route": "/api/health",
+  "/api/projects/route": "/api/projects",
+  "/api/auth/update-name/route": "/api/auth/update-name",
+  "/api/projects/[id]/route": "/api/projects/[id]",
+  "/api/projects/[id]/data/route": "/api/projects/[id]/data",
+  "/auth/callback/page": "/auth/callback",
+  "/editor/[[...projectId]]/page": "/editor/[[...projectId]]",
+  "/dashboard/page": "/dashboard",
+  "/login/page": "/login",
+  "/privacy/page": "/privacy",
+  "/page": "/",
+  "/technical-approach/page": "/technical-approach",
+  "/terms/page": "/terms",
+  "/project/[projectId]/mesh/page": "/project/[projectId]/mesh",
+  "/project/[projectId]/geometry/page": "/project/[projectId]/geometry",
+  "/project/[projectId]/schematic/page": "/project/[projectId]/schematic",
+  "/project/[projectId]/engineering-data/page": "/project/[projectId]/engineering-data",
+  "/project/[projectId]/setup/page": "/project/[projectId]/setup",
+  "/project/[projectId]/results/page": "/project/[projectId]/results"
+}
