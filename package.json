@@ -2,33 +2,25 @@
   "name": "feai",
   "version": "1.0.0",
   "private": true,
-  "description": "Web-based CAD Software with REST API",
+  "description": "Web-based CAD Software with AI-Powered FEA",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run build:frontend && npm run dev:server",
-    "dev:server": "npm run dev -w @feai/backend",
-    "build": "npm run db:generate && npm run build:frontend && npm run build:server",
-    "build:frontend": "npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
-    "build:server": "npm run build -w @feai/backend",
-    "start": "npm run build && npm start -w @feai/backend",
-    "db:push": "npm run db:push:local -w @feai/backend",
-    "db:generate": "npm run db:generate -w @feai/backend",
-    "db:studio": "npm run db:studio:local -w @feai/backend",
+    "dev": "dotenv -e .env -- npm run dev -w @feai/frontend",
+    "build": "dotenv -e .env -- npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && dotenv -e .env -- npm run build -w @feai/frontend",
+    "start": "dotenv -e .env -- npm run start -w @feai/frontend",
+    "db:push": "dotenv -e .env -- npx prisma db push --schema=packages/frontend/prisma/schema.prisma",
+    "db:generate": "dotenv -e .env -- npx prisma generate --schema=packages/frontend/prisma/schema.prisma",
+    "db:migrate": "dotenv -e .env -- npx prisma migrate dev --schema=packages/frontend/prisma/schema.prisma",
+    "db:studio": "dotenv -e .env -- npx prisma studio --schema=packages/frontend/prisma/schema.prisma",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "clean": "node ./node_modules/rimraf/dist/esm/bin.mjs packages/*/dist packages/*/.turbo node_modules/.cache",
-    "vercel-build": "npm run db:generate && npm run build:frontend && npm run build:server"
+    "clean": "node ./node_modules/rimraf/dist/esm/bin.mjs packages/*/dist packages/*/.turbo packages/*/.next node_modules/.cache",
+    "postinstall": "npm run db:generate"
   },
   "dependencies": {
-    "typescript": "^5.3.3",
-    "vite": "^5.0.10",
-    "ts-node-dev": "^2.0.0",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.4.0"
+    "typescript": "^5.3.3"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

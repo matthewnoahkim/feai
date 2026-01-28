@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useRouter, useParams } from 'next/navigation'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useProjectStore } from '../store/projectStore'
@@ -240,7 +240,8 @@ function ToolDivider() {
 }
 
 export function Toolbar() {
-  const navigate = useNavigate()
+  const router = useRouter()
+  const params = useParams<{ projectId?: string }>()
   const { 
     activeMode, 
     activeTool, 
@@ -261,7 +262,7 @@ export function Toolbar() {
   const { document, createNewDocument, importSTLPart, undo, redo, canUndo, canRedo, updateDocumentName, showAllBodies } = useDocumentStore()
   const { isSimulationMode, enterSimulationMode, exitSimulationMode } = useFEAStore()
   const { currentProject, updateProject } = useProjectStore()
-  const { projectId } = useParams<{ projectId?: string }>()
+  const projectId = params?.projectId as string | undefined
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState('')
@@ -555,7 +556,7 @@ export function Toolbar() {
       <div className="flex items-center h-12 px-1">
         {/* Logo - scholarly style - clicking returns to dashboard */}
         <button 
-          onClick={() => navigate('/dashboard')}
+          onClick={() => router.push('/dashboard')}
           className="flex items-center gap-1.5 px-2 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           title="Back to Dashboard"
         >
@@ -841,13 +842,6 @@ export function Toolbar() {
         onClick={handleSimulation}
         title="Local FEA simulation"
       />
-      <ToolButton 
-        icon={<Activity size={16} />} 
-        label="FEA API" 
-        onClick={() => navigate('/fea-solver')}
-        title="External FEA Solver (Cloud)"
-      />
-
       {/* Spacer */}
       <div className="flex-1 min-w-[8px]" />
 

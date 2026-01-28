@@ -96,7 +96,8 @@ interface ChatState {
 const generateId = () => Math.random().toString(36).substring(2, 15)
 
 // OpenAI API Key - loaded from environment variable
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || ''
+// Use NEXT_PUBLIC_ prefix for client-side access in Next.js
+const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || ''
 
 const DEFAULT_CONTEXT: ChatContext = {
   documentId: null,

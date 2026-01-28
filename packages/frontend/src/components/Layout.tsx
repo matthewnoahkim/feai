@@ -1,7 +1,9 @@
-import React from 'react'
+'use client';
+
+import React from 'react';
 
 interface LayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -9,5 +11,5 @@ export function Layout({ children }: LayoutProps) {
     <div className="flex flex-col h-screen w-screen bg-white text-cad-text overflow-hidden">
       {children}
     </div>
-  )
+  );
 }

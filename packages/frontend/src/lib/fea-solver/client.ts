@@ -15,7 +15,7 @@ import type {
   Mesh
 } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_FEA_API_URL || 'https://fea-solver.vercel.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_FEA_API_URL || 'https://fea-solver.vercel.app';
 
 export class FEAApiError extends Error {
   constructor(

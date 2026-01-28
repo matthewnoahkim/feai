@@ -24,7 +24,6 @@ import { importRouter } from './routes/import';
 import { analysisRouter } from './routes/analysis';
 import { feaRouter } from './routes/fea';
 import { projectsRouter } from './routes/projects';
-import { authRouter } from './auth';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -83,7 +82,6 @@ app.get('/api', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 app.use('/api/documents', documentsRouter);
 app.use('/api/parts', partsRouter);
@@ -157,7 +155,6 @@ if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
 ║    ✅ WebAssembly FEA solver support                         ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Available Endpoints:                                        ║
-║    Auth:         GET /api/auth/google (OAuth login)          ║
 ║    Documents:    GET|POST /api/documents                     ║
 ║    Part Studios: GET /api/documents/:id/partstudios/:psId    ║
 ║    Features:     GET|POST /api/documents/:id/partstudios/... ║
