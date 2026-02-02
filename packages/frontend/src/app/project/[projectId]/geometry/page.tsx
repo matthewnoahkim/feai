@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Box, Save } from 'lucide-react';
 import { useWorkflowStore } from '@/store/workflowStore';
@@ -49,7 +49,6 @@ function LoadingSpinner() {
 
 function GeometryEditorContent() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
 
   const { 

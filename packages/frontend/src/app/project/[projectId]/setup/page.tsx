@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { 
   Settings, 
@@ -42,7 +42,6 @@ const LOAD_TYPES = [
 
 export default function SetupPage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
 
   const {

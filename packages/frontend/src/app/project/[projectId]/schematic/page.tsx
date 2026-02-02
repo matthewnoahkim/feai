@@ -101,7 +101,9 @@ function ToolboxItem({
       style={{ borderLeftColor: NODE_COLOR, borderLeftWidth: 4 }}
     >
       <GripVertical className="w-4 h-4 text-gray-400" />
-      <Icon className="w-5 h-5" style={{ color: NODE_COLOR }} />
+      <div style={{ color: NODE_COLOR }}>
+        <Icon className="w-5 h-5" />
+      </div>
       <span className="text-sm text-gray-700" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>{config.name}</span>
     </div>
   );

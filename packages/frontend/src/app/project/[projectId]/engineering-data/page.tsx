@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { 
   Plus, 
   Trash2, 
@@ -68,7 +68,6 @@ const DEFAULT_FORM_DATA: MaterialFormData = {
 
 export default function EngineeringDataPage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
   
   const {

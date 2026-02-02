@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { 
   Grid3X3, 
@@ -30,7 +30,6 @@ const ELEMENT_TYPE_OPTIONS: { value: ElementType; label: string; description: st
 
 export default function MeshPage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
 
   const {
@@ -176,14 +175,6 @@ export default function MeshPage() {
                     </>
                   )}
                 </div>
-                {!geometryReady && (
-                  <Link
-                    href={`/project/${projectId}/geometry`}
-                    className="mt-2 inline-block text-sm text-cad-accent hover:underline font-sans"
-                  >
-                    Go to Geometry →
-                  </Link>
-                )}
               </div>
 
               {/* Mesh Settings */}
@@ -432,12 +423,9 @@ export default function MeshPage() {
                     <div className="text-center">
                       <Grid3X3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                       <p className="text-cad-text-dim font-sans">No geometry loaded</p>
-                      <Link
-                        href={`/project/${projectId}/geometry`}
-                        className="mt-2 inline-block text-sm text-cad-accent hover:underline font-sans"
-                      >
-                        Create Geometry →
-                      </Link>
+                      <p className="mt-2 text-sm text-cad-accent font-sans">
+                        Create geometry first
+                      </p>
                     </div>
                   </div>
                 )}

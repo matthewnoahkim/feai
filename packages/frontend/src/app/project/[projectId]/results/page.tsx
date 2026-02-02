@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { 
   BarChart3, 
@@ -85,7 +85,6 @@ function formatDisplacement(value: number): string {
 
 export default function ResultsPage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
 
   const {
