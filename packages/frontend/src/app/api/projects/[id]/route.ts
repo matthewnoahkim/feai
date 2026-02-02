@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
 
 // GET /api/projects/:id - Get single project
 export async function GET(
@@ -9,7 +8,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const { user, error } = await requireAuth();
+    if (error) return error;
+    
     const projectId = params.id;
     
     const project = await prisma.project.findUnique({
@@ -17,27 +18,18 @@ export async function GET(
     });
     
     if (!project) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Project not found' } },
-        { status: 404 }
-      );
+      return ApiErrors.notFound('Project');
     }
     
-    // Check ownership
-    if (session?.user?.id && project.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } },
-        { status: 403 }
-      );
+    // Check ownership - user can only access their own projects
+    if (project.userId !== user.id) {
+      return ApiErrors.forbidden();
     }
     
     return NextResponse.json(project);
   } catch (error) {
     console.error('Get project error:', error);
-    return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to get project' } },
-      { status: 500 }
-    );
+    return ApiErrors.internal('Failed to get project');
   }
 }
 
@@ -47,7 +39,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const { user, error } = await requireAuth();
+    if (error) return error;
+    
     const projectId = params.id;
     const body = await request.json();
     const { name, description, thumbnail } = body;
@@ -57,18 +51,12 @@ export async function PATCH(
     });
     
     if (!project) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Project not found' } },
-        { status: 404 }
-      );
+      return ApiErrors.notFound('Project');
     }
     
     // Check ownership
-    if (session?.user?.id && project.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } },
-        { status: 403 }
-      );
+    if (project.userId !== user.id) {
+      return ApiErrors.forbidden();
     }
     
     const updatedProject = await prisma.project.update({
@@ -83,10 +71,7 @@ export async function PATCH(
     return NextResponse.json(updatedProject);
   } catch (error) {
     console.error('Update project error:', error);
-    return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to update project' } },
-      { status: 500 }
-    );
+    return ApiErrors.internal('Failed to update project');
   }
 }
 
@@ -96,7 +81,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const { user, error } = await requireAuth();
+    if (error) return error;
+    
     const projectId = params.id;
     
     const project = await prisma.project.findUnique({
@@ -104,18 +91,12 @@ export async function DELETE(
     });
     
     if (!project) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'Project not found' } },
-        { status: 404 }
-      );
+      return ApiErrors.notFound('Project');
     }
     
     // Check ownership
-    if (session?.user?.id && project.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } },
-        { status: 403 }
-      );
+    if (project.userId !== user.id) {
+      return ApiErrors.forbidden();
     }
     
     await prisma.project.delete({
@@ -125,9 +106,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete project error:', error);
-    return NextResponse.json(
-      { success: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to delete project' } },
-      { status: 500 }
-    );
+    return ApiErrors.internal('Failed to delete project');
   }
 }

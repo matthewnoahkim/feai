@@ -1,30 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const { user, error } = await requireAuth();
+    if (error) return error;
 
     const { name } = await request.json();
 
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest('Name is required');
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: { name: name.trim() },
       select: {
         id: true,
@@ -37,9 +27,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(updatedUser);
   } catch (error) {
     console.error('Error updating user name:', error);
-    return NextResponse.json(
-      { error: 'Failed to update name' },
-      { status: 500 }
-    );
+    return ApiErrors.internal('Failed to update name');
   }
 }
