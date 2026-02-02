@@ -13,10 +13,12 @@ const nextConfig = {
   },
   // Headers for SharedArrayBuffer support (WASM threading)
   // Note: credentialless allows loading cross-origin resources without CORP headers
+  // Auth routes are excluded to allow OAuth redirects to work
   async headers() {
     return [
       {
-        source: '/(.*)',
+        // Apply COOP/COEP headers to all routes EXCEPT auth-related ones
+        source: '/((?!api/auth|login).*)',
         headers: [
           {
             key: 'Cross-Origin-Opener-Policy',
