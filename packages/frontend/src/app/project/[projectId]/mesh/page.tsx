@@ -2,11 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { 
-  ArrowLeft, 
-  ArrowRight, 
   Grid3X3, 
   RefreshCw, 
   Trash2,
@@ -137,43 +134,24 @@ export default function MeshPage() {
     setMeshError(null);
   };
 
-  const handleContinue = () => {
-    if (meshData) {
-      updateStepStatus('mesh', 'complete');
-      router.push(`/project/${projectId}/setup`);
-    }
-  };
-
   const canGenerateMesh = geometryReady && !isMeshing;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Navigation Header */}
       <nav className="bg-white border-b border-cad-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/project/${projectId}/schematic`}
-              className="flex items-center gap-2 text-cad-text-dim hover:text-cad-text transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-sans">Schematic</span>
-            </Link>
-            <div className="w-px h-6 bg-cad-border" />
-            <div className="flex items-center gap-2">
-              <Grid3X3 className="w-5 h-5 text-cad-accent" />
-              <h1 className="font-serif text-lg text-cad-text">Mesh Generation</h1>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
+            <span className="text-white font-serif font-bold text-sm">F</span>
           </div>
-          
-          <button
-            onClick={handleContinue}
-            disabled={!meshData}
-            className="flex items-center gap-2 px-4 py-2 bg-cad-accent text-white text-sm font-sans hover:bg-cad-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Continue to Setup
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="w-px h-6 bg-cad-border" />
+          <div className="flex items-center gap-2">
+            <Grid3X3 className="w-5 h-5 text-cad-accent" />
+            <h1 className="font-serif text-lg text-cad-text">Mesh Generation</h1>
+          </div>
+          <span className="text-xs text-cad-text-dim font-sans">
+            {currentProject?.name || 'Project'}
+          </span>
         </div>
       </nav>
 

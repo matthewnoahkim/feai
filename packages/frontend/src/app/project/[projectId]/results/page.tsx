@@ -2,10 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { 
-  ArrowLeft, 
   BarChart3, 
   Play, 
   Download, 
@@ -357,13 +355,9 @@ export default function ResultsPage() {
       <nav className="bg-white border-b border-cad-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link
-              href={`/project/${projectId}/schematic`}
-              className="flex items-center gap-2 text-cad-text-dim hover:text-cad-text transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-sans">Schematic</span>
-            </Link>
+            <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
+              <span className="text-white font-serif font-bold text-sm">F</span>
+            </div>
             <div className="w-px h-6 bg-cad-border" />
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-cad-accent" />
@@ -433,10 +427,7 @@ export default function ResultsPage() {
               <div>
                 <h4 className="text-yellow-700 font-sans font-medium">Mesh Required</h4>
                 <p className="text-yellow-600 text-sm font-sans mt-1">
-                  Generate a mesh before running the analysis.{' '}
-                  <Link href={`/project/${projectId}/mesh`} className="text-cad-accent hover:underline">
-                    Go to Mesh →
-                  </Link>
+                  Generate a mesh before running the analysis.
                 </p>
               </div>
             </div>
@@ -448,10 +439,7 @@ export default function ResultsPage() {
               <div>
                 <h4 className="text-yellow-700 font-sans font-medium">Boundary Conditions Required</h4>
                 <p className="text-yellow-600 text-sm font-sans mt-1">
-                  Add at least one boundary condition before running the analysis.{' '}
-                  <Link href={`/project/${projectId}/setup`} className="text-cad-accent hover:underline">
-                    Go to Setup →
-                  </Link>
+                  Add at least one boundary condition before running the analysis.
                 </p>
               </div>
             </div>

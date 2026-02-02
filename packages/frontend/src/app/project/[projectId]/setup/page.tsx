@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { 
-  ArrowLeft, 
-  ArrowRight, 
   Settings, 
   Plus, 
   Trash2,
@@ -185,43 +182,22 @@ export default function SetupPage() {
     setLoadForm({ ...loadForm, name: '' });
   };
 
-  const handleContinue = () => {
-    updateStepStatus('setup', 'complete');
-    router.push(`/project/${projectId}/results`);
-  };
-
   const activeBCs = boundaryConditions.filter(bc => bc.enabled);
   const activeLoads = loads.filter(l => l.enabled);
-  const canContinue = activeBCs.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Navigation Header */}
       <nav className="bg-white border-b border-cad-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/project/${projectId}/schematic`}
-              className="flex items-center gap-2 text-cad-text-dim hover:text-cad-text transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-sans">Schematic</span>
-            </Link>
-            <div className="w-px h-6 bg-cad-border" />
-            <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-cad-accent" />
-              <h1 className="font-serif text-lg text-cad-text">Analysis Setup</h1>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
+            <span className="text-white font-serif font-bold text-sm">F</span>
           </div>
-          
-          <button
-            onClick={handleContinue}
-            disabled={!canContinue}
-            className="flex items-center gap-2 px-4 py-2 bg-cad-accent text-white text-sm font-sans hover:bg-cad-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Continue to Results
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="w-px h-6 bg-cad-border" />
+          <div className="flex items-center gap-2">
+            <Settings className="w-5 h-5 text-cad-accent" />
+            <h1 className="font-serif text-lg text-cad-text">Analysis Setup</h1>
+          </div>
         </div>
       </nav>
 
@@ -236,14 +212,8 @@ export default function SetupPage() {
                 <div className="p-4 bg-yellow-50 border border-yellow-200">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    <span className="text-yellow-700 font-sans text-sm">No mesh generated</span>
+                    <span className="text-yellow-700 font-sans text-sm">No mesh generated - generate mesh first</span>
                   </div>
-                  <Link
-                    href={`/project/${projectId}/mesh`}
-                    className="mt-2 inline-block text-sm text-cad-accent hover:underline font-sans"
-                  >
-                    Go to Mesh →
-                  </Link>
                 </div>
               )}
 
@@ -693,12 +663,12 @@ export default function SetupPage() {
               )}
 
               {/* Validation Warning */}
-              {!canContinue && (
+              {activeBCs.length === 0 && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-yellow-600" />
                     <span className="text-yellow-700 font-sans text-sm">
-                      Add at least one boundary condition to continue
+                      Add at least one boundary condition for analysis
                     </span>
                   </div>
                 </div>

@@ -2,13 +2,13 @@
 
 import { useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, ArrowRight, Box, Save } from 'lucide-react';
+import { Box, Save } from 'lucide-react';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { useUIStore } from '@/store/uiStore';
+import { useSchematicStore } from '@/store/schematicStore';
 
 // Dynamically import CAD components to avoid SSR issues
 const Viewport3D = dynamic(() => import('@/components/Viewport3D').then(m => ({ default: m.Viewport3D })), { ssr: false });
@@ -186,12 +186,6 @@ function GeometryEditorContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [sketchMode, setActiveTool, clearSelection, handleConfirmSketch, handleCancelSketch, transformState, cancelTransform, handleSave]);
 
-  const handleContinue = () => {
-    handleSave();
-    updateStepStatus('geometry', 'complete');
-    router.push(`/project/${projectId}/mesh`);
-  };
-
   const isSketchMode = activeMode === 'sketch' && sketchMode;
 
   // Get default material info
@@ -202,18 +196,17 @@ function GeometryEditorContent() {
       {/* Navigation Header */}
       <nav className="bg-white border-b border-cad-border px-4 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-4">
-          <Link
-            href={`/project/${projectId}/schematic`}
-            className="flex items-center gap-2 text-cad-text-dim hover:text-cad-text transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-sans">Schematic</span>
-          </Link>
+          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
+            <span className="text-white font-serif font-bold text-sm">F</span>
+          </div>
           <div className="w-px h-6 bg-cad-border" />
           <div className="flex items-center gap-2">
             <Box className="w-5 h-5 text-cad-accent" />
             <h1 className="font-serif text-lg text-cad-text">Geometry</h1>
           </div>
+          <span className="text-xs text-cad-text-dim font-sans">
+            {currentProject?.name || 'Project'}
+          </span>
           {defaultMaterial && (
             <>
               <div className="w-px h-6 bg-cad-border" />
@@ -233,17 +226,10 @@ function GeometryEditorContent() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-3 py-1.5 text-cad-text-dim hover:text-cad-text text-sm font-sans transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-cad-text-dim hover:text-cad-text text-sm font-sans transition-colors border border-cad-border hover:border-cad-accent"
           >
             <Save className="w-4 h-4" />
             Save
-          </button>
-          <button
-            onClick={handleContinue}
-            className="flex items-center gap-2 px-4 py-2 bg-cad-accent text-white text-sm font-sans hover:bg-cad-accent-hover transition-colors"
-          >
-            Continue to Mesh
-            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </nav>
