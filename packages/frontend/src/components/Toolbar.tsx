@@ -563,7 +563,7 @@ export function Toolbar() {
           <div className="w-7 h-7 flex items-center justify-center bg-cad-accent">
             <span className="text-white font-serif font-bold text-sm">F</span>
           </div>
-          <span className="font-serif font-semibold text-cad-text text-sm">FeAI</span>
+          <span className="font-serif font-semibold text-cad-text text-sm">FEAI</span>
         </button>
 
       {/* Project/Document Name */}

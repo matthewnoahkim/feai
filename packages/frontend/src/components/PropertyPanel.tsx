@@ -403,7 +403,7 @@ export function PropertyPanel() {
             
             <PropertySection title="Info" icon={<Info size={16} />} defaultOpen={false}>
               <div className="text-xs text-cad-text-dim space-y-1 font-sans">
-                <p className="font-serif">FeAI v1.0.0</p>
+                <p className="font-serif">FEAI v1.0.0</p>
                 <p>Select features or parts to view and edit their properties.</p>
                 <p className="mt-2">
                   <strong>Shortcuts:</strong><br />

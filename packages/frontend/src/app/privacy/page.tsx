@@ -13,7 +13,7 @@ export default function PrivacyPage() {
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
             </div>
-            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
+            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
         </nav>
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
                 1. Information We Collect
               </h2>
               <p>
-                When you use FeAI, we may collect information you provide directly, such as 
+                When you use FEAI, we may collect information you provide directly, such as 
                 your email address when signing up, and usage data including your designs, 
                 simulations, and interactions with the platform.
               </p>

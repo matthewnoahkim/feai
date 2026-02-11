@@ -25,7 +25,7 @@ export default function HomePage() {
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
             </div>
-            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
+            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </div>
         </nav>
 
@@ -107,7 +107,7 @@ export default function HomePage() {
               }}
             >
               Traditionally... <span style={{ fontWeight: 600 }}>no</span>. And regular AI{' '}
-              <span style={{ fontStyle: 'italic' }}>still</span> can&apos;t. But FeAI is a specially 
+              <span style={{ fontStyle: 'italic' }}>still</span> can&apos;t. But FEAI is a specially 
               trained model that uses scientific research and data to deliver accurate results.
             </p>
             <Link
@@ -281,7 +281,7 @@ export default function HomePage() {
               className="mb-10"
               style={{ fontSize: '1.1rem', opacity: 0.85, lineHeight: 1.7 }}
             >
-              FeAI is currently in development. Join the waitlist to get early 
+              FEAI is currently in development. Join the waitlist to get early 
               access and help shape the future of AI-assisted engineering.
             </p>
             <HomeClient variant="secondary" />
@@ -296,7 +296,7 @@ export default function HomePage() {
                 <div className="w-6 h-6 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
                   <span style={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>F</span>
                 </div>
-                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>FeAI</span>
+                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>FEAI</span>
               </div>
               
               <div className="flex items-center gap-6" style={{ fontSize: '0.875rem' }}>
@@ -329,7 +329,7 @@ export default function HomePage() {
               </div>
               
               <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
-                © 2024 FeAI
+                © 2024 FEAI
               </span>
             </div>
           </div>

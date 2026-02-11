@@ -12,7 +12,7 @@ export default function ApiDocsPage() {
           <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
             <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
           </div>
-          <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
+          <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
         </Link>
         <Link
           href="/dashboard"
@@ -28,7 +28,7 @@ export default function ApiDocsPage() {
           API Documentation
         </h1>
         <p className="mb-12" style={{ fontSize: '1.1rem', opacity: 0.7 }}>
-          RESTful API for FeAI engineering simulation platform
+          RESTful API for FEAI engineering simulation platform
         </p>
 
         <div className="space-y-12">

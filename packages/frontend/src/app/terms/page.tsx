@@ -13,7 +13,7 @@ export default function TermsPage() {
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
             </div>
-            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
+            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
         </nav>
 
@@ -29,7 +29,7 @@ export default function TermsPage() {
                 1. Acceptance of Terms
               </h2>
               <p>
-                By accessing and using FeAI, you accept and agree to be bound by the terms 
+                By accessing and using FEAI, you accept and agree to be bound by the terms 
                 and provisions of this agreement. If you do not agree to abide by these terms, 
                 please do not use this service.
               </p>
@@ -40,7 +40,7 @@ export default function TermsPage() {
                 2. Description of Service
               </h2>
               <p>
-                FeAI provides AI-assisted finite element analysis tools for engineering 
+                FEAI provides AI-assisted finite element analysis tools for engineering 
                 simulation and metamaterial design. The service is provided &ldquo;as is&rdquo; and is 
                 intended for educational and research purposes.
               </p>
@@ -62,7 +62,7 @@ export default function TermsPage() {
                 4. Intellectual Property
               </h2>
               <p>
-                Users retain ownership of their designs and data. FeAI retains ownership 
+                Users retain ownership of their designs and data. FEAI retains ownership 
                 of the platform, algorithms, and underlying technology.
               </p>
             </section>
@@ -72,7 +72,7 @@ export default function TermsPage() {
                 5. Limitation of Liability
               </h2>
               <p>
-                FeAI and its developers shall not be liable for any indirect, incidental, 
+                FEAI and its developers shall not be liable for any indirect, incidental, 
                 special, consequential, or punitive damages resulting from your use of 
                 the service. Engineering decisions should be validated independently.
               </p>

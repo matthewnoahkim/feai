@@ -1,4 +1,4 @@
-# FeAI - Professional 3D CAD Powered by AI
+# FEAI - Professional 3D CAD Powered by AI
 
 AI-assisted CAD software with integrated modeling, analysis, and real-time collaboration.
 

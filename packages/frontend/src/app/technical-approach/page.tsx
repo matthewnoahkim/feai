@@ -13,7 +13,7 @@ export default function TechnicalApproachPage() {
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
             </div>
-            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
+            <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
         </nav>
 
@@ -23,7 +23,7 @@ export default function TechnicalApproachPage() {
             Technical Approach
           </h1>
           <p className="mb-12" style={{ fontSize: '1.1rem', opacity: 0.7 }}>
-            How FeAI combines AI with rigorous engineering simulation
+            How FEAI combines AI with rigorous engineering simulation
           </p>
           
           <div className="space-y-12" style={{ fontSize: '1rem', lineHeight: 1.8 }}>
@@ -43,7 +43,7 @@ export default function TechnicalApproachPage() {
                 Our Solution
               </h2>
               <p style={{ opacity: 0.85, marginBottom: '1rem' }}>
-                FeAI uses a hybrid approach that combines:
+                FEAI uses a hybrid approach that combines:
               </p>
               <ul className="list-disc list-inside space-y-2" style={{ opacity: 0.85 }}>
                 <li>
@@ -70,7 +70,7 @@ export default function TechnicalApproachPage() {
                 The AI Role
               </h2>
               <p style={{ opacity: 0.85 }}>
-                The AI in FeAI does not replace the physics engine—it augments the user 
+                The AI in FEAI does not replace the physics engine—it augments the user 
                 experience. AI helps translate design intent into parameters, suggests 
                 optimization directions, and interprets results. The actual simulation 
                 math remains deterministic and verifiable.
@@ -108,7 +108,7 @@ export default function TechnicalApproachPage() {
               </h3>
               <p style={{ opacity: 0.85, fontStyle: 'italic' }}>
                 AI should make engineering more accessible, not replace engineering judgment. 
-                FeAI accelerates exploration while maintaining scientific rigor.
+                FEAI accelerates exploration while maintaining scientific rigor.
               </p>
             </section>
           </div>

@@ -54,7 +54,7 @@ function LoginContent() {
           >
             <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
           </div>
-          <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FeAI</span>
+          <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
         </a>
       </nav>
 
@@ -75,7 +75,7 @@ function LoginContent() {
                   fontFamily: 'Georgia, serif',
                 }}
               >
-                Welcome to <span style={{ fontWeight: 600 }}>FeAI</span>
+                Welcome to <span style={{ fontWeight: 600 }}>FEAI</span>
               </h1>
               <p style={{ fontSize: '0.95rem', opacity: 0.8 }}>
                 Sign in to access your projects
@@ -187,7 +187,7 @@ function LoginContent() {
         className="px-8 py-4 text-center relative z-10"
         style={{ borderTop: '1px solid #1a4d8f', background: 'white' }}
       >
-        <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>© 2024 FeAI</span>
+        <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>© 2024 FEAI</span>
       </footer>
     </div>
   );

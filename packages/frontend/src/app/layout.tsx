@@ -3,7 +3,7 @@ import { Providers } from '@/components/Providers';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'FeAI - AI-Powered Finite Element Analysis',
+  title: 'FEAI - AI-Powered Finite Element Analysis',
   description: 'The most accessible and efficient way to design metamaterials with AI-assisted FEA.',
   icons: {
     icon: '/favicon.svg',
