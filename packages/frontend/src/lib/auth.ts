@@ -18,9 +18,6 @@ const getSecret = () => {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions['adapter'],
 
-  // Required on Vercel: use request host for callback URL so OAuth redirect lands on the same domain
-  trustHost: true,
-
   // Explicitly set the secret to prevent session issues
   secret: getSecret(),
 
