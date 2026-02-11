@@ -93,12 +93,14 @@ function LoginContent() {
                   fontSize: '0.875rem',
                 }}
               >
+                {error === 'Configuration' && 'Server configuration problem. Check NEXTAUTH_URL and Google OAuth settings.'}
                 {error === 'OAuthSignin' && 'Error starting sign in process.'}
                 {error === 'OAuthCallback' && 'Error during authentication callback.'}
                 {error === 'OAuthCreateAccount' && 'Error creating account.'}
                 {error === 'Callback' && 'Error during callback.'}
+                {error === 'AccessDenied' && 'Access denied.'}
                 {error === 'Default' && 'An error occurred. Please try again.'}
-                {!['OAuthSignin', 'OAuthCallback', 'OAuthCreateAccount', 'Callback', 'Default'].includes(error) && 
+                {!['Configuration', 'OAuthSignin', 'OAuthCallback', 'OAuthCreateAccount', 'Callback', 'AccessDenied', 'Default'].includes(error) && 
                   'An error occurred. Please try again.'}
               </div>
             )}

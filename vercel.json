@@ -3,5 +3,13 @@
   "buildCommand": "npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
   "installCommand": "npm install",
   "outputDirectory": "packages/frontend/.next",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.feai.app" }],
+      "destination": "https://feai.app/:path*",
+      "permanent": true
+    }
+  ]
 }

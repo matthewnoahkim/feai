@@ -17,10 +17,13 @@ const getSecret = () => {
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions['adapter'],
-  
+
+  // Required on Vercel: use request host for callback URL so OAuth redirect lands on the same domain
+  trustHost: true,
+
   // Explicitly set the secret to prevent session issues
   secret: getSecret(),
-  
+
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -41,6 +44,16 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Force error redirects to /login on same origin (avoids /api/auth/error 404 on some hosts)
+      if (url.startsWith(baseUrl + '/api/auth/error')) {
+        const parsed = new URL(url);
+        const error = parsed.searchParams.get('error');
+        return error ? `${baseUrl}/login?error=${error}` : `${baseUrl}/login`;
+      }
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
+
     async signIn({ user, account, profile }) {
       if (!user.email) {
         return false;
