@@ -73,6 +73,12 @@ feai/
 - Google OAuth 2.0
 - JWT authentication
 
+## Deploying to Vercel (monorepo)
+
+1. In **Vercel** → Project → **Settings** → **General**, set **Root Directory** to `packages/frontend`.
+2. Enable **Include source files outside of the Root Directory** (so `@feai/shared` and `@feai/kernel` are available).
+3. Set env vars: `NEXTAUTH_URL` (e.g. `https://feai.app`), `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL`.
+
 ## License
 
 MIT License - Open source under MIT license.
