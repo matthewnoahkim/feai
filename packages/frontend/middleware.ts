@@ -15,37 +15,33 @@ const authRoutes = ['/login'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  // Get the token from the request
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  
-  const isAuthenticated = !!token;
-  
-  // Check if the route is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
+
+  let isAuthenticated = false;
+  try {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    isAuthenticated = !!token;
+  } catch {
+    // getToken can throw in Edge (e.g. missing NEXTAUTH_SECRET); continue as unauthenticated
+  }
+
+  const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
-  
-  // Check if it's an auth route (login, etc.)
-  const isAuthRoute = authRoutes.some(route => 
+  const isAuthRoute = authRoutes.some((route) =>
     pathname.startsWith(route)
   );
-  
-  // Redirect unauthenticated users from protected routes to login
+
   if (isProtectedRoute && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
-  
-  // Redirect authenticated users from auth routes to dashboard
   if (isAuthRoute && isAuthenticated) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
-  
   return NextResponse.next();
 }
 

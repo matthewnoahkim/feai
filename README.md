@@ -73,6 +73,17 @@ feai/
 - Google OAuth 2.0
 - JWT authentication
 
+## Deploying to Vercel (monorepo)
+
+**Root Directory must be `packages/frontend`** for OAuth (and all Next.js API routes) to work. When Root Directory is the repo root, Vercel treats the repo root as the app root; your Next.js app and its `/api/auth/*` routes live in `packages/frontend`, so those routes are not registered and return 404. With Root Directory = `packages/frontend`, the deployment root is the Next.js app, so `/api/auth/callback/google` and other API routes are served correctly.
+
+The repo is set up so the build still has access to workspace packages (`@feai/shared`, `@feai/kernel`):
+
+- **vercel.json**: `installCommand: "cd ../.. && npm install"` (install from repo root), `buildCommand: "npm run build"`, `outputDirectory: ".next"`.
+- **packages/frontend/package.json**: `"build": "cd ../.. && npm run build"` so when Vercel runs `npm run build` from `packages/frontend`, it runs the full monorepo build (shared → kernel → frontend). The root uses `build:next` for the frontend step to avoid a build loop.
+
+In Vercel: set **Root Directory** to `packages/frontend`. Do not override Build/Install Command. Set env vars: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL`. In Google Cloud Console, add **Authorized redirect URI**: `https://yourdomain.com/api/auth/callback/google`.
+
 ## License
 
 MIT License - Open source under MIT license.
