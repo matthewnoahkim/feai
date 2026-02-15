@@ -1,1 +1,10 @@
-{}
+{
+  "/page": "app/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/projects/[id]/data/route": "app/api/projects/[id]/data/route.js",
+  "/api/projects/[id]/route": "app/api/projects/[id]/route.js",
+  "/project/[projectId]/geometry/page": "app/project/[projectId]/geometry/page.js",
+  "/project/[projectId]/engineering-data/page": "app/project/[projectId]/engineering-data/page.js",
+  "/project/[projectId]/mesh/page": "app/project/[projectId]/mesh/page.js",
+  "/project/[projectId]/results/page": "app/project/[projectId]/results/page.js"
+}

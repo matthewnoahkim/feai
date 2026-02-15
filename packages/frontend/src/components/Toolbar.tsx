@@ -8,7 +8,6 @@ import { useRouter, useParams } from 'next/navigation'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useProjectStore } from '../store/projectStore'
-import { useFEAStore } from '../store/feaStore'
 import {
   Undo,
   Redo,
@@ -31,7 +30,6 @@ import {
   CornerUpRight,
   Shell,
   FlipHorizontal,
-  Activity,
   PanelRight,
   Check,
   X,
@@ -260,22 +258,12 @@ export function Toolbar() {
   } = useUIStore()
   
   const { document, createNewDocument, importSTLPart, undo, redo, canUndo, canRedo, updateDocumentName, showAllBodies } = useDocumentStore()
-  const { isSimulationMode, enterSimulationMode, exitSimulationMode } = useFEAStore()
   const { currentProject, updateProject } = useProjectStore()
   const projectId = params?.projectId as string | undefined
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState('')
   
-  // FEA/Simulation handler
-  const handleSimulation = () => {
-    if (isSimulationMode) {
-      exitSimulationMode()
-    } else {
-      enterSimulationMode()
-    }
-  }
-
   // Model tools
   const handleExtrude = () => {
     openDialog('extrude')
@@ -834,14 +822,6 @@ export function Toolbar() {
 
       <ToolDivider />
 
-      {/* Simulation / FEA */}
-      <ToolButton 
-        icon={<Activity size={16} />} 
-        label="Simulate" 
-        active={isSimulationMode}
-        onClick={handleSimulation}
-        title="Local FEA simulation"
-      />
       {/* Spacer */}
       <div className="flex-1 min-w-[8px]" />
 

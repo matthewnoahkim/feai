@@ -77,6 +77,7 @@ feai/
 
 1. Keep **Root Directory** empty (repo root). Build runs from root and outputs to `packages/frontend/.next`.
 2. Set env vars: `NEXTAUTH_URL` (e.g. `https://feai.app`), `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL`.
+3. In Google Cloud Console (APIs & Services → Credentials → your OAuth 2.0 Client), set **Authorized redirect URI** to `{NEXTAUTH_URL}/api/auth/callback/google` (e.g. `https://feai.app/api/auth/callback/google` or `http://localhost:3000/api/auth/callback/google` for local).
 
 ## License
 

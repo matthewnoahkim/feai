@@ -8,12 +8,15 @@ function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  // Never redirect to /login after sign-in (avoids authenticated user stuck on login page)
+  const rawCallback = searchParams.get('callbackUrl') || '/dashboard';
+  const callbackUrl =
+    !rawCallback || rawCallback === '/login' ? '/dashboard' : rawCallback;
   const error = searchParams.get('error');
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push(callbackUrl);
+      router.replace(callbackUrl);
     }
   }, [status, router, callbackUrl]);
 
@@ -147,28 +150,6 @@ function LoginContent() {
               </svg>
               Sign in with Google
             </button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-4 my-6">
-              <div style={{ flex: 1, height: '1px', background: '#1a4d8f', opacity: 0.2 }} />
-              <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>OR</span>
-              <div style={{ flex: 1, height: '1px', background: '#1a4d8f', opacity: 0.2 }} />
-            </div>
-
-            {/* Continue without account */}
-            <a
-              href="/dashboard"
-              className="block w-full text-center py-3 no-underline transition-all"
-              style={{
-                color: '#1a4d8f',
-                fontSize: '0.875rem',
-                opacity: 0.7,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-            >
-              Continue without an account →
-            </a>
           </div>
 
           {/* Terms */}

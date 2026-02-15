@@ -281,8 +281,8 @@ export default function HomePage() {
               className="mb-10"
               style={{ fontSize: '1.1rem', opacity: 0.85, lineHeight: 1.7 }}
             >
-              FEAI is currently in development. Join the waitlist to get early 
-              access and help shape the future of AI-assisted engineering.
+              Sign in to access your dashboard and start exploring 
+              AI-assisted finite element analysis.
             </p>
             <HomeClient variant="secondary" />
           </div>

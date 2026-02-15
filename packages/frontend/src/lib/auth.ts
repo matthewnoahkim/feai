@@ -48,6 +48,11 @@ export const authOptions: NextAuthOptions = {
         const error = parsed.searchParams.get('error');
         return error ? `${baseUrl}/login?error=${error}` : `${baseUrl}/login`;
       }
+      // After successful sign-in, never send users to the login page — send to dashboard
+      const loginPath = baseUrl + '/login';
+      if (url === loginPath || url.startsWith(loginPath + '?')) {
+        return baseUrl + '/dashboard';
+      }
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
 

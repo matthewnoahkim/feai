@@ -1,48 +1,49 @@
 'use client';
 
+import Link from 'next/link';
+
 interface HomeClientProps {
   variant: 'primary' | 'secondary';
 }
 
-export default function HomeClient({ variant }: HomeClientProps) {
-  const handleClick = () => {
-    window.open('https://forms.gle/g8X1huDK5cLN6D6n6', '_blank');
-  };
+const baseStyle = {
+  padding: '1rem 3rem',
+  fontSize: '1rem',
+  cursor: 'pointer',
+  fontWeight: 500,
+  transition: 'all 0.2s',
+  textDecoration: 'none',
+  display: 'inline-block',
+};
 
+export default function HomeClient({ variant }: HomeClientProps) {
   if (variant === 'primary') {
     return (
-      <button
-        onClick={handleClick}
+      <Link
+        href="/dashboard"
         style={{
-          padding: '1rem 3rem',
-          fontSize: '1rem',
+          ...baseStyle,
           color: 'white',
           background: '#1a4d8f',
           border: 'none',
-          cursor: 'pointer',
-          fontWeight: 500,
-          transition: 'all 0.2s'
         }}
       >
-        Join the Waitlist
-      </button>
+        Dashboard
+      </Link>
     );
   }
 
   return (
-    <button
-      onClick={handleClick}
+    <Link
+      href="/dashboard"
       style={{
-        padding: '1rem 3rem',
-        fontSize: '1rem',
+        ...baseStyle,
         color: '#1a4d8f',
         background: 'white',
         border: 'none',
-        cursor: 'pointer',
-        fontWeight: 500,
       }}
     >
-      Join the Waitlist
-    </button>
+      Dashboard
+    </Link>
   );
 }

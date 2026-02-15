@@ -9,6 +9,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { useUIStore } from '@/store/uiStore';
 import { useSchematicStore } from '@/store/schematicStore';
+import { useChatStore } from '@/store/chatStore';
 
 // Dynamically import CAD components to avoid SSR issues
 const Viewport3D = dynamic(() => import('@/components/Viewport3D').then(m => ({ default: m.Viewport3D })), { ssr: false });
@@ -35,6 +36,7 @@ const LinearPatternDialog = dynamic(() => import('@/components/dialogs/LinearPat
 const CircularPatternDialog = dynamic(() => import('@/components/dialogs/CircularPatternDialog').then(m => ({ default: m.CircularPatternDialog })), { ssr: false });
 const SketchDialog = dynamic(() => import('@/components/dialogs/SketchDialog').then(m => ({ default: m.SketchDialog })), { ssr: false });
 const MoveCopyBodyDialog = dynamic(() => import('@/components/dialogs/MoveCopyBodyDialog').then(m => ({ default: m.MoveCopyBodyDialog })), { ssr: false });
+const ChatPanel = dynamic(() => import('@/components/chat').then(m => ({ default: m.ChatPanel })), { ssr: false });
 
 function LoadingSpinner() {
   return (
@@ -68,6 +70,7 @@ function GeometryEditorContent() {
     leftPanelOpen, 
     rightPanelOpen,
     leftPanelWidth,
+    chatPanelWidth,
     setLeftPanelWidth,
     exitSketchMode,
     setActiveTool,
@@ -76,11 +79,13 @@ function GeometryEditorContent() {
     transformState,
     cancelTransform
   } = useUIStore();
+  const { isOpen: isChatOpen, loadProjectChats } = useChatStore();
 
-  // Load project data
+  // Load project data and chat sessions
   useEffect(() => {
     setCurrentStep('geometry');
     updateStepStatus('geometry', 'in-progress');
+    loadProjectChats(projectId);
     
     fetchProject(projectId).then((project) => {
       if (project?.data) {
@@ -254,7 +259,10 @@ function GeometryEditorContent() {
           )}
 
           {/* Center - 3D Viewport / Sketch Canvas */}
-          <div className="flex-1 relative bg-white min-h-0 min-w-0">
+          <div 
+            className="flex-1 relative bg-white min-h-0 min-w-0"
+            style={{ marginRight: isChatOpen ? `${chatPanelWidth}px` : 0 }}
+          >
             <SelectionManager>
               <div className={`absolute inset-0 ${isSketchMode ? 'opacity-0 pointer-events-none' : ''}`}>
                 <Viewport3D />
@@ -263,6 +271,9 @@ function GeometryEditorContent() {
               {isSketchMode && <SketchCanvas />}
             </SelectionManager>
           </div>
+
+          {/* AI Chat Assistant */}
+          <ChatPanel />
         </div>
 
         {/* Bottom Panel - Properties */}
