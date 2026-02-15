@@ -1,31 +1,16 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 
-// Routes that require authentication
-const protectedRoutes: string[] = [
-  // Add routes that require authentication here
-  // Currently, all routes are accessible without auth for easier development
-  // '/dashboard',
-  // '/editor',
-];
-
-// Routes that should redirect to dashboard if already authenticated
+const protectedRoutes: string[] = [];
 const authRoutes = ['/login'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  let isAuthenticated = false;
-  try {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
-    isAuthenticated = !!token;
-  } catch {
-    // getToken can throw in Edge (e.g. missing NEXTAUTH_SECRET); continue as unauthenticated
-  }
+  const sessionCookie =
+    request.cookies.get('next-auth.session-token') ??
+    request.cookies.get('__Secure-next-auth.session-token');
+  const isAuthenticated = !!sessionCookie?.value;
 
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
