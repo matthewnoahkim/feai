@@ -41,7 +41,7 @@ export default function MeshPage() {
     setMeshing,
     meshError,
     setMeshError,
-    geometryReady,
+    setGeometryReady,
     updateStepStatus,
     setCurrentStep,
   } = useWorkflowStore();
@@ -54,13 +54,23 @@ export default function MeshPage() {
   useEffect(() => {
     setCurrentStep('mesh');
     updateStepStatus('mesh', 'in-progress');
-    
     fetchProject(projectId).then((project) => {
       if (project?.data) {
         loadDocumentFromData(project.data);
       }
     });
   }, [projectId]);
+
+  const hasGeometry =
+    !!document &&
+    (() => {
+      const activePartStudio = document.partStudios.find((ps) => ps.id === document.activeElementId);
+      return !!(activePartStudio?.parts && activePartStudio.parts.length > 0);
+    })();
+
+  useEffect(() => {
+    setGeometryReady(hasGeometry);
+  }, [hasGeometry, setGeometryReady]);
 
   const generateMesh = useCallback(async () => {
     if (!document) {
@@ -133,7 +143,7 @@ export default function MeshPage() {
     setMeshError(null);
   };
 
-  const canGenerateMesh = geometryReady && !isMeshing;
+  const canGenerateMesh = hasGeometry && !isMeshing;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -161,9 +171,9 @@ export default function MeshPage() {
             {/* Mesh Controls */}
             <div className="space-y-6">
               {/* Geometry Status */}
-              <div className={`p-4 border ${geometryReady ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+              <div className={`p-4 border ${hasGeometry ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
                 <div className="flex items-center gap-2">
-                  {geometryReady ? (
+                  {hasGeometry ? (
                     <>
                       <Check className="w-5 h-5 text-green-600" />
                       <span className="text-green-700 font-sans text-sm">Geometry ready for meshing</span>
@@ -418,7 +428,7 @@ export default function MeshPage() {
               <div className="h-[600px] relative">
                 <Viewport3D />
                 
-                {!geometryReady && (
+                {!hasGeometry && (
                   <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
                     <div className="text-center">
                       <Grid3X3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
