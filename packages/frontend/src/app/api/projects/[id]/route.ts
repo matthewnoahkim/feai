@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
 
-// GET /api/projects/:id - Get single project
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -20,8 +19,6 @@ export async function GET(
     if (!project) {
       return ApiErrors.notFound('Project');
     }
-    
-    // Check ownership - user can only access their own projects
     if (project.userId !== user.id) {
       return ApiErrors.forbidden();
     }
@@ -33,7 +30,6 @@ export async function GET(
   }
 }
 
-// PATCH /api/projects/:id - Update project metadata
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -53,12 +49,9 @@ export async function PATCH(
     if (!project) {
       return ApiErrors.notFound('Project');
     }
-    
-    // Check ownership
     if (project.userId !== user.id) {
       return ApiErrors.forbidden();
     }
-    
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: {
@@ -75,7 +68,6 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/projects/:id - Delete project
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -93,12 +85,9 @@ export async function DELETE(
     if (!project) {
       return ApiErrors.notFound('Project');
     }
-    
-    // Check ownership
     if (project.userId !== user.id) {
       return ApiErrors.forbidden();
     }
-    
     await prisma.project.delete({
       where: { id: projectId },
     });

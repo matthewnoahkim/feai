@@ -8,7 +8,6 @@ function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Never redirect to /login after sign-in (avoids authenticated user stuck on login page)
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard';
   const callbackUrl =
     !rawCallback || rawCallback === '/login' ? '/dashboard' : rawCallback;

@@ -3,12 +3,10 @@ import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from './prisma';
 
-// Use a stable secret for development if NEXTAUTH_SECRET is not set
 const getSecret = () => {
   if (process.env.NEXTAUTH_SECRET) {
     return process.env.NEXTAUTH_SECRET;
   }
-  // Fallback secret for development - DO NOT use in production
   if (process.env.NODE_ENV === 'development') {
     return 'feai-development-secret-key-do-not-use-in-production-12345';
   }
@@ -17,8 +15,6 @@ const getSecret = () => {
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as NextAuthOptions['adapter'],
-
-  // Explicitly set the secret to prevent session issues
   secret: getSecret(),
 
   providers: [
@@ -31,8 +27,7 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: 'jwt',
-    // Extend session max age to 30 days
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   pages: {
@@ -42,13 +37,11 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Force error redirects to /login on same origin (avoids /api/auth/error 404 on some hosts)
       if (url.startsWith(baseUrl + '/api/auth/error')) {
         const parsed = new URL(url);
         const error = parsed.searchParams.get('error');
         return error ? `${baseUrl}/login?error=${error}` : `${baseUrl}/login`;
       }
-      // After successful sign-in, never send users to the login page — send to dashboard
       const loginPath = baseUrl + '/login';
       if (url === loginPath || url.startsWith(loginPath + '?')) {
         return baseUrl + '/dashboard';
@@ -61,20 +54,17 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      // Check if user already exists
       const existingUser = await prisma.user.findUnique({
         where: { email: user.email },
         include: { accounts: true },
       });
 
       if (existingUser) {
-        // Check if this provider is already linked
         const existingAccount = existingUser.accounts.find(
           (acc) => acc.provider === account?.provider
         );
 
         if (!existingAccount && account) {
-          // Link new provider account to existing user
           await prisma.account.create({
             data: {
               userId: existingUser.id,
@@ -97,12 +87,10 @@ export const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, user, account }) {
-      // Initial sign in
       if (user) {
         token.sub = user.id;
       }
 
-      // Fetch latest user data from database on subsequent requests
       if (token.sub) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
@@ -127,8 +115,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
-
-        // Fetch latest user data from database
         const dbUser = await prisma.user.findUnique({
           where: { id: token.sub },
           select: {
@@ -150,12 +136,5 @@ export const authOptions: NextAuthOptions = {
     },
   },
 
-  events: {
-    async createUser({ user }) {
-      console.log('New user created:', user.email);
-    },
-  },
-
-  // Only enable debug in development when explicitly requested
   debug: process.env.NEXTAUTH_DEBUG === 'true',
 };

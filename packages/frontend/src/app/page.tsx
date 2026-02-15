@@ -1,14 +1,12 @@
 import Link from 'next/link';
 import HomeClient from './HomeClient';
 
-// Force dynamic rendering to prevent SSR issues with SessionProvider in layout
 export const dynamic = 'force-dynamic';
 
 export default function HomePage() {
   return (
     <div className="public-theme">
       <div className="min-h-screen relative" style={{ background: 'white', color: '#1a4d8f' }}>
-        {/* Full-page geometric background pattern */}
         <div 
           className="fixed inset-0 pointer-events-none"
           style={{

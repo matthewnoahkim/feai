@@ -8,6 +8,7 @@ packages/*/node_modules/
 # Build outputs
 dist/
 build/
+.next/
 *.tsbuildinfo
 **/dist/
 packages/*/dist/

@@ -62,7 +62,6 @@ export default function EditorContent({ projectId }: EditorContentProps) {
   const { isOpen: isChatOpen, loadProjectChats } = useChatStore();
   const { contextMenu, openContextMenu, closeContextMenu } = useContextMenu();
 
-  // Load project if projectId is provided
   useEffect(() => {
     if (projectId) {
       loadProjectChats(projectId);
@@ -79,7 +78,6 @@ export default function EditorContent({ projectId }: EditorContentProps) {
     }
   }, [projectId]);
 
-  // Auto-save project data periodically
   useEffect(() => {
     if (!projectId || !document) return;
     
@@ -97,8 +95,7 @@ export default function EditorContent({ projectId }: EditorContentProps) {
     
     return () => clearInterval(saveInterval);
   }, [projectId, document, saveProjectData]);
-  
-  // Save on window unload/close
+
   useEffect(() => {
     if (!projectId || !document) return;
     
@@ -137,7 +134,6 @@ export default function EditorContent({ projectId }: EditorContentProps) {
     addNotification('info', 'View oriented normal to sketch plane');
   }, [addNotification]);
 
-  // Handle global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -185,13 +181,9 @@ export default function EditorContent({ projectId }: EditorContentProps) {
 
   return (
     <Layout>
-      {/* Top Toolbar */}
       {isSketchMode ? <SketchToolbar /> : <Toolbar />}
-
-      {/* Main Content Area */}
       <div className="flex flex-col flex-1 overflow-hidden relative">
         <div className="flex flex-1 overflow-hidden relative">
-          {/* Left Panel - Feature Tree */}
           {leftPanelOpen && (
             <ResizablePanel
               direction="horizontal"
@@ -204,8 +196,6 @@ export default function EditorContent({ projectId }: EditorContentProps) {
               <FeatureTree />
             </ResizablePanel>
           )}
-
-          {/* Center - 3D Viewport / Sketch Canvas */}
           <div 
             className="flex-1 relative bg-white min-h-0 min-w-0"
             style={{ marginRight: isChatOpen ? `${chatPanelWidth}px` : 0 }}
@@ -226,19 +216,11 @@ export default function EditorContent({ projectId }: EditorContentProps) {
               />
             )}
           </div>
-          
-          {/* AI Chat Assistant */}
           <ChatPanel />
         </div>
-
-        {/* Bottom Panel - Properties */}
         {rightPanelOpen && <PropertyPanel />}
-
-        {/* Status Bar */}
         <StatusBar />
       </div>
-      
-      {/* Dialogs */}
       {activeDialog === 'extrude' && <ExtrudeDialog />}
       {activeDialog === 'revolve' && <RevolveDialog />}
       {activeDialog === 'sweep' && <SweepDialog />}
@@ -251,14 +233,8 @@ export default function EditorContent({ projectId }: EditorContentProps) {
       {activeDialog === 'circular-pattern' && <CircularPatternDialog />}
       {activeDialog === 'sketch' && <SketchDialog />}
       {activeDialog === 'move-copy-body' && <MoveCopyBodyDialog />}
-      
-      {/* Notifications */}
       <Notifications />
-      
-      {/* Measurements Panel */}
       <MeasurementsPanel />
-      
-      {/* FEA Simulation Panel */}
       <SimulationPanel />
     </Layout>
   );

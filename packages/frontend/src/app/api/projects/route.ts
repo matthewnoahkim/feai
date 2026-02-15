@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
 
-// GET /api/projects - List all projects for the current user
 export async function GET(request: NextRequest) {
   try {
     const { user, error } = await requireAuth();
@@ -28,7 +27,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/projects - Create new project
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth();

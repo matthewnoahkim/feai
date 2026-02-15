@@ -2,22 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['lh3.googleusercontent.com'], // For Google profile images
+    domains: ['lh3.googleusercontent.com'],
   },
-  // Enable transpiling of monorepo packages
   transpilePackages: ['@feai/shared', '@feai/kernel'],
-  // Disable static generation for pages that use SessionProvider
-  // This prevents the "useContext" errors during build
-  experimental: {
-    // This allows pages to be rendered dynamically by default
-  },
-  // Headers for SharedArrayBuffer support (WASM threading)
-  // Note: credentialless allows loading cross-origin resources without CORP headers
-  // Auth routes are excluded to allow OAuth redirects to work
+  experimental: {},
   async headers() {
     return [
       {
-        // Apply COOP/COEP headers to all routes EXCEPT auth-related ones
         source: '/((?!api/auth|login).*)',
         headers: [
           {

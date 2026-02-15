@@ -51,9 +51,6 @@ export async function requireAuth(): Promise<
   return { user, error: null };
 }
 
-/**
- * Standard error responses for API routes
- */
 export const ApiErrors = {
   unauthorized: () => NextResponse.json(
     { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },

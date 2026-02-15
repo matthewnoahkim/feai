@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
 
-// PUT /api/projects/:id/data - Save project CAD data
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -26,8 +25,6 @@ export async function PUT(
     if (!project) {
       return ApiErrors.notFound('Project');
     }
-    
-    // Check ownership
     if (project.userId !== user.id) {
       return ApiErrors.forbidden();
     }
@@ -44,7 +41,6 @@ export async function PUT(
   }
 }
 
-// POST handler for sendBeacon compatibility (beacon sends POST)
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
