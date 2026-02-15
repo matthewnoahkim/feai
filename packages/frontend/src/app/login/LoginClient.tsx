@@ -49,7 +49,7 @@ function LoginContent() {
         className="flex items-center justify-between px-8 py-6 relative z-10"
         style={{ borderBottom: '1px solid #1a4d8f', background: 'white' }}
       >
-        <a href="/" className="flex items-center gap-2 no-underline">
+        <a href="/" className="logo-link flex items-center gap-2 no-underline">
           <div 
             className="w-8 h-8 flex items-center justify-center"
             style={{ background: '#1a4d8f' }}

@@ -2357,6 +2357,12 @@ video {
   color: var(--public-accent-hover);
 }
 
+/* Top-left logo link/button: never underline */
+.logo-link,
+.logo-link:hover {
+  text-decoration: none !important;
+}
+
 * {
   box-sizing: border-box;
 }

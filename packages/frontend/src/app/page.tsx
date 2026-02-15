@@ -63,7 +63,7 @@ export default function HomePage() {
                 opacity: 0.8
               }}
             >
-              &ldquo;Surrogate modelling for metamaterial design.&rdquo;
+              Surrogate modelling for metamaterial design.
             </p>
             
             <HomeClient variant="primary" />

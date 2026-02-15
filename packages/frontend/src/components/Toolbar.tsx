@@ -545,7 +545,7 @@ export function Toolbar() {
         {/* Logo - scholarly style - clicking returns to dashboard */}
         <button 
           onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-1.5 px-2 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity"
+          className="logo-link flex items-center gap-1.5 px-2 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           title="Back to Dashboard"
         >
           <div className="w-7 h-7 flex items-center justify-center bg-cad-accent">

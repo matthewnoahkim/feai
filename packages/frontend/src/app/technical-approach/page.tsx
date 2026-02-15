@@ -9,7 +9,7 @@ export default function TechnicalApproachPage() {
       <div className="min-h-screen" style={{ background: 'white', color: '#1a4d8f' }}>
         {/* Navigation */}
         <nav className="flex items-center justify-between px-8 py-6" style={{ borderBottom: '1px solid #1a4d8f' }}>
-          <Link href="/" className="flex items-center gap-2 no-underline">
+          <Link href="/" className="logo-link flex items-center gap-2 no-underline">
             <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
               <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
             </div>

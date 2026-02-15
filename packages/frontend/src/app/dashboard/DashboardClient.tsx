@@ -173,7 +173,7 @@ export default function DashboardClient() {
         style={{ background: 'white', borderBottom: '1px solid #e2e8f0' }}
       >
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 no-underline">
+          <Link href="/" className="logo-link flex items-center gap-2 no-underline">
             <div
               className="w-8 h-8 flex items-center justify-center"
               style={{ background: '#1a4d8f' }}

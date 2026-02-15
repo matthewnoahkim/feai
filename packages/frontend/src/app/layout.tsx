@@ -4,7 +4,7 @@ import '@/styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'FEAI - AI-Powered Finite Element Analysis',
-  description: 'Surrogate modelling for metamaterial design with AI-assisted FEA.',
+  description: 'Surrogate modelling for metamaterial design',
   icons: {
     icon: '/favicon.svg',
   },
