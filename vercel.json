@@ -3,5 +3,13 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && npm install",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "feai.app" }],
+      "destination": "https://www.feai.app/:path*",
+      "permanent": true
+    }
+  ]
 }
