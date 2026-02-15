@@ -73,14 +73,6 @@ feai/
 - Google OAuth 2.0
 - JWT authentication
 
-## Deploying to Vercel (monorepo)
-
-1. **Root Directory:** Either leave empty (repo root) so the root build runs and outputs to `packages/frontend/.next`, or set **Root Directory** to `packages/frontend` so Next.js API routes (including `/api/auth/...`) are deployed correctly. If `/api/auth/signin` 404s in production, use Root Directory = `packages/frontend`.
-2. **Env vars (production):** Set `NEXTAUTH_URL=https://feai.app` (not localhost), `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL`.
-3. **Google OAuth:** In Google Cloud Console → Credentials → OAuth 2.0 Client → **Authorized redirect URIs**, add exactly `https://feai.app/api/auth/callback/google` (HTTPS, no trailing slash, no www unless you use it).
-
-**Full OAuth checklist and 404 troubleshooting:** see [DEPLOY.md](./DEPLOY.md).
-
 ## License
 
 MIT License - Open source under MIT license.
