@@ -346,7 +346,7 @@ export function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={hasApiKey ? "Describe what you want to create..." : "Add VITE_OPENAI_API_KEY to .env file"}
+          placeholder={hasApiKey ? "Describe what you want to create..." : "Add NEXT_PUBLIC_OPENAI_API_KEY to .env file"}
           disabled={!hasApiKey || isTyping || isExecuting}
           rows={1}
           className="chat-input"

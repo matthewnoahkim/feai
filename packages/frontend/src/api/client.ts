@@ -25,13 +25,22 @@ async function request<T>(
       ...options.headers
     }
   })
-  
+
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    const text = await response.text()
+    if (text.trimStart().startsWith('<!')) {
+      throw new Error(`API returned HTML instead of JSON (${response.status}). The route may be missing or misconfigured.`)
+    }
+    throw new Error(`API returned non-JSON (${response.status}): ${text.slice(0, 100)}`)
+  }
+
   const result: ApiResponse<T> = await response.json()
-  
+
   if (!result.success) {
     throw new Error(result.error?.message || 'API request failed')
   }
-  
+
   return result.data as T
 }
 
