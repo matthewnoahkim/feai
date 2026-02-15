@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "dotenv -e .env -- npm run dev -w @feai/frontend",
-    "build": "npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
+    "build": "npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build:next -w @feai/frontend",
     "build:local": "dotenv -e .env -- npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
     "start": "dotenv -e .env -- npm run start -w @feai/frontend",
     "db:push": "dotenv -e .env -- npx prisma db push --schema=packages/frontend/prisma/schema.prisma",
