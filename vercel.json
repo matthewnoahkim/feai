@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "buildCommand": "npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
-  "outputDirectory": "packages/frontend/.next"
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "cd ../.. && npm run build",
+  "outputDirectory": ".next"
 }
