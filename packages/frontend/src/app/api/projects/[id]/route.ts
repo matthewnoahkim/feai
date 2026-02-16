@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
+import { requireAuth, ApiErrors } from '@/lib/auth';
+import { updateProjectSchema, validationErrorResponse } from '@/schemas';
 
 export async function GET(
   request: NextRequest,
@@ -39,13 +40,16 @@ export async function PATCH(
     if (error) return error;
     
     const projectId = params.id;
-    const body = await request.json();
-    const { name, description, thumbnail } = body;
-    
+    const raw = await request.json();
+    const parsed = updateProjectSchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
+
+    const { name, description, thumbnail } = parsed.data;
+
     const project = await prisma.project.findUnique({
       where: { id: projectId },
     });
-    
+
     if (!project) {
       return ApiErrors.notFound('Project');
     }
@@ -55,8 +59,8 @@ export async function PATCH(
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: {
-        ...(name !== undefined && { name: name.trim() }),
-        ...(description !== undefined && { description: description?.trim() || null }),
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
         ...(thumbnail !== undefined && { thumbnail }),
       },
     });

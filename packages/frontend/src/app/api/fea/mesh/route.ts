@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-helpers';
+import { requireAuth } from '@/lib/auth';
+import { meshRequestBodySchema, validationErrorResponse } from '@/schemas';
 
 /**
  * POST /api/fea/mesh - Generate mesh from geometry (parts).
@@ -11,17 +12,12 @@ export async function POST(request: NextRequest) {
     const { user, error } = await requireAuth();
     if (error) return error;
 
-    const body = await request.json();
-    const { partStudioId, settings } = body;
+    const raw = await request.json();
+    const parsed = meshRequestBodySchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
 
-    if (!partStudioId) {
-      return NextResponse.json(
-        { success: false, error: { code: 'INVALID_REQUEST', message: 'partStudioId is required' } },
-        { status: 400 }
-      );
-    }
-
-    const parts = settings?.parts || [];
+    const { partStudioId, settings } = parsed.data;
+    const parts = settings?.parts ?? [];
     if (parts.length === 0) {
       return NextResponse.json(
         { success: false, error: { code: 'NO_GEOMETRY', message: 'No parts to mesh. Please create geometry first.' } },

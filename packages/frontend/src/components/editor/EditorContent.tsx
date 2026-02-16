@@ -12,18 +12,20 @@ import { SelectionManager } from '@/components/SelectionManager';
 import { SelectionContextMenu, useContextMenu } from '@/components/SelectionContextMenu';
 import { PropertyPanel } from '@/components/PropertyPanel';
 import { StatusBar } from '@/components/StatusBar';
-import { ExtrudeDialog } from '@/components/dialogs/ExtrudeDialog';
-import { RevolveDialog } from '@/components/dialogs/RevolveDialog';
-import { SweepDialog } from '@/components/dialogs/SweepDialog';
-import { LoftDialog } from '@/components/dialogs/LoftDialog';
-import { FilletDialog } from '@/components/dialogs/FilletDialog';
-import { ChamferDialog } from '@/components/dialogs/ChamferDialog';
-import { ShellDialog } from '@/components/dialogs/ShellDialog';
-import { MirrorFeatureDialog } from '@/components/dialogs/MirrorFeatureDialog';
-import { LinearPatternDialog } from '@/components/dialogs/LinearPatternDialog';
-import { CircularPatternDialog } from '@/components/dialogs/CircularPatternDialog';
-import { SketchDialog } from '@/components/dialogs/SketchDialog';
-import { MoveCopyBodyDialog } from '@/components/dialogs/MoveCopyBodyDialog';
+import {
+  ExtrudeDialog,
+  RevolveDialog,
+  SweepDialog,
+  LoftDialog,
+  FilletDialog,
+  ChamferDialog,
+  ShellDialog,
+  MirrorFeatureDialog,
+  LinearPatternDialog,
+  CircularPatternDialog,
+  SketchDialog,
+  MoveCopyBodyDialog,
+} from '@/components/dialogs';
 import { Notifications } from '@/components/Notifications';
 import { ChatPanel } from '@/components/chat';
 import { SimulationPanel } from '@/components/fea';

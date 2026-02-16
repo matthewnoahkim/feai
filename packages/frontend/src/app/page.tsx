@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import HomeClient from './HomeClient';
+import HomeClient from '@/components/landing/HomeClient';
 
 export const dynamic = 'force-dynamic';
 

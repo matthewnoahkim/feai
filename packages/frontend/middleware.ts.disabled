@@ -1,3 +1,8 @@
+/**
+ * Disabled: kept for reference. Re-enable by renaming to middleware.ts.
+ * Previously caused 500 MIDDLEWARE_INVOCATION_FAILED; app works without it.
+ * Auth redirect (e.g. /login → /dashboard when logged in) is handled in login page.
+ */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 

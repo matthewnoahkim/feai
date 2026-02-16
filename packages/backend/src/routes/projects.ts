@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import { createProjectSchema, updateProjectSchema, projectDataSchema, validationErrorResponse } from '../schemas';
 
 const router = express.Router();
 
@@ -77,20 +78,16 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, description } = req.body;
-    
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'BAD_REQUEST', message: 'Project name is required' }
-      });
-    }
-    
+    const parsed = createProjectSchema.safeParse(req.body);
+    if (!parsed.success) return validationErrorResponse(res, parsed.error);
+
+    const { name, description } = parsed.data;
+
     const now = new Date();
     const project: Project = {
       id: generateId(),
-      name: name.trim(),
-      description: description?.trim() || undefined,
+      name,
+      description,
       userId: 'anonymous',
       createdAt: now,
       updatedAt: now,
@@ -114,19 +111,22 @@ router.post('/', async (req, res) => {
  */
 router.patch('/:id', async (req, res) => {
   try {
-    const { name, description, thumbnail } = req.body;
-    
+    const parsed = updateProjectSchema.safeParse(req.body);
+    if (!parsed.success) return validationErrorResponse(res, parsed.error);
+
+    const { name, description, thumbnail } = parsed.data;
+
     const project = projects.get(req.params.id);
-    
+
     if (!project) {
       return res.status(404).json({
         success: false,
         error: { code: 'NOT_FOUND', message: 'Project not found' }
       });
     }
-    
-    if (name !== undefined) project.name = name.trim();
-    if (description !== undefined) project.description = description?.trim() || undefined;
+
+    if (name !== undefined) project.name = name;
+    if (description !== undefined) project.description = description ?? undefined;
     if (thumbnail !== undefined) project.thumbnail = thumbnail;
     project.updatedAt = new Date();
     
@@ -148,15 +148,11 @@ router.patch('/:id', async (req, res) => {
  */
 router.put('/:id/data', async (req, res) => {
   try {
-    const { data } = req.body;
-    
-    if (!data) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'BAD_REQUEST', message: 'Project data is required' }
-      });
-    }
-    
+    const parsed = projectDataSchema.safeParse(req.body);
+    if (!parsed.success) return validationErrorResponse(res, parsed.error);
+
+    const { data } = parsed.data;
+
     const project = projects.get(req.params.id);
     
     if (!project) {

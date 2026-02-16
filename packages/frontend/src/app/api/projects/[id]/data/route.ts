@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
+import { requireAuth, ApiErrors } from '@/lib/auth';
+import { projectDataSchema, validationErrorResponse } from '@/schemas';
 
 export async function PUT(
   request: NextRequest,
@@ -9,14 +11,13 @@ export async function PUT(
   try {
     const { user, error } = await requireAuth();
     if (error) return error;
-    
+
     const projectId = params.id;
-    const body = await request.json();
-    const { data } = body;
-    
-    if (!data) {
-      return ApiErrors.badRequest('Project data is required');
-    }
+    const raw = await request.json();
+    const parsed = projectDataSchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
+
+    const { data } = parsed.data;
     
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -31,7 +32,7 @@ export async function PUT(
     
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
-      data: { data },
+      data: { data: data as Prisma.InputJsonValue },
     });
     
     return NextResponse.json({ success: true, updatedAt: updatedProject.updatedAt });

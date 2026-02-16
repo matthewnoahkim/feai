@@ -36,22 +36,26 @@ feai/
 ├── .env                          # Environment variables (root)
 ├── package.json                  # Root workspace config
 ├── packages/
-│   ├── shared/                   # Shared TypeScript types
-│   ├── kernel/                   # CAD kernel logic
-│   ├── frontend/                 # React application
+│   ├── shared/                   # Shared TypeScript types (document, fea, geometry, etc.)
+│   ├── kernel/                   # CAD kernel (modeling, sketch, fea, io, geometry, math)
+│   ├── frontend/                 # Next.js app (Vercel / standalone)
 │   │   ├── src/
-│   │   │   ├── pages/           # Route pages
-│   │   │   ├── components/      # Reusable components
-│   │   │   ├── store/           # Zustand state management
-│   │   │   └── App.tsx          # Main app component
-│   │   └── dist/                # Built frontend (served by backend)
-│   └── backend/                  # Express server
-│       ├── src/
-│       │   ├── routes/          # API routes
-│       │   ├── db/              # Prisma client
-│       │   └── index.ts         # Server entry point
-│       └── prisma/
-│           └── schema.prisma    # Database schema
+│   │   │   ├── app/              # Next.js App Router (routes, layouts, api/)
+│   │   │   ├── components/       # UI (dialogs/, chat/, fea/, editor/, landing/)
+│   │   │   ├── api/              # API client for backend + barrel (index)
+│   │   │   ├── lib/              # Auth (config, helpers), prisma, fea-solver
+│   │   │   ├── store/            # Zustand (document, project, fea, chat, schematic, ui, workflow)
+│   │   │   ├── services/          # chatService, cadExecutor
+│   │   │   ├── hooks/            # useChatAssistant
+│   │   │   ├── utils/            # measurement-utils, fea-utils
+│   │   │   ├── styles/           # globals.css
+│   │   │   └── types/            # next-auth.d.ts
+│   │   └── prisma/               # Schema (when frontend owns DB)
+│   └── backend/                  # Express server (optional; FEA mesh also in Next.js api/)
+│       └── src/
+│           ├── routes/           # documents, parts, sketches, fea, analysis, etc.
+│           ├── db/               # DB access
+│           └── store.ts          # In-memory store
 ```
 
 ## Tech Stack

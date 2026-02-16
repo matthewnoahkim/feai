@@ -3,6 +3,7 @@
  */
 
 import { Router } from 'express';
+import { meshBodySchema, runSimulationSchema, validationErrorResponse } from '../schemas';
 import { execFile, spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -323,14 +324,10 @@ feaRouter.post('/mesh', async (req, res) => {
  */
 feaRouter.post('/run', async (req, res) => {
   try {
-    const { setup, partStudioId } = req.body;
+    const parsed = runSimulationSchema.safeParse(req.body);
+    if (!parsed.success) return validationErrorResponse(res, parsed.error);
 
-    if (!setup || !partStudioId) {
-      return res.status(400).json({
-        success: false,
-        error: { code: 'INVALID_REQUEST', message: 'setup and partStudioId are required' }
-      });
-    }
+    const { setup, partStudioId } = parsed.data;
 
     // Create job
     const jobId = `fea-${Date.now()}-${Math.random().toString(36).substring(7)}`;

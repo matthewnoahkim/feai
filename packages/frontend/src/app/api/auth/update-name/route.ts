@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, ApiErrors } from '@/lib/auth-helpers';
+import { requireAuth, ApiErrors } from '@/lib/auth';
+import { updateNameSchema, validationErrorResponse } from '@/schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const { user, error } = await requireAuth();
     if (error) return error;
 
-    const { name } = await request.json();
+    const raw = await request.json();
+    const parsed = updateNameSchema.safeParse(raw);
+    if (!parsed.success) return validationErrorResponse(parsed.error);
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return ApiErrors.badRequest('Name is required');
-    }
+    const { name } = parsed.data;
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: { name: name.trim() },
+      data: { name },
       select: {
         id: true,
         name: true,
