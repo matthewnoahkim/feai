@@ -434,9 +434,16 @@ export const useWorkflowStore = create<WorkflowState>()(
     {
       name: 'feai-workflow-storage',
       partialize: (state) => ({
+        projectId: state.projectId,
         materials: state.materials,
         defaultMaterialId: state.defaultMaterialId,
         meshSettings: state.meshSettings,
+        meshData: state.meshData,
+        geometryReady: state.geometryReady,
+        stepStatus: state.stepStatus,
+        boundaryConditions: state.boundaryConditions,
+        loads: state.loads,
+        analysisResults: state.analysisResults,
       }),
     }
   )

@@ -14,6 +14,7 @@ import {
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
+import { useSchematicStore } from '@/store/schematicStore';
 import { apiClient } from '@/api/client';
 
 // Dynamically import 3D viewport for mesh preview
@@ -48,6 +49,7 @@ export default function MeshPage() {
 
   const { fetchProject, currentProject } = useProjectStore();
   const { document, loadDocumentFromData } = useDocumentStore();
+  const { getNodesByType, markNodeComplete } = useSchematicStore();
   
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -129,6 +131,8 @@ export default function MeshPage() {
         nodes: response.mesh.nodes,
         elements: response.mesh.elements,
       });
+      updateStepStatus('mesh', 'complete');
+      getNodesByType('mesh').forEach((n) => markNodeComplete(n.id));
 
     } catch (error: any) {
       console.error('[Mesh] Generation failed:', error);
@@ -136,7 +140,7 @@ export default function MeshPage() {
     } finally {
       setMeshing(false);
     }
-  }, [document, meshSettings, setMeshData, setMeshing, setMeshError]);
+  }, [document, meshSettings, setMeshData, setMeshing, setMeshError, updateStepStatus, getNodesByType, markNodeComplete]);
 
   const clearMesh = () => {
     setMeshData(null);

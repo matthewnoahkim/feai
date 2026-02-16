@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useSchematicStore, NodeType, SchematicNode, Connection } from '@/store/schematicStore';
 import { useProjectStore } from '@/store/projectStore';
+import { useWorkflowStore } from '@/store/workflowStore';
 
 // Node dimensions
 const NODE_WIDTH = 160;
@@ -467,9 +468,13 @@ export default function SchematicPage() {
     startDrag,
     endDrag,
     setLastSaved,
+    updateNode,
   } = useSchematicStore();
   
   const { fetchProject, updateProject } = useProjectStore();
+  const stepStatus = useWorkflowStore((s) => s.stepStatus);
+  const geometryReady = useWorkflowStore((s) => s.geometryReady);
+  const meshData = useWorkflowStore((s) => s.meshData);
 
   // Load project on mount
   useEffect(() => {
@@ -484,6 +489,19 @@ export default function SchematicPage() {
       });
     }
   }, [projectId, setProject, fetchProject, setProjectName]);
+
+  // Sync schematic node checkmarks from workflow state (geometry ready, mesh complete, etc.)
+  useEffect(() => {
+    nodes.forEach((node) => {
+      const workflowComplete =
+        (node.type === 'geometry' && geometryReady) ||
+        (node.type === 'mesh' && !!meshData) ||
+        (node.type !== 'geometry' && node.type !== 'mesh' && stepStatus[node.type] === 'complete');
+      if (workflowComplete && node.status !== 'complete') {
+        updateNode(node.id, { status: 'complete' });
+      }
+    });
+  }, [nodes, stepStatus, geometryReady, meshData, updateNode]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

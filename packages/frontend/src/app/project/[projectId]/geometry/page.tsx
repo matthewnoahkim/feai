@@ -63,6 +63,7 @@ function GeometryEditorContent() {
   
   const { fetchProject, currentProject, saveProjectData } = useProjectStore();
   const { document, createNewDocument, loadDocumentFromData } = useDocumentStore();
+  const { getNodesByType, markNodeComplete } = useSchematicStore();
   const { 
     activeMode, 
     sketchMode, 
@@ -96,14 +97,18 @@ function GeometryEditorContent() {
     });
   }, [projectId]);
 
-  // Check if geometry has parts
+  // Check if geometry has parts; sync schematic checkmarks when ready
   useEffect(() => {
     if (document) {
       const activePartStudio = document.partStudios.find(ps => ps.id === document.activeElementId);
       const hasParts = !!(activePartStudio?.parts && activePartStudio.parts.length > 0);
       setGeometryReady(hasParts);
+      if (hasParts) {
+        updateStepStatus('geometry', 'complete');
+        getNodesByType('geometry').forEach((n) => markNodeComplete(n.id));
+      }
     }
-  }, [document, setGeometryReady]);
+  }, [document, setGeometryReady, updateStepStatus, getNodesByType, markNodeComplete]);
 
   // Auto-save
   useEffect(() => {

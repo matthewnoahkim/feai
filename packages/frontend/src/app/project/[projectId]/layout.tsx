@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useWorkflowStore } from '@/store/workflowStore';
 
 export default function ProjectLayout({
   children,
@@ -11,6 +12,15 @@ export default function ProjectLayout({
 }) {
   const { status } = useSession();
   const router = useRouter();
+  const params = useParams();
+  const projectId = params?.projectId as string | undefined;
+  const setProject = useWorkflowStore((s) => s.setProject);
+
+  useEffect(() => {
+    if (projectId) {
+      setProject(projectId);
+    }
+  }, [projectId, setProject]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
