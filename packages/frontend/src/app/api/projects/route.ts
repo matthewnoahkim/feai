@@ -40,6 +40,11 @@ export async function POST(request: NextRequest) {
     const parsed = createProjectSchema.safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
 
+    const projectCount = await prisma.project.count({ where: { userId: user.id } });
+    if (projectCount >= 100) {
+      return ApiErrors.badRequest('Maximum number of projects (100) reached.');
+    }
+
     const { name, description } = parsed.data;
 
     const project = await prisma.project.create({

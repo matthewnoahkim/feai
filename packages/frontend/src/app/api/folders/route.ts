@@ -35,6 +35,11 @@ export async function POST(request: NextRequest) {
     const parsed = createFolderSchema.safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
 
+    const folderCount = await prisma.folder.count({ where: { userId: user.id } });
+    if (folderCount >= 10) {
+      return ApiErrors.badRequest('Maximum number of folders (10) reached.');
+    }
+
     const { name } = parsed.data;
 
     const folder = await prisma.folder.create({
