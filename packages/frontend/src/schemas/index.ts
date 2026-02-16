@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 export * from './fea';
 export * from './projects';
+export * from './folders';
 export * from './auth';
 export * from './env';
 

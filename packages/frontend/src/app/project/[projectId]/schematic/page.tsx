@@ -768,7 +768,7 @@ export default function SchematicPage() {
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2"
+            className="logo-link flex items-center gap-2 no-underline"
           >
             <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
               <span className="text-white font-serif font-bold text-sm">F</span>

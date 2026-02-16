@@ -11,6 +11,8 @@ export const updateProjectSchema = z.object({
   name: nameString.optional(),
   description: z.string().max(2000).optional().nullable().transform((s) => s === '' ? null : s?.trim()),
   thumbnail: z.string().optional(),
+  folderId: z.string().nullable().optional(),
+  lastOpenedAt: z.union([z.string().datetime(), z.date()]).optional().transform((v) => (v ? new Date(v) : undefined)),
 }).strict();
 
 /** Project document data (schematic, geometry, etc.) – allow any JSON object */

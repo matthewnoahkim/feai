@@ -44,7 +44,7 @@ export async function PATCH(
     const parsed = updateProjectSchema.safeParse(raw);
     if (!parsed.success) return validationErrorResponse(parsed.error);
 
-    const { name, description, thumbnail } = parsed.data;
+    const { name, description, thumbnail, folderId, lastOpenedAt } = parsed.data;
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
@@ -62,9 +62,12 @@ export async function PATCH(
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
         ...(thumbnail !== undefined && { thumbnail }),
+        ...(folderId !== undefined && { folderId }),
+        ...(lastOpenedAt !== undefined && { lastOpenedAt }),
       },
+      include: { folder: { select: { id: true, name: true } } },
     });
-    
+
     return NextResponse.json(updatedProject);
   } catch (error) {
     console.error('Update project error:', error);

@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
         thumbnail: true,
         createdAt: true,
         updatedAt: true,
+        lastOpenedAt: true,
+        folderId: true,
+        folder: { select: { id: true, name: true } },
       },
     });
 
