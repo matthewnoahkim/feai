@@ -45,13 +45,23 @@ export async function POST(request: NextRequest) {
       return ApiErrors.badRequest('Maximum number of projects (100) reached.');
     }
 
-    const { name, description } = parsed.data;
+    const { name, description, folderId } = parsed.data;
+
+    if (folderId != null) {
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
+      });
+      if (!folder || folder.userId !== user.id) {
+        return ApiErrors.badRequest('Folder not found or access denied.');
+      }
+    }
 
     const project = await prisma.project.create({
       data: {
         name,
         description,
         userId: user.id,
+        folderId: folderId ?? undefined,
       },
     });
 

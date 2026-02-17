@@ -51,7 +51,10 @@ export async function DELETE(
     if (!folder) return ApiErrors.notFound('Folder');
     if (folder.userId !== user.id) return ApiErrors.forbidden();
 
-    await prisma.folder.delete({ where: { id: folderId } });
+    await prisma.$transaction([
+      prisma.project.deleteMany({ where: { folderId } }),
+      prisma.folder.delete({ where: { id: folderId } }),
+    ]);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete folder error:', error);

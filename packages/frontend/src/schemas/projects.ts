@@ -5,6 +5,7 @@ const nameString = z.string().min(1, 'Name is required').max(500).transform((s) 
 export const createProjectSchema = z.object({
   name: nameString,
   description: z.string().max(2000).optional().transform((s) => s?.trim() ?? undefined),
+  folderId: z.string().nullable().optional(),
 }).strict();
 
 export const updateProjectSchema = z.object({

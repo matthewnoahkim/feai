@@ -10,10 +10,11 @@ export async function GET(request: NextRequest) {
 
     const folders = await prisma.folder.findMany({
       where: { userId: user.id },
-      orderBy: { name: 'asc' },
+      orderBy: [{ order: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
         name: true,
+        order: true,
         createdAt: true,
         _count: { select: { projects: true } },
       },
@@ -42,8 +43,15 @@ export async function POST(request: NextRequest) {
 
     const { name } = parsed.data;
 
+    const maxOrder = await prisma.folder
+      .aggregate({
+        where: { userId: user.id },
+        _max: { order: true },
+      })
+      .then((r) => r._max.order ?? -1);
+
     const folder = await prisma.folder.create({
-      data: { name, userId: user.id },
+      data: { name, userId: user.id, order: maxOrder + 1 },
     });
 
     return NextResponse.json(folder, { status: 201 });

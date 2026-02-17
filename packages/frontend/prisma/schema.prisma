@@ -76,6 +76,7 @@ model VerificationToken {
 model Folder {
   id        String    @id @default(cuid())
   name      String
+  order     Int       @default(0)
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
