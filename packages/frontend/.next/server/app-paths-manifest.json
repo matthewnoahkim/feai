@@ -1,9 +1,4 @@
 {
-  "/dashboard/page": "app/dashboard/page.js",
-  "/api/projects/route": "app/api/projects/route.js",
-  "/page": "app/page.js",
-  "/api/folders/route": "app/api/folders/route.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/projects/[id]/route": "app/api/projects/[id]/route.js",
-  "/project/[projectId]/schematic/page": "app/project/[projectId]/schematic/page.js"
+  "/api/projects/[id]/export/route": "app/api/projects/[id]/export/route.js"
 }

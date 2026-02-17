@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, ChevronDown, LogOut, FolderOpen, Calendar, Edit3, Pencil, Search, LayoutList, PanelRightClose, PanelRight } from 'lucide-react';
+import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, ChevronDown, LogOut, FolderOpen, Calendar, Edit3, Pencil, Search, LayoutList, PanelRightClose, PanelRight, Download, Upload } from 'lucide-react';
 
 interface FolderType {
   id: string;
@@ -62,6 +62,9 @@ export default function DashboardClient() {
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null);
   const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'project'; id: string; name: string } | { type: 'folder'; id: string; name: string; projectCount: number } | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -329,6 +332,60 @@ export default function DashboardClient() {
     setDeleteConfirm(null);
   };
 
+  const handleExportProject = async (projectId: string, projectName: string) => {
+    setOpenMenuId(null);
+    setMenuAnchor(null);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/export`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        alert(err?.error?.message || 'Export failed.');
+        return;
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition');
+      const match = disposition?.match(/filename="?([^";\n]+)"?/);
+      const filename = match ? decodeURIComponent(match[1].trim()) : `${projectName.replace(/[^\w\s-]/g, '').trim() || 'project'}.feai`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.name.toLowerCase().endsWith('.feai')) return;
+    e.target.value = '';
+    setImportError(null);
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/projects/import', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        await fetchProjects();
+        router.push(`/project/${data.id}/schematic`);
+      } else {
+        setImportError(data?.error?.message || 'Import failed.');
+      }
+    } catch (error) {
+      console.error('Import failed:', error);
+      setImportError('Import failed. Please try again.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const handleRenameProject = async () => {
     if (!editingProject || !newProjectName.trim()) return;
 
@@ -366,6 +423,16 @@ export default function DashboardClient() {
       year: 'numeric',
     });
   };
+
+  // Import loading overlay
+  if (importLoading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="w-12 h-12 border-2 border-cad-accent border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-cad-text font-sans">Importing project...</p>
+      </div>
+    );
+  }
 
   // Show loading state while checking auth
   if (status === 'loading') {
@@ -448,6 +515,13 @@ export default function DashboardClient() {
 
       {/* File Explorer–style layout */}
       <main className="flex-1 flex flex-col min-h-0" style={{ background: '#f1f5f9' }}>
+        {/* Import error banner */}
+        {importError && (
+          <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-sm text-red-800 flex items-center justify-between">
+            <span>{importError}</span>
+            <button onClick={() => setImportError(null)} className="text-red-600 hover:underline">Dismiss</button>
+          </div>
+        )}
         {/* Toolbar: + New and search left-aligned, Sort and Details right-aligned */}
         <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0">
           <div className="relative">
@@ -479,6 +553,21 @@ export default function DashboardClient() {
                     <LayoutList className="w-4 h-4" />
                     New project
                   </button>
+                  <button
+                    onClick={() => { importFileInputRef.current?.click(); setShowNewDropdown(false); }}
+                    disabled={importLoading || projects.length >= 100}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import .feai
+                  </button>
+                  <input
+                    ref={importFileInputRef}
+                    type="file"
+                    accept=".feai"
+                    className="hidden"
+                    onChange={handleImportFile}
+                  />
                 </div>
               </>
             )}
@@ -772,6 +861,13 @@ export default function DashboardClient() {
                         Edit
                       </button>
                       <button
+                        onClick={() => handleExportProject(selectedProject.id, selectedProject.name)}
+                        className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export .feai
+                      </button>
+                      <button
                         onClick={() => setDeleteConfirm({ type: 'project', id: selectedProject.id, name: selectedProject.name })}
                         className="px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded hover:bg-red-50"
                       >
@@ -835,34 +931,41 @@ export default function DashboardClient() {
                 <Edit2 className="w-4 h-4" />
                 Edit
               </button>
-              <button
-                onClick={(e) => {
-                  if (showMoveToMenuId === project.id) {
-                    setShowMoveToMenuId(null);
-                    setMoveToMenuAnchor(null);
-                  } else {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setMoveToMenuAnchor({ left: rect.left, top: rect.bottom });
-                    setShowMoveToMenuId(project.id);
-                  }
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-              >
-                <FolderOpen className="w-4 h-4" />
-                Move to folder
-                <ChevronDown className="w-3 h-3 ml-auto" />
-              </button>
-              <button
-                onClick={() => {
-                  setOpenMenuId(null);
-                  setMenuAnchor(null);
-                  setDeleteConfirm({ type: 'project', id: project.id, name: project.name });
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
+                  <button
+                    onClick={(e) => {
+                      if (showMoveToMenuId === project.id) {
+                        setShowMoveToMenuId(null);
+                        setMoveToMenuAnchor(null);
+                      } else {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMoveToMenuAnchor({ left: rect.left, top: rect.bottom });
+                        setShowMoveToMenuId(project.id);
+                      }
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Move to folder
+                    <ChevronDown className="w-3 h-3 ml-auto" />
+                  </button>
+                  <button
+                    onClick={() => handleExportProject(project.id, project.name)}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export .feai
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      setMenuAnchor(null);
+                      setDeleteConfirm({ type: 'project', id: project.id, name: project.name });
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
             </div>
           </>,
           document.body

@@ -77,6 +77,25 @@ feai/
 - Google OAuth 2.0
 - JWT authentication
 
+## .feai project export/import
+
+Projects can be exported as encrypted `.feai` files and re-imported on the same or another account.
+
+**Required environment variables** (for export/import to work):
+
+- `FEAI_EXPORT_SECRET` – Server secret for key derivation (min 32 characters). Used with HKDF-SHA256 + `user_id` to derive the AES-256 key.
+- `FEAI_SIGNING_PRIVATE_KEY` – Ed25519 private key (base64, PKCS8 DER).
+- `FEAI_SIGNING_PUBLIC_KEY` – Ed25519 public key (base64, SPKI DER).
+
+Generate a signing key pair: use `generateSigningKeyPair()` from `@/lib/feai` (e.g. in a one-off script or Node REPL with ts-node). It returns `{ privateKeyBase64, publicKeyBase64 }`; set those in `.env` as `FEAI_SIGNING_PRIVATE_KEY` and `FEAI_SIGNING_PUBLIC_KEY`.
+
+**Endpoints:**
+
+- `GET /api/projects/:id/export` – Download project as `application/x-feai` (encrypted, signed).
+- `POST /api/projects/import` – Upload a `.feai` file (multipart form field `file`); returns the new project and redirect to it.
+
+**Format:** `.feai` = AES-256-GCM encrypted ZIP (IV + ciphertext + auth tag). ZIP contains `manifest.json`, `geometry.json`, `model/architecture.json`, `model/weights.bin`, `dataset.json`, `simulation.json`, `metadata.json`, and `signature.sig` (Ed25519 over SHA-256 of ZIP before adding signature).
+
 ## Deploying to Vercel (monorepo)
 
 **Root Directory must be `packages/frontend`** for OAuth (and all Next.js API routes) to work. When Root Directory is the repo root, Vercel treats the repo root as the app root; your Next.js app and its `/api/auth/*` routes live in `packages/frontend`, so those routes are not registered and return 404. With Root Directory = `packages/frontend`, the deployment root is the Next.js app, so `/api/auth/callback/google` and other API routes are served correctly.
