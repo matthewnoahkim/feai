@@ -46,6 +46,11 @@ export const authOptions: NextAuthOptions = {
       if (url === loginPath || url.startsWith(loginPath + '?')) {
         return baseUrl + '/dashboard';
       }
+      // After sign-in, send users to dashboard instead of homepage when callback was root
+      const root = baseUrl.replace(/\/$/, '');
+      if (url === root || url === root + '/' || url === '/' || url.startsWith('/?')) {
+        return root + '/dashboard';
+      }
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
 

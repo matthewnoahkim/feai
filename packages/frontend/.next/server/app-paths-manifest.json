@@ -1,7 +1,4 @@
 {
   "/dashboard/page": "app/dashboard/page.js",
-  "/api/folders/[id]/route": "app/api/folders/[id]/route.js",
-  "/api/folders/route": "app/api/folders/route.js",
-  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/projects/route": "app/api/projects/route.js"
+  "/page": "app/page.js"
 }

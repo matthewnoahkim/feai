@@ -10,7 +10,9 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard';
   const callbackUrl =
-    !rawCallback || rawCallback === '/login' ? '/dashboard' : rawCallback;
+    !rawCallback || rawCallback === '/login' || rawCallback === '/' || rawCallback.startsWith('/?')
+      ? '/dashboard'
+      : rawCallback;
   const error = searchParams.get('error');
 
   useEffect(() => {
