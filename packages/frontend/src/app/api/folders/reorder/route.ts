@@ -15,10 +15,7 @@ export async function PATCH(request: NextRequest) {
     const raw = await request.json();
     const parsed = reorderSchema.safeParse(raw);
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: { code: 'BAD_REQUEST', message: parsed.error.flatten().message } },
-        { status: 400 }
-      );
+      return ApiErrors.badRequest(parsed.error.message ?? 'Invalid request');
     }
 
     const { folderIds } = parsed.data;
