@@ -37,14 +37,24 @@ const VALID_CONNECTIONS: Record<NodeType, NodeType[]> = {
 // Define which node types can have multiple instances
 const MULTI_INSTANCE_TYPES: NodeType[] = ['geometry', 'mesh', 'setup', 'results'];
 
+/** Per-project schematic data (nodes, connections, name) */
+export interface ProjectSchematicData {
+  nodes: SchematicNode[];
+  connections: Connection[];
+  projectName: string;
+}
+
 interface SchematicState {
   // Project info
   projectId: string | null;
   projectName: string;
   
-  // Nodes and connections
+  // Nodes and connections (current project only)
   nodes: SchematicNode[];
   connections: Connection[];
+
+  // Per-project cache: projectId -> schematic data (used for switching projects)
+  schematicsByProject: Record<string, ProjectSchematicData>;
   
   // Selection state
   selectedNodeId: string | null;
@@ -102,21 +112,37 @@ export const useSchematicStore = create<SchematicState>()(
       projectName: 'Untitled Project',
       nodes: [],
       connections: [],
+      schematicsByProject: {},
       selectedNodeId: null,
       draggingNodeType: null,
       dragPosition: null,
       lastSaved: null,
 
       setProject: (projectId, name) => {
-        const current = get().projectId;
-        if (current !== projectId) {
-          // Load saved state for this project or reset
-          set({
-            projectId,
-            projectName: name || 'Untitled Project',
-            selectedNodeId: null,
-          });
+        const { projectId: currentId, nodes, connections, projectName, schematicsByProject } = get();
+        if (currentId === projectId) return;
+
+        // Save current project's schematic into the per-project cache
+        const updatedMap = { ...schematicsByProject };
+        if (currentId) {
+          updatedMap[currentId] = { nodes: [...nodes], connections: [...connections], projectName };
         }
+
+        // Load the target project's schematic (or empty)
+        const targetData = updatedMap[projectId] ?? {
+          nodes: [],
+          connections: [],
+          projectName: name || 'Untitled Project',
+        };
+
+        set({
+          projectId,
+          projectName: targetData.projectName,
+          nodes: targetData.nodes.map((n) => ({ ...n })),
+          connections: targetData.connections.map((c) => ({ ...c })),
+          schematicsByProject: updatedMap,
+          selectedNodeId: null,
+        });
       },
 
       setProjectName: (name) => set({ projectName: name }),
@@ -303,12 +329,32 @@ export const useSchematicStore = create<SchematicState>()(
     }),
     {
       name: 'feai-schematic-storage',
-      partialize: (state) => ({
-        // Persist per-project data
-        nodes: state.nodes,
-        connections: state.connections,
-        projectName: state.projectName,
-      }),
+      partialize: (state) => {
+        // Persist per-project schematics; include current project's data in the map
+        const map = { ...state.schematicsByProject };
+        if (state.projectId) {
+          map[state.projectId] = {
+            nodes: state.nodes,
+            connections: state.connections,
+            projectName: state.projectName,
+          };
+        }
+        return { projectId: state.projectId, schematicsByProject: map };
+      },
+      merge: (persisted, current) => {
+        const p = persisted as { projectId?: string | null; schematicsByProject?: Record<string, ProjectSchematicData> };
+        const map = p.schematicsByProject ?? {};
+        const projectId = p.projectId ?? null;
+        const data = projectId ? map[projectId] : undefined;
+        return {
+          ...current,
+          projectId,
+          schematicsByProject: map,
+          nodes: data?.nodes ?? [],
+          connections: data?.connections ?? [],
+          projectName: data?.projectName ?? 'Untitled Project',
+        };
+      },
     }
   )
 );

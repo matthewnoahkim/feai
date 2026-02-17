@@ -1,14 +1,9 @@
 {
   "pages": {
-    "/project/[projectId]/schematic/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/project/[projectId]/schematic/page.js"
-    ],
-    "/project/[projectId]/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/project/[projectId]/layout.js"
+      "static/chunks/app/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -26,10 +21,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
-    "/project/[projectId]/geometry/page": [
+    "/project/[projectId]/schematic/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/project/[projectId]/geometry/page.js"
+      "static/chunks/app/project/[projectId]/schematic/page.js"
+    ],
+    "/project/[projectId]/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/project/[projectId]/layout.js"
     ]
   }
 }
