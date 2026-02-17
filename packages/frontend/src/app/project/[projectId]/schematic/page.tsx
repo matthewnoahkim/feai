@@ -917,7 +917,6 @@ export default function SchematicPage() {
             {nodes.length === 0 && !dragPreview && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center text-gray-400">
-                  <Box className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-sans">Drag components from the toolbox</p>
                   <p className="text-sm font-sans mt-1">to build your analysis workflow</p>
                   <p className="text-sm font-sans mt-4 text-gray-500">

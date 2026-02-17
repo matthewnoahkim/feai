@@ -192,8 +192,7 @@ export default function DashboardClient() {
         setShowNewProjectModal(false);
         setNewProjectName('');
         setNewProjectDescription('');
-        // Navigate to the new project's schematic page
-        router.push(`/project/${project.id}/schematic`);
+        window.open(`/project/${project.id}/schematic`, '_blank');
       } else if (response.status === 401) {
         // Session expired, redirect to login
         alert('Your session has expired. Please sign in again.');
@@ -221,7 +220,7 @@ export default function DashboardClient() {
         )
       );
     } catch (_) {}
-    router.push(`/project/${projectId}/schematic`);
+    window.open(`/project/${projectId}/schematic`, '_blank');
   };
 
   const handleMoveToFolder = async (projectId: string, folderId: string | null) => {
