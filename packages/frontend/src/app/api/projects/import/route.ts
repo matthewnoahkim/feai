@@ -94,10 +94,12 @@ export async function POST(request: NextRequest) {
 
     // Build project.data as a Document (loadDocumentFromData expects partStudios, assemblies, activeElementId)
     // plus model, dataset, simulation so the app can use the imported project seamlessly.
+    const { name: metadataName, ...restMetadata } = migratedPayload.metadata;
     const projectData = {
       ...geom,
+      ...restMetadata,
       id: typeof geom.id === 'string' ? geom.id : `doc-${Date.now()}`,
-      name: migratedPayload.metadata.name.trim(),
+      name: metadataName.trim(),
       partStudios,
       assemblies,
       activeElementId: geom.activeElementId == null ? null : geom.activeElementId,
@@ -107,7 +109,6 @@ export async function POST(request: NextRequest) {
       },
       dataset: migratedPayload.dataset,
       simulation: migratedPayload.simulation,
-      ...migratedPayload.metadata,
     } as Prisma.InputJsonValue;
 
     const project = await prisma.project.create({
