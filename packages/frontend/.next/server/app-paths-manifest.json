@@ -1,4 +1,8 @@
 {
+  "/page": "app/page.js",
+  "/products/page": "app/products/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/support/page": "app/support/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
-  "/api/projects/[id]/export/route": "app/api/projects/[id]/export/route.js"
+  "/about/page": "app/about/page.js"
 }

@@ -88,15 +88,26 @@ export async function POST(request: NextRequest) {
       return ApiErrors.badRequest('Manifest or metadata missing project name.');
     }
 
+    const geom = migratedPayload.geometry && typeof migratedPayload.geometry === 'object' ? (migratedPayload.geometry as Record<string, unknown>) : {};
+    const partStudios = Array.isArray(geom.partStudios) ? geom.partStudios : [];
+    const assemblies = Array.isArray(geom.assemblies) ? geom.assemblies : [];
+
+    // Build project.data as a Document (loadDocumentFromData expects partStudios, assemblies, activeElementId)
+    // plus model, dataset, simulation so the app can use the imported project seamlessly.
     const projectData = {
-      geometry: migratedPayload.geometry,
+      ...geom,
+      id: typeof geom.id === 'string' ? geom.id : `doc-${Date.now()}`,
+      name: migratedPayload.metadata.name.trim(),
+      partStudios,
+      assemblies,
+      activeElementId: geom.activeElementId == null ? null : geom.activeElementId,
       model: {
         architecture: migratedPayload.model.architecture,
         weights: Array.from(migratedPayload.model.weights),
       },
       dataset: migratedPayload.dataset,
       simulation: migratedPayload.simulation,
-      metadata: migratedPayload.metadata,
+      ...migratedPayload.metadata,
     } as Prisma.InputJsonValue;
 
     const project = await prisma.project.create({

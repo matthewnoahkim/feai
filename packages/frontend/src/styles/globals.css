@@ -95,9 +95,11 @@
   color: var(--public-accent-hover);
 }
 
-/* Top-left logo link/button: never underline */
+/* Top-left logo link/button: never underline (override .public-theme a) */
 .logo-link,
-.logo-link:hover {
+.logo-link:hover,
+.public-theme .logo-link,
+.public-theme a.logo-link {
   text-decoration: none !important;
 }
 

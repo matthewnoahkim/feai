@@ -49,7 +49,8 @@ export function buildSignedZip(params: {
     hash_algorithm: HASH_ALGORITHM,
   };
 
-  const geometry = data.geometry ?? {};
+  // App may store project.data as the document (partStudios, etc.) or as { geometry, model, ... }
+  const geometry = data.geometry ?? (data.partStudios != null ? data : {});
   const modelArch = (data.model as { architecture?: unknown } | undefined)?.architecture ?? {};
   const modelWeights = (data.model as { weights?: Buffer | number[] } | undefined)?.weights;
   const weightsBuf = modelWeights instanceof Buffer

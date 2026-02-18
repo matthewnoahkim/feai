@@ -372,16 +372,16 @@ export default function DashboardClient() {
         body: formData,
       });
       const data = await response.json().catch(() => ({}));
-      if (response.ok) {
+      if (response.ok && data?.id) {
         await fetchProjects();
-        router.push(`/project/${data.id}/schematic`);
+        router.replace(`/project/${data.id}/schematic`);
       } else {
-        setImportError(data?.error?.message || 'Import failed.');
+        setImportError(data?.error?.message || 'Import failed. Try again or use a valid .feai file.');
+        setImportLoading(false);
       }
     } catch (error) {
       console.error('Import failed:', error);
       setImportError('Import failed. Please try again.');
-    } finally {
       setImportLoading(false);
     }
   };
