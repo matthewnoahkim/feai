@@ -94,7 +94,7 @@ export default function TermsPage() {
               </h2>
               <p>
                 For questions about these terms, please contact us at{' '}
-                <a href="mailto:finite.element.ai@gmail.com">finite.element.ai@gmail.com</a>.
+                <a href="mailto:matthew@feai.app">matthew@feai.app</a>.
               </p>
             </section>
           </div>

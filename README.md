@@ -113,4 +113,4 @@ MIT License - Open source under MIT license.
 
 ## Contributing
 
-Contributions welcome! Please contact finite.element.ai@gmail.com.
+Contributions welcome! Please contact matthew@feai.app.

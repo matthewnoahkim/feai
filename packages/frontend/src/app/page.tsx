@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export default function HomePage() {
   return (
     <div className="public-theme">
-      <div className="min-h-screen relative" style={{ background: 'white', color: '#1a4d8f' }}>
+      <div className="min-h-screen relative flex flex-col" style={{ background: 'white', color: '#1a4d8f' }}>
         <div 
           className="fixed inset-0 pointer-events-none"
           style={{
@@ -34,7 +34,7 @@ export default function HomePage() {
         </nav>
 
         {/* Hero Section */}
-        <section className="px-8 py-24 relative">
+        <section className="flex-1 px-8 py-24 relative flex flex-col justify-center">
           <div className="max-w-4xl mx-auto text-center relative z-10">
             <div 
               className="inline-block mb-6 px-4 py-2"
@@ -89,7 +89,7 @@ export default function HomePage() {
               
               <div className="flex items-center gap-6" style={{ fontSize: '0.875rem' }}>
                 <a 
-                  href="mailto:finite.element.ai@gmail.com"
+                  href="mailto:matthew@feai.app"
                   style={{ color: '#1a4d8f', textDecoration: 'none', opacity: 0.7 }}
                 >
                   Contact

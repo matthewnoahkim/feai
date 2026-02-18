@@ -106,7 +106,7 @@ export default function PrivacyPage() {
               <p>
                 If you have questions about this privacy policy or our data practices, 
                 please contact us at{' '}
-                <a href="mailto:finite.element.ai@gmail.com">finite.element.ai@gmail.com</a>.
+                <a href="mailto:matthew@feai.app">matthew@feai.app</a>.
               </p>
             </section>
           </div>
