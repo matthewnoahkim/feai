@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import HomeClient from '@/components/landing/HomeClient';
+import { Logo } from '@/components/Logo';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,9 +21,7 @@ export default function HomePage() {
         {/* Navigation */}
         <nav className="flex items-center justify-between px-8 py-6 relative z-10" style={{ borderBottom: '1px solid #1a4d8f', background: 'white' }}>
           <Link href="/" className="logo-link flex items-center gap-2 no-underline" style={{ textDecoration: 'none' }}>
-            <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
-              <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
-            </div>
+            <Logo size="md" />
             <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
           <div className="flex items-center gap-8" style={{ fontSize: '0.9375rem' }}>
@@ -81,9 +80,7 @@ export default function HomePage() {
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
-                  <span style={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>F</span>
-                </div>
+                <Logo size="sm" />
                 <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>FEAI</span>
               </div>
               

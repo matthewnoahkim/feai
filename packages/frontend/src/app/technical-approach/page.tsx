@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 // Force dynamic rendering to prevent SSR issues
 export const dynamic = 'force-dynamic';
@@ -10,9 +11,7 @@ export default function TechnicalApproachPage() {
         {/* Navigation */}
         <nav className="flex items-center justify-between px-8 py-6" style={{ borderBottom: '1px solid #1a4d8f' }}>
           <Link href="/" className="logo-link flex items-center gap-2 no-underline">
-            <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#1a4d8f' }}>
-              <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
-            </div>
+            <Logo size="md" />
             <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
         </nav>

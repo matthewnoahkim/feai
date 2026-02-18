@@ -1,6 +1,7 @@
 'use client';
 
 import { signIn, useSession } from 'next-auth/react';
+import { Logo } from '@/components/Logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, Suspense } from 'react';
 
@@ -52,12 +53,7 @@ function LoginContent() {
         style={{ borderBottom: '1px solid #1a4d8f', background: 'white' }}
       >
         <a href="/" className="logo-link flex items-center gap-2 no-underline">
-          <div 
-            className="w-8 h-8 flex items-center justify-center"
-            style={{ background: '#1a4d8f' }}
-          >
-            <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
-          </div>
+          <Logo size="md" />
           <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
         </a>
       </nav>

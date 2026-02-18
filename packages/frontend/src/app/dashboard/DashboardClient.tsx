@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, ChevronDown, LogOut, FolderOpen, Calendar, Edit3, Pencil, Search, LayoutList, PanelRightClose, PanelRight, Download, Upload } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 interface FolderType {
   id: string;
@@ -460,12 +461,7 @@ export default function DashboardClient() {
       >
         <div className="flex items-center gap-3">
           <Link href="/" className="logo-link flex items-center gap-2 no-underline">
-            <div
-              className="w-8 h-8 flex items-center justify-center"
-              style={{ background: '#1a4d8f' }}
-            >
-              <span style={{ color: 'white', fontWeight: 600, fontSize: '0.875rem' }}>F</span>
-            </div>
+            <Logo size="md" />
             <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
         </div>

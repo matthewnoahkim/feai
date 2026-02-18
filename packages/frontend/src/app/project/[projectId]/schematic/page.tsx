@@ -19,6 +19,7 @@ import {
   GripVertical
 } from 'lucide-react';
 import { useSchematicStore, NodeType, SchematicNode, Connection } from '@/store/schematicStore';
+import { Logo } from '@/components/Logo';
 import { useProjectStore } from '@/store/projectStore';
 import { useWorkflowStore } from '@/store/workflowStore';
 
@@ -770,9 +771,7 @@ export default function SchematicPage() {
             href="/dashboard"
             className="logo-link flex items-center gap-2 no-underline"
           >
-            <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-              <span className="text-white font-serif font-bold text-sm">F</span>
-            </div>
+            <Logo size="md" />
           </Link>
           
           <div className="w-px h-6 bg-gray-300" />

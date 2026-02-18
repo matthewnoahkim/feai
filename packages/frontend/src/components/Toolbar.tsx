@@ -5,6 +5,7 @@
 
 import React, { useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import { Logo } from './Logo'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useProjectStore } from '../store/projectStore'
@@ -548,9 +549,7 @@ export function Toolbar() {
           className="logo-link flex items-center gap-1.5 px-2 mr-2 flex-shrink-0 hover:opacity-80 transition-opacity"
           title="Back to Dashboard"
         >
-          <div className="w-7 h-7 flex items-center justify-center bg-cad-accent">
-            <span className="text-white font-serif font-bold text-sm">F</span>
-          </div>
+          <Logo size="md" />
           <span className="font-serif font-semibold text-cad-text text-sm">FEAI</span>
         </button>
 
