@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { 
   Grid3X3, 
@@ -11,6 +12,7 @@ import {
   Check,
   Settings
 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
@@ -154,9 +156,9 @@ export default function MeshPage() {
       {/* Navigation Header */}
       <nav className="bg-white border-b border-cad-border px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-            <span className="text-white font-serif font-bold text-sm">F</span>
-          </div>
+          <Link href="/dashboard" className="logo-link flex items-center gap-2 no-underline">
+            <Logo size="md" />
+          </Link>
           <div className="w-px h-6 bg-cad-border" />
           <div className="flex items-center gap-2">
             <Grid3X3 className="w-5 h-5 text-cad-accent" />

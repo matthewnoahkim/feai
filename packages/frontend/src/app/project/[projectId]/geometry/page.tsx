@@ -2,8 +2,10 @@
 
 import { useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Box, Save } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
@@ -204,12 +206,12 @@ function GeometryEditorContent() {
     <div className="h-screen flex flex-col bg-white">
       {/* Navigation Header */}
       <nav className="bg-white border-b border-cad-border px-4 py-2 flex items-center justify-between z-50">
-        <div className="flex items-center gap-4">
-          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-            <span className="text-white font-serif font-bold text-sm">F</span>
-          </div>
-          <div className="w-px h-6 bg-cad-border" />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard" className="logo-link flex items-center gap-2 no-underline">
+              <Logo size="md" />
+            </Link>
+            <div className="w-px h-6 bg-cad-border" />
+            <div className="flex items-center gap-2">
             <Box className="w-5 h-5 text-cad-accent" />
             <h1 className="font-serif text-lg text-cad-text">Geometry</h1>
           </div>

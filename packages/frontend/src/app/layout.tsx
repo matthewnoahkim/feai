@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'FEAI - AI-Powered Finite Element Analysis',
   description: 'Surrogate modelling for metamaterial design',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/logo.png',
   },
 };
 

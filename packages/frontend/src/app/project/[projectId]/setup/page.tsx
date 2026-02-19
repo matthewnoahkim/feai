@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { 
   Settings, 
@@ -18,6 +19,7 @@ import {
   EyeOff,
   AlertCircle
 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { useWorkflowStore, BoundaryConditionDef, LoadDef } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
@@ -189,9 +191,9 @@ export default function SetupPage() {
       {/* Navigation Header */}
       <nav className="bg-white border-b border-cad-border px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="w-8 h-8 flex items-center justify-center bg-cad-accent">
-            <span className="text-white font-serif font-bold text-sm">F</span>
-          </div>
+          <Link href="/dashboard" className="logo-link flex items-center gap-2 no-underline">
+            <Logo size="md" />
+          </Link>
           <div className="w-px h-6 bg-cad-border" />
           <div className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-cad-accent" />
