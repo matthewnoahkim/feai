@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useWorkflowStore, CustomMaterial } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
+import { useSchematicStore } from '@/store/schematicStore';
 
 const CATEGORY_COLORS: Record<string, string> = {
   steel: '#71797E',
@@ -82,7 +83,8 @@ export default function EngineeringDataPage() {
   } = useWorkflowStore();
   
   const { fetchProject, currentProject } = useProjectStore();
-  
+  const { getNodesByType, markNodeComplete } = useSchematicStore();
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<string | null>(null);
   const [formData, setFormData] = useState<MaterialFormData>(DEFAULT_FORM_DATA);
@@ -93,6 +95,16 @@ export default function EngineeringDataPage() {
     updateStepStatus('engineering-data', 'in-progress');
     fetchProject(projectId);
   }, [projectId]);
+
+  // Engineering Data is complete when a material is selected (schematic checkmark)
+  useEffect(() => {
+    if (defaultMaterialId) {
+      updateStepStatus('engineering-data', 'complete');
+      getNodesByType('engineering-data').forEach((n) => markNodeComplete(n.id));
+    } else {
+      updateStepStatus('engineering-data', 'pending');
+    }
+  }, [defaultMaterialId, updateStepStatus, getNodesByType, markNodeComplete]);
 
   const handleAddMaterial = () => {
     if (!formData.name.trim()) return;

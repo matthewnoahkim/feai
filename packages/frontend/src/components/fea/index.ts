@@ -9,5 +9,6 @@ export { BoundaryConditionsPanel } from './BoundaryConditionsPanel';
 export { ResultsPanel } from './ResultsPanel';
 export { FEAResultsViewer } from './FEAResultsViewer';
 export { FEAMeshPreview } from './FEAMeshPreview';
+export { WorkflowMeshPreview } from './WorkflowMeshPreview';
 export { FEABCIcons } from './FEABCIcons';
 

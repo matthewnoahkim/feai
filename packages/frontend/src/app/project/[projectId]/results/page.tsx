@@ -415,6 +415,11 @@ export default function ResultsPage() {
               <div>
                 <h4 className="text-red-700 font-sans font-medium">Analysis Failed</h4>
                 <p className="text-red-600 text-sm font-sans mt-1">{runError}</p>
+                {(runError.toLowerCase().includes('service configuration') || runError.toLowerCase().includes('configuration error')) && (
+                  <p className="text-red-600/90 text-xs font-sans mt-2">
+                    This message comes from the external analysis service (FEA solver). A &quot;service configuration error&quot; usually means the solver server is misconfigured—for example, missing environment variables or deal.ii setup. If you run the solver yourself, check its configuration; otherwise try again later or contact the service administrator.
+                  </p>
+                )}
               </div>
             </div>
           )}

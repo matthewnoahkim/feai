@@ -14,7 +14,8 @@ import * as THREE from 'three'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useFEAStore } from '../store/feaStore'
-import { FEAResultsViewer, FEAMeshPreview, FEABCIcons } from './fea'
+import { useWorkflowStore } from '../store/workflowStore'
+import { FEAResultsViewer, FEAMeshPreview, FEABCIcons, WorkflowMeshPreview } from './fea'
 import { MeasurementVisualization } from './MeasurementVisualization'
 import { MeasurementHandler } from './MeasurementHandler'
 import { TransformGizmo } from './TransformGizmo'
@@ -2370,6 +2371,7 @@ function Scene() {
   const { viewSettings, selection, sketchMode } = useUIStore()
   const { document } = useDocumentStore()
   const { isSimulationMode, results } = useFEAStore()
+  const meshData = useWorkflowStore((s) => s.meshData)
   
   // Get parts from active part studio
   const activePartStudio = document?.partStudios.find(ps => ps.id === document.activeElementId)
@@ -2454,6 +2456,8 @@ function Scene() {
       {isSimulationMode && !results && <FEAMeshPreview />}
       {isSimulationMode && results && <FEAResultsViewer />}
       {isSimulationMode && <FEABCIcons />}
+      {/* Mesh from workflow (mesh page) - display with lines so it is visible */}
+      {meshData && !results && <WorkflowMeshPreview />}
       
       {/* Measurement dimension lines */}
       <MeasurementVisualization />

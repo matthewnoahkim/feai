@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Pencil,
   X,
-  GripVertical
+  GripVertical,
+  Link2
 } from 'lucide-react';
 import { useSchematicStore, NodeType, SchematicNode, Connection } from '@/store/schematicStore';
 import { Logo } from '@/components/Logo';
@@ -26,11 +27,21 @@ import { useWorkflowStore } from '@/store/workflowStore';
 // Node dimensions
 const NODE_WIDTH = 160;
 const NODE_HEIGHT = 80;
+const ROW_HEIGHT = 28;
 const CONNECTION_SPACING = 200; // Horizontal spacing between connected nodes
 const SNAP_DISTANCE = 60; // Distance threshold for auto-connection
 
 // Consistent navy blue color for all nodes
 const NODE_COLOR = '#1e3a5f';
+
+// Step rows shown in each block (cumulative from upstream + this block)
+const STEP_ROWS: Record<NodeType, string[]> = {
+  'engineering-data': ['Engineering Data'],
+  'geometry': ['Engineering Data', 'Geometry'],
+  'mesh': ['Engineering Data', 'Geometry', 'Mesh'],
+  'setup': ['Engineering Data', 'Geometry', 'Mesh', 'Setup'],
+  'results': ['Engineering Data', 'Geometry', 'Mesh', 'Setup', 'Solution'],
+};
 
 // Node type configurations
 const NODE_CONFIGS: Record<NodeType, {
@@ -79,6 +90,59 @@ const VALID_CONNECTIONS: Record<NodeType, NodeType[]> = {
   'setup': ['results'],
   'results': [],
 };
+
+type RowStatus = 'pending' | 'in-progress' | 'complete' | 'outdated' | 'linked';
+
+// Map step label to workflow validity (for upstream row checkmarks)
+function getStepValidity(
+  label: string,
+  stepStatus: Record<string, 'pending' | 'in-progress' | 'complete'>,
+  geometryReady: boolean,
+  meshData: unknown,
+  analysisResults: unknown,
+  defaultMaterialId: string | null
+): boolean {
+  switch (label) {
+    case 'Engineering Data':
+      return stepStatus['engineering-data'] === 'complete' || !!defaultMaterialId;
+    case 'Geometry':
+      return geometryReady;
+    case 'Mesh':
+      return !!meshData;
+    case 'Setup':
+      return stepStatus['setup'] === 'complete';
+    case 'Solution':
+      return stepStatus['results'] === 'complete' || !!analysisResults;
+    default:
+      return false;
+  }
+}
+
+// Compute status for each row of a node (upstream = valid from workflow or linked; own step = node.status)
+function getRowStatuses(
+  node: SchematicNode,
+  connections: Connection[],
+  stepStatus: Record<string, 'pending' | 'in-progress' | 'complete'>,
+  geometryReady: boolean,
+  meshData: unknown,
+  analysisResults: unknown,
+  defaultMaterialId: string | null
+): RowStatus[] {
+  const rows = STEP_ROWS[node.type];
+  const upstreamConnections = connections.filter((c) => c.targetId === node.id);
+  const hasUpstream = upstreamConnections.length > 0;
+
+  return rows.map((label, index) => {
+    const isOwnStep = index === rows.length - 1;
+    if (isOwnStep) {
+      return node.status;
+    }
+    const isValid = getStepValidity(label, stepStatus, geometryReady, meshData, analysisResults, defaultMaterialId);
+    if (isValid) return 'complete';
+    if (hasUpstream) return 'linked';
+    return 'pending';
+  });
+}
 
 // Toolbox item component
 function ToolboxItem({ 
@@ -141,6 +205,13 @@ function StatusIndicator({ status }: { status: SchematicNode['status'] }) {
   }
 }
 
+// Compute node height from row count (header + rows)
+function getNodeHeight(node: SchematicNode): number {
+  const headerHeight = 36;
+  const rows = STEP_ROWS[node.type];
+  return headerHeight + rows.length * ROW_HEIGHT;
+}
+
 // Schematic node component
 function SchematicNodeComponent({
   node,
@@ -150,6 +221,7 @@ function SchematicNodeComponent({
   onOpenWorkspace,
   onDragStart,
   connections,
+  rowStatuses,
 }: {
   node: SchematicNode;
   isSelected: boolean;
@@ -158,12 +230,12 @@ function SchematicNodeComponent({
   onOpenWorkspace: () => void;
   onDragStart: (nodeId: string, e: React.DragEvent) => void;
   connections: Connection[];
+  rowStatuses: RowStatus[];
 }) {
   const config = NODE_CONFIGS[node.type];
   const Icon = config.icon;
-  
-  // Get connected upstream nodes for this node
-  const upstreamConnections = connections.filter(c => c.targetId === node.id);
+  const rows = STEP_ROWS[node.type];
+  const lastRowIndex = rows.length - 1;
 
   return (
     <div
@@ -191,7 +263,7 @@ function SchematicNodeComponent({
         onOpenWorkspace();
       }}
     >
-      {/* Header - drag handle area */}
+      {/* Header - drag handle area; green check when this block's step is valid */}
       <div 
         className="px-3 py-2 flex items-center gap-2"
         style={{ backgroundColor: NODE_COLOR }}
@@ -204,49 +276,17 @@ function SchematicNodeComponent({
         <StatusIndicator status={node.status} />
       </div>
       
-      {/* Rows - similar to ANSYS */}
+      {/* Rows - cumulative steps; each row green when valid; block step green when block has valid work */}
       <div className="divide-y divide-gray-200">
-        {node.type === 'engineering-data' && (
-          <NodeRow 
-            number={1} 
-            label="Engineering Data" 
-            status={node.status} 
-            onClick={onOpenWorkspace}
+        {rows.map((label, index) => (
+          <NodeRow
+            key={label + index}
+            number={index + 1}
+            label={label}
+            status={rowStatuses[index] ?? 'pending'}
+            onClick={index === lastRowIndex ? onOpenWorkspace : undefined}
           />
-        )}
-        {node.type === 'geometry' && (
-          <NodeRow 
-            number={1} 
-            label="Geometry" 
-            status={node.status} 
-            onClick={onOpenWorkspace}
-          />
-        )}
-        {node.type === 'mesh' && (
-          <NodeRow 
-            number={1} 
-            label="Mesh" 
-            status={node.status} 
-            onClick={onOpenWorkspace}
-          />
-        )}
-        {node.type === 'setup' && (
-          <>
-            <NodeRow number={1} label="Engineering Data" status={upstreamConnections.length > 0 ? 'linked' : 'pending'} />
-            <NodeRow number={2} label="Geometry" status={upstreamConnections.length > 0 ? 'linked' : 'pending'} />
-            <NodeRow number={3} label="Model" status={node.status} onClick={onOpenWorkspace} />
-            <NodeRow number={4} label="Setup" status={node.status} onClick={onOpenWorkspace} />
-            <NodeRow number={5} label="Solution" status={node.status} />
-          </>
-        )}
-        {node.type === 'results' && (
-          <NodeRow 
-            number={1} 
-            label="Results" 
-            status={node.status} 
-            onClick={onOpenWorkspace}
-          />
-        )}
+        ))}
       </div>
       
       {/* Delete button when selected */}
@@ -286,7 +326,7 @@ function NodeRow({
       case 'outdated':
         return <AlertTriangle className="w-3 h-3 text-yellow-500" />;
       case 'linked':
-        return <Check className="w-3 h-3 text-green-500" />;
+        return <Link2 className="w-3 h-3 text-gray-400" />;
       default:
         return <span className="w-3 h-3 text-gray-400 text-xs">?</span>;
     }
@@ -339,12 +379,6 @@ function ConnectionLines({
         const targetNode = nodes.find(n => n.id === conn.targetId);
         
         if (!sourceNode || !targetNode) return null;
-        
-        // Calculate node heights based on type
-        const getNodeHeight = (node: SchematicNode) => {
-          if (node.type === 'setup') return 130; // 5 rows
-          return NODE_HEIGHT; // 1 row
-        };
         
         const sourceHeight = getNodeHeight(sourceNode);
         const targetHeight = getNodeHeight(targetNode);
@@ -476,6 +510,8 @@ export default function SchematicPage() {
   const stepStatus = useWorkflowStore((s) => s.stepStatus);
   const geometryReady = useWorkflowStore((s) => s.geometryReady);
   const meshData = useWorkflowStore((s) => s.meshData);
+  const analysisResults = useWorkflowStore((s) => s.analysisResults);
+  const defaultMaterialId = useWorkflowStore((s) => s.defaultMaterialId);
 
   // Load project on mount
   useEffect(() => {
@@ -491,18 +527,19 @@ export default function SchematicPage() {
     }
   }, [projectId, setProject, fetchProject, setProjectName]);
 
-  // Sync schematic node checkmarks from workflow state (geometry ready, mesh complete, etc.)
+  // Sync schematic node checkmarks from workflow state (material selected, geometry ready, mesh complete, etc.)
   useEffect(() => {
     nodes.forEach((node) => {
       const workflowComplete =
+        (node.type === 'engineering-data' && !!defaultMaterialId) ||
         (node.type === 'geometry' && geometryReady) ||
         (node.type === 'mesh' && !!meshData) ||
-        (node.type !== 'geometry' && node.type !== 'mesh' && stepStatus[node.type] === 'complete');
+        (node.type !== 'engineering-data' && node.type !== 'geometry' && node.type !== 'mesh' && stepStatus[node.type] === 'complete');
       if (workflowComplete && node.status !== 'complete') {
         updateNode(node.id, { status: 'complete' });
       }
     });
-  }, [nodes, stepStatus, geometryReady, meshData, updateNode]);
+  }, [nodes, stepStatus, geometryReady, meshData, defaultMaterialId, updateNode]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -535,7 +572,7 @@ export default function SchematicPage() {
       if (!canConnectTo && !canConnectFrom) continue;
       
       // Calculate distance to node center
-      const nodeHeight = node.type === 'setup' ? 130 : NODE_HEIGHT;
+      const nodeHeight = getNodeHeight(node);
       const nodeCenterX = node.x + NODE_WIDTH / 2;
       const nodeCenterY = node.y + nodeHeight / 2;
       const distance = Math.sqrt(Math.pow(x - nodeCenterX, 2) + Math.pow(y - nodeCenterY, 2));
@@ -556,7 +593,7 @@ export default function SchematicPage() {
   ): { x: number; y: number } => {
     const nearConfig = NODE_CONFIGS[nearNode.type];
     const newConfig = NODE_CONFIGS[newType];
-    const nodeHeight = nearNode.type === 'setup' ? 130 : NODE_HEIGHT;
+    const nodeHeight = getNodeHeight(nearNode);
     
     // Determine if new node should be to the right or left based on workflow order
     if (newConfig.order > nearConfig.order) {
@@ -583,6 +620,7 @@ export default function SchematicPage() {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left - NODE_WIDTH / 2;
     const y = e.clientY - rect.top - NODE_HEIGHT / 2;
+    const freePos = { x: Math.max(0, x), y: Math.max(0, y) };
     
     const isNew = e.dataTransfer.types.includes('nodetype');
     const nodeType = isNew 
@@ -591,11 +629,24 @@ export default function SchematicPage() {
         ? nodes.find(n => n.id === draggingNodeId)?.type || 'geometry'
         : 'geometry';
     
+    // When moving an existing block, always show preview at cursor (free movement)
+    if (draggingNodeId) {
+      setDragPreview({
+        x: freePos.x,
+        y: freePos.y,
+        type: nodeType,
+        willConnect: false,
+        nearNode: null,
+      });
+      return;
+    }
+    
+    // New node from toolbox: snap to connect if near another node
     const nearNode = findNearestConnectableNode(
       e.clientX - rect.left, 
       e.clientY - rect.top, 
       nodeType,
-      draggingNodeId || undefined
+      undefined
     );
     
     if (nearNode) {
@@ -609,8 +660,7 @@ export default function SchematicPage() {
       });
     } else {
       setDragPreview({
-        x: Math.max(0, x),
-        y: Math.max(0, y),
+        ...freePos,
         type: nodeType,
         willConnect: false,
         nearNode: null,
@@ -664,36 +714,28 @@ export default function SchematicPage() {
         }
       }
     } else if (existingNodeId) {
-      // Moving existing node
-      let x = e.clientX - rect.left - NODE_WIDTH / 2;
-      let y = e.clientY - rect.top - NODE_HEIGHT / 2;
+      // Moving existing node: use drop position so blocks can be moved freely
+      const x = e.clientX - rect.left - NODE_WIDTH / 2;
+      const y = e.clientY - rect.top - NODE_HEIGHT / 2;
       
       const movingNode = nodes.find(n => n.id === existingNodeId);
       if (!movingNode) return;
       
-      // Check for nearby node to connect to
+      // Optionally add connection if dropped near another node (position stays free)
       const nearNode = findNearestConnectableNode(
         e.clientX - rect.left, 
         e.clientY - rect.top, 
         movingNode.type,
         existingNodeId
       );
-      
       if (nearNode) {
-        const connectedPos = calculateConnectedPosition(nearNode, movingNode.type);
-        x = connectedPos.x;
-        y = connectedPos.y;
-        
-        // Check if already connected
         const alreadyConnected = connections.some(
           c => (c.sourceId === nearNode.id && c.targetId === existingNodeId) ||
                (c.sourceId === existingNodeId && c.targetId === nearNode.id)
         );
-        
         if (!alreadyConnected) {
           const nearConfig = NODE_CONFIGS[nearNode.type];
           const movingConfig = NODE_CONFIGS[movingNode.type];
-          
           if (movingConfig.order > nearConfig.order) {
             addConnection(nearNode.id, existingNodeId);
           } else {
@@ -899,6 +941,15 @@ export default function SchematicPage() {
                 onOpenWorkspace={() => handleOpenWorkspace(node)}
                 onDragStart={handleNodeDragStart}
                 connections={connections}
+                rowStatuses={getRowStatuses(
+                  node,
+                  connections,
+                  stepStatus,
+                  geometryReady,
+                  meshData,
+                  analysisResults,
+                  defaultMaterialId
+                )}
               />
             ))}
             
