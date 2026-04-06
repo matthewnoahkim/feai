@@ -1,7 +1,4 @@
 {
-  "/project/[projectId]/geometry/page": "app/project/[projectId]/geometry/page.js",
-  "/project/[projectId]/schematic/page": "app/project/[projectId]/schematic/page.js",
-  "/project/[projectId]/mesh/page": "app/project/[projectId]/mesh/page.js",
-  "/project/[projectId]/setup/page": "app/project/[projectId]/setup/page.js",
-  "/project/[projectId]/results/page": "app/project/[projectId]/results/page.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/page": "app/page.js"
 }

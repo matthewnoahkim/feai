@@ -22,24 +22,11 @@ export default function AboutPage() {
         <main className="max-w-3xl mx-auto px-8 py-16">
           <h1 className="mb-6" style={{ fontSize: '2.5rem', fontWeight: 300 }}>About</h1>
           <p style={{ fontSize: '1rem', lineHeight: 1.8, opacity: 0.85 }}>
-            FEAI provides free engineering simulation software for students, teachers, and academic researchers.
-            We specialize in surrogate modelling and Finite Element solvers that use artificial intelligence to increase efficiency and accessibility.
+           WIP
           </p>
-
-          <section className="mt-12 pt-8" style={{ borderTop: '1px solid #1a4d8f' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.75rem' }}>Summer 2026 Internships</h2>
-            <p style={{ fontSize: '1rem', lineHeight: 1.8, opacity: 0.85 }}>
-              We are hiring interns for Summer 2026. Apply via our application form:{' '}
-              <a
-                href="https://forms.gle/tFHsxQYN1adkFQkr7"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#1a4d8f', textDecoration: 'underline' }}
-              >
-                Application form
-              </a>
-            </p>
-          </section>
+          <div className="mt-12 pt-8" style={{ borderTop: '1px solid #1a4d8f' }}>
+            <Link href="/" style={{ color: '#1a4d8f', textDecoration: 'none', fontSize: '0.875rem' }}>← Back to Home</Link>
+          </div>
         </main>
       </div>
     </div>
