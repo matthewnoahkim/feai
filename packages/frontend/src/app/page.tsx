@@ -24,28 +24,11 @@ export default function HomePage() {
             <Logo size="md" />
             <span style={{ fontWeight: 600, fontSize: '1.125rem', color: '#1a4d8f' }}>FEAI</span>
           </Link>
-          <div className="flex items-center gap-8" style={{ fontSize: '0.9375rem' }}>
-            <Link href="/products" style={{ color: '#1a4d8f', textDecoration: 'none', opacity: 0.9 }}>Products</Link>
-            <Link href="/support" style={{ color: '#1a4d8f', textDecoration: 'none', opacity: 0.9 }}>Support</Link>
-            <Link href="/learn" style={{ color: '#1a4d8f', textDecoration: 'none', opacity: 0.9 }}>Learn</Link>
-            <Link href="/about" style={{ color: '#1a4d8f', textDecoration: 'none', opacity: 0.9 }}>About</Link>
-          </div>
         </nav>
 
         {/* Hero Section */}
         <section className="flex-1 px-8 py-24 relative flex flex-col justify-center">
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            <div 
-              className="inline-block mb-6 px-4 py-2"
-              style={{ 
-                border: '1px solid #1a4d8f',
-                fontSize: '0.75rem',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase'
-              }}
-            >
-              Engineering Simulation Software
-            </div>
             
             <h1 
               className="mb-8"
@@ -59,17 +42,6 @@ export default function HomePage() {
               Finite Element Analysis<br />
               <span style={{ fontWeight: 600 }}>assisted with AI.</span>
             </h1>
-            
-            <p 
-              className="max-w-2xl mx-auto mb-12"
-              style={{ 
-                fontSize: '1.25rem', 
-                lineHeight: 1.7,
-                opacity: 0.8
-              }}
-            >
-              Surrogate modelling for metamaterial design.
-            </p>
             
             <HomeClient variant="primary" />
           </div>
