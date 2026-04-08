@@ -54,40 +54,15 @@ export const authOptions: NextAuthOptions = {
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
 
-    async signIn({ user, account, profile }) {
+    async signIn({ user }) {
+      // Require email for Google. Linking/creating Account rows is handled by
+      // PrismaAdapter (including email account linking via
+      // allowDangerousEmailAccountLinking). Do not create Account here — that
+      // duplicates linkAccount and triggers a unique constraint on
+      // (provider, providerAccountId), which surfaces as OAuthCallback.
       if (!user.email) {
         return false;
       }
-
-      const existingUser = await prisma.user.findUnique({
-        where: { email: user.email },
-        include: { accounts: true },
-      });
-
-      if (existingUser) {
-        const existingAccount = existingUser.accounts.find(
-          (acc) => acc.provider === account?.provider
-        );
-
-        if (!existingAccount && account) {
-          await prisma.account.create({
-            data: {
-              userId: existingUser.id,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: account.refresh_token,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token,
-              session_state: account.session_state as string | null,
-            },
-          });
-        }
-      }
-
       return true;
     },
 
