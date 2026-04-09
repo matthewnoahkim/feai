@@ -1,6 +1,10 @@
 /**
- * FEA Solver API Client
- * Communicates with external FEA Solver at https://fea-solver.vercel.app
+ * FEA Solver API Client — public URL defaults to https://fea-solver.vercel.app
+ *
+ * The deployed app is primarily a CORS-open proxy to COMPUTE_SERVER_URL: it forwards JSON
+ * and HTTP status codes. Expect ~50 MB max analyze body, ~55 s upstream timeout on POST
+ * /api/analyze, ~10 s on GET /api/jobs/{id}, ~30 s on GET .../results (gateway limits).
+ * Any 2xx response is success for that hop (e.g. 202 on submit is OK).
  */
 
 import type {
@@ -14,6 +18,7 @@ import type {
   ApiError,
   Mesh
 } from './types';
+import { normalizeAnalysisResults } from './normalize-results';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_FEA_API_URL || 'https://fea-solver.vercel.app';
 
@@ -29,6 +34,7 @@ export class FEAApiError extends Error {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
+  // Gateway forwards compute status; treat all 2xx as success (including 202 Accepted).
   if (!response.ok) {
     const errorData: ApiError = await response.json().catch(() => ({
       error: `HTTP ${response.status}: ${response.statusText}`
@@ -64,7 +70,8 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
 
 export async function getJobResults(jobId: string): Promise<AnalysisResults> {
   const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/results`);
-  return handleResponse<AnalysisResults>(response);
+  const raw = await handleResponse<AnalysisResults>(response);
+  return normalizeAnalysisResults(raw);
 }
 
 export async function cancelJob(jobId: string): Promise<{ status: string }> {
@@ -125,13 +132,17 @@ export interface PollOptions {
   onProgress?: (status: JobStatusResponse) => void;
 }
 
+/**
+ * Polls job status until completed, failed, or cancelled. Slow or hung upstream responses
+ * can hit the gateway’s short GET timeout even while the job is still running on compute.
+ */
 export async function pollJobUntilComplete(
   jobId: string,
   options: PollOptions = {}
 ): Promise<AnalysisResults> {
   const {
     interval = 2000,
-    maxAttempts = 300,  // 10 minutes at 2s intervals
+    maxAttempts = 300, // ~10 minutes at 2s intervals (longer than gateway per-request timeouts)
     onProgress
   } = options;
 

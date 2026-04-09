@@ -21,7 +21,8 @@ import { useWorkflowStore } from '@/store/workflowStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { feaSolverClient } from '@/lib/fea-solver/client';
-import type { AnalysisRequest, AnalysisResults, BoundaryCondition, Load } from '@/lib/fea-solver/types';
+import type { AnalysisResults } from '@/lib/fea-solver/types';
+import { buildAnalysisRequestFromWorkflow } from '@/lib/fea-solver/workflow-request';
 
 // Dynamically import 3D viewport
 const Viewport3D = dynamic(() => import('@/components/Viewport3D').then(m => ({ default: m.Viewport3D })), { ssr: false });
@@ -140,96 +141,19 @@ export default function ResultsPage() {
     setAnalysisResults(null);
 
     try {
-      // Get default material
-      const material = materials.find(m => m.id === defaultMaterialId) || materials[0];
-      
-      // Build analysis request
-      const request: AnalysisRequest = {
-        mesh: {
-          type: 'box',
-          min: [-50, -50, -50],
-          max: [50, 50, 50],
-          subdivisions: [10, 10, 10],
-        },
-        materials: {
-          default: material?.name || 'steel',
-        },
-        boundary_conditions: boundaryConditions
-          .filter(bc => bc.enabled)
-          .map(bc => {
-            const apiBC: BoundaryCondition = {
-              type: bc.type,
-              target: {
-                type: bc.target.type === 'point' ? 'point' : 
-                      bc.target.type === 'box' ? 'box' : 
-                      bc.target.type === 'sphere' ? 'sphere' : 'box',
-                ...(bc.target.type === 'point' && bc.target.location && { location: bc.target.location }),
-                ...(bc.target.type === 'box' && bc.target.min && bc.target.max && { 
-                  min: bc.target.min, 
-                  max: bc.target.max 
-                }),
-                ...(bc.target.type === 'sphere' && bc.target.center && { 
-                  center: bc.target.center, 
-                  radius: bc.target.radius || 5 
-                }),
-              },
-              description: bc.name,
-            } as BoundaryCondition;
-            
-            if (bc.type === 'displacement' && bc.values) {
-              (apiBC as any).values = bc.values;
-            }
-            if (bc.type === 'symmetry' && bc.planeNormal) {
-              (apiBC as any).plane_normal = bc.planeNormal;
-            }
-            
-            return apiBC;
-          }),
-        loads: loads
-          .filter(l => l.enabled)
-          .map(l => {
-            const apiLoad: Load = {
-              type: l.type,
-              description: l.name,
-            } as Load;
-            
-            if (l.type === 'gravity' && l.acceleration) {
-              (apiLoad as any).acceleration = l.acceleration;
-            }
-            if (l.type === 'pressure' && l.target) {
-              (apiLoad as any).target = {
-                type: l.target.type,
-                ...(l.target.min && l.target.max && { min: l.target.min, max: l.target.max }),
-              };
-              (apiLoad as any).value = l.value;
-            }
-            if (l.type === 'point_force' && l.location && l.force) {
-              (apiLoad as any).location = l.location;
-              (apiLoad as any).force = l.force;
-            }
-            if (l.type === 'thermal') {
-              (apiLoad as any).reference_temperature = l.referenceTemperature;
-              (apiLoad as any).applied_temperature = l.appliedTemperature;
-            }
-            if (l.type === 'centrifugal') {
-              (apiLoad as any).axis_point = l.axisPoint;
-              (apiLoad as any).axis_direction = l.axisDirection;
-              (apiLoad as any).angular_velocity = l.angularVelocity;
-            }
-            
-            return apiLoad;
-          }),
-        solver_options: {
-          fe_degree: 1,
-          refinement_cycles: 0,
-          compute_reactions: true,
-          compute_safety_factors: true,
-        },
-        units: { type: 'SI_MM' },
-      };
+      const built = buildAnalysisRequestFromWorkflow({
+        meshData,
+        boundaryConditions,
+        loads,
+        materials,
+        defaultMaterialId,
+      });
+      if (!built.ok) {
+        setRunError(built.error);
+        return;
+      }
 
-      // Submit analysis
-      const submitResponse = await feaSolverClient.submitAnalysis(request);
+      const submitResponse = await feaSolverClient.submitAnalysis(built.request);
       setJobId(submitResponse.job_id);
       setRunProgress(10);
 

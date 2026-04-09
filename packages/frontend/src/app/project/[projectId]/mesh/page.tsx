@@ -132,6 +132,7 @@ export default function MeshPage() {
         quality: response.mesh.quality,
         nodes: response.mesh.nodes,
         elements: response.mesh.elements,
+        boundingBox: response.mesh.boundingBox,
       });
       updateStepStatus('mesh', 'complete');
       getNodesByType('mesh').forEach((n) => markNodeComplete(n.id));

@@ -1,1 +1,239 @@
-{}
+{
+  "..\\..\\..\\node_modules\\@react-three\\drei\\core\\VideoTexture.js -> hls.js": {
+    "id": null,
+    "files": []
+  },
+  "..\\..\\..\\node_modules\\@react-three\\drei\\web\\FaceLandmarker.js -> @mediapipe/tasks-vision": {
+    "id": null,
+    "files": []
+  },
+  "app\\editor\\[[...projectId]]\\page.tsx -> @/components/editor/EditorContent": {
+    "id": 584,
+    "files": [
+      "static/chunks/9d78c252.fda7234134835f16.js",
+      "static/chunks/1837-6af91cb266dbf397.js",
+      "static/chunks/429.23fe4ada337cadd0.js",
+      "static/chunks/39.7c174c31bdc0e1ab.js",
+      "static/chunks/2234.f9eecc6ddb48c5d0.js",
+      "static/chunks/8134-8b96614f89401dfd.js",
+      "static/chunks/5607.768d47757f9aeacf.js",
+      "static/chunks/2336.ceb78ed00436f4d5.js",
+      "static/chunks/8793.7377cd49a4f3e54a.js",
+      "static/chunks/954.fd56bd74454b221c.js",
+      "static/chunks/1844.377f3f322f8ff84b.js",
+      "static/chunks/8594.c4e9bb6646fc0dc1.js",
+      "static/chunks/5231.41ab60bfb59a04b1.js",
+      "static/chunks/8720.114f74179da3e7f1.js",
+      "static/chunks/6826.8f3544d3abd8cb45.js",
+      "static/chunks/4929.323f7319539f61c6.js",
+      "static/chunks/2358.d6b860fa991d3cf3.js",
+      "static/chunks/1679.d1101dfbfa110c3e.js",
+      "static/chunks/4603.1c82b8f4b3568b6d.js",
+      "static/chunks/8319.64d9ee3eec915861.js",
+      "static/chunks/4222.b87037c1b9f8cac3.js",
+      "static/chunks/3227.5ed1f7e44846468f.js",
+      "static/chunks/606.0cdb97e5744d94e8.js",
+      "static/chunks/4810.204d04386a5fb04e.js",
+      "static/chunks/4858.6eeea8c116b6e53c.js",
+      "static/chunks/1741.57eab9dd77cea04d.js",
+      "static/chunks/584.07715207d62ac71f.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/FeatureTree": {
+    "id": 4929,
+    "files": [
+      "static/chunks/39.7c174c31bdc0e1ab.js",
+      "static/chunks/4929.323f7319539f61c6.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/Notifications": {
+    "id": 9814,
+    "files": [
+      "static/chunks/9814.482c2147339e8bb7.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/PropertyPanel": {
+    "id": 606,
+    "files": [
+      "static/chunks/606.0cdb97e5744d94e8.js",
+      "static/chunks/6030.48f450b51e9dd4f5.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/ResizablePanel": {
+    "id": 382,
+    "files": [
+      "static/chunks/382.cc17be9eeb64c70b.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/SelectionManager": {
+    "id": 4858,
+    "files": [
+      "static/chunks/4858.6eeea8c116b6e53c.js",
+      "static/chunks/2497.43fe685151a0cbee.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/SketchCanvas": {
+    "id": 2336,
+    "files": [
+      "static/chunks/2336.ceb78ed00436f4d5.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/SketchToolbar": {
+    "id": 6826,
+    "files": [
+      "static/chunks/6826.8f3544d3abd8cb45.js",
+      "static/chunks/6221.06e4bb733c043ae3.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/StatusBar": {
+    "id": 1426,
+    "files": [
+      "static/chunks/1426.2e70445de07d7730.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/Toolbar": {
+    "id": 3227,
+    "files": [
+      "static/chunks/3227.5ed1f7e44846468f.js",
+      "static/chunks/7584.03f2f2ae4dba4d3e.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/Viewport3D": {
+    "id": 5607,
+    "files": [
+      "static/chunks/9d78c252.fda7234134835f16.js",
+      "static/chunks/429.23fe4ada337cadd0.js",
+      "static/chunks/5607.768d47757f9aeacf.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/chat": {
+    "id": 954,
+    "files": [
+      "static/chunks/954.fd56bd74454b221c.js",
+      "static/chunks/9358.f0f531d94103350a.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/ChamferDialog": {
+    "id": 8720,
+    "files": [
+      "static/chunks/8720.114f74179da3e7f1.js",
+      "static/chunks/1151.fd21157c55253902.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/CircularPatternDialog": {
+    "id": 1679,
+    "files": [
+      "static/chunks/1679.d1101dfbfa110c3e.js",
+      "static/chunks/5577.f759e07a8b25d581.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/ExtrudeDialog": {
+    "id": 4603,
+    "files": [
+      "static/chunks/4603.1c82b8f4b3568b6d.js",
+      "static/chunks/6023.4df12c0c53d8fd6a.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/FilletDialog": {
+    "id": 1844,
+    "files": [
+      "static/chunks/1844.377f3f322f8ff84b.js",
+      "static/chunks/5988.e0950e6571b58d27.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/LinearPatternDialog": {
+    "id": 8793,
+    "files": [
+      "static/chunks/8793.7377cd49a4f3e54a.js",
+      "static/chunks/3309.a38909b4b5339bc9.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/LoftDialog": {
+    "id": 8594,
+    "files": [
+      "static/chunks/8594.c4e9bb6646fc0dc1.js",
+      "static/chunks/8798.b1991b351fbd3df0.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/MirrorFeatureDialog": {
+    "id": 5231,
+    "files": [
+      "static/chunks/5231.41ab60bfb59a04b1.js",
+      "static/chunks/2617.47f704c91d442469.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/MoveCopyBodyDialog": {
+    "id": 1741,
+    "files": [
+      "static/chunks/1741.57eab9dd77cea04d.js",
+      "static/chunks/6761.f85369abf08e6258.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/RevolveDialog": {
+    "id": 4222,
+    "files": [
+      "static/chunks/4222.b87037c1b9f8cac3.js",
+      "static/chunks/7065.55ec5c89e9825871.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/ShellDialog": {
+    "id": 2358,
+    "files": [
+      "static/chunks/2358.d6b860fa991d3cf3.js",
+      "static/chunks/5968.ef274bbbe66246d5.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/SketchDialog": {
+    "id": 4810,
+    "files": [
+      "static/chunks/4810.204d04386a5fb04e.js",
+      "static/chunks/5011.ac8c5811f6d0ba63.js"
+    ]
+  },
+  "app\\project\\[projectId]\\geometry\\page.tsx -> @/components/dialogs/SweepDialog": {
+    "id": 8319,
+    "files": [
+      "static/chunks/8319.64d9ee3eec915861.js",
+      "static/chunks/5112.db2642eee1e8f2d8.js"
+    ]
+  },
+  "app\\project\\[projectId]\\mesh\\page.tsx -> @/components/Viewport3D": {
+    "id": 5607,
+    "files": [
+      "static/chunks/9d78c252.fda7234134835f16.js",
+      "static/chunks/429.23fe4ada337cadd0.js",
+      "static/chunks/5607.768d47757f9aeacf.js",
+      "static/chunks/8092.bbddb0b86c8b2a39.js"
+    ]
+  },
+  "app\\project\\[projectId]\\results\\page.tsx -> @/components/Viewport3D": {
+    "id": 5607,
+    "files": [
+      "static/chunks/9d78c252.fda7234134835f16.js",
+      "static/chunks/429.23fe4ada337cadd0.js",
+      "static/chunks/5607.768d47757f9aeacf.js",
+      "static/chunks/8162.b278e2096afe162b.js"
+    ]
+  },
+  "app\\project\\[projectId]\\setup\\page.tsx -> @/components/Viewport3D": {
+    "id": 5607,
+    "files": [
+      "static/chunks/9d78c252.fda7234134835f16.js",
+      "static/chunks/429.23fe4ada337cadd0.js",
+      "static/chunks/5607.768d47757f9aeacf.js",
+      "static/chunks/8092.bbddb0b86c8b2a39.js"
+    ]
+  },
+  "store\\documentStore.ts -> ./projectStore": {
+    "id": 7931,
+    "files": []
+  },
+  "store\\documentStore.ts -> ./uiStore": {
+    "id": 664,
+    "files": []
+  },
+  "store\\uiStore.ts -> ./documentStore": {
+    "id": 1716,
+    "files": []
+  }
+}

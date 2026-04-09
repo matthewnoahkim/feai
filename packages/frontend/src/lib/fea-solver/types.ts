@@ -62,6 +62,7 @@ export interface BoxTarget {
   max: [number, number, number];
 }
 
+/** Not listed in the public HTML target table; the gateway still forwards JSON—support is compute-defined. */
 export interface SphereTarget {
   type: 'sphere';
   center: [number, number, number];

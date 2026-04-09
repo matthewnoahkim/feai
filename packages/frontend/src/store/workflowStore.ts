@@ -77,6 +77,25 @@ export interface MeshSettings {
   curvatureSensitivity: number;
 }
 
+/** Axis-aligned bounds in model units (mm) from mesh generation */
+export interface MeshBoundingBox {
+  min: { x: number; y: number; z: number };
+  max: { x: number; y: number; z: number };
+}
+
+export interface MeshNodeRecord {
+  id: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface MeshElementRecord {
+  id: number;
+  type: string;
+  nodeIds: number[];
+}
+
 export interface MeshData {
   nodeCount: number;
   elementCount: number;
@@ -87,8 +106,9 @@ export interface MeshData {
     maxAspectRatio: number;
     warningCount: number;
   };
-  nodes?: number[];
-  elements?: number[];
+  nodes?: MeshNodeRecord[];
+  elements?: MeshElementRecord[];
+  boundingBox?: MeshBoundingBox;
 }
 
 export interface AnalysisResultData {
