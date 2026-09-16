@@ -299,12 +299,12 @@ export function LinearPatternDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'linear-pattern').length + 1
     const name = `Linear Pattern ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'linear-pattern',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       const actualCount = totalInstances - skippedInstances.length

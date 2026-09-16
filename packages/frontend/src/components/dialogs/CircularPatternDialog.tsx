@@ -269,12 +269,12 @@ export function CircularPatternDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'circular-pattern').length + 1
     const name = `Circular Pattern ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'circular-pattern',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       const actualCount = instanceCount - skippedInstances.length

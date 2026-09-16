@@ -3,12 +3,26 @@
  */
 
 import { CadAction, ChatContext, ChatMessage } from '../store/chatStore'
+import { FEATURE_CATALOG } from '../store/featureAdapter'
 
 // OpenAI API configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
 
+// Generated from FEATURE_CATALOG (packages/frontend/src/store/featureAdapter.ts) so the
+// assistant is never told about an operation cadExecutor can't actually perform.
+function describeFeatureCatalog(): string {
+  const live = FEATURE_CATALOG.filter(f => f.status === 'live')
+  const planned = FEATURE_CATALOG.filter(f => f.status === 'planned')
+  const lines = live.map(f => {
+    const params = Object.entries(f.params).map(([k, v]) => `${k}${v ? ` (${v})` : ''}`).join(', ')
+    return `- "${f.type}": ${f.summary}${params ? `\n  parameters: ${params}` : ''}`
+  })
+  const plannedList = planned.map(f => f.type).join(', ')
+  return `${lines.join('\n')}\n\nNot yet implemented (say so if asked, do not emit these): ${plannedList || 'none'}.`
+}
+
 // System prompt that instructs the AI about CAD operations
-const getSystemPrompt = (context: ChatContext): string => `You are CAD Assistant, an AI helper for a professional web-based CAD application. Your role is to help users create and modify 3D geometry through natural language commands.
+const getSystemPrompt = (context: ChatContext): string => `You are CAD Assistant, an AI helper for a professional web-based CAD application. Your role is to help users create and modify 3D geometry through natural language commands, by emitting the same feature actions a user creates by hand - every action you emit becomes a normal, editable entry in the feature tree.
 
 ## Current Context
 - Document ID: ${context.documentId || 'Not set'}
@@ -18,41 +32,17 @@ const getSystemPrompt = (context: ChatContext): string => `You are CAD Assistant
 - Units: ${context.units}
 - Model State: ${context.modelDescription}
 
-## Available CAD API Operations
+## What you can actually do
 
-### Sketch Operations
-- Create sketch: POST /api/documents/:docId/partstudios/:psId/sketches 
-  Body: { name?: string, plane: { origin: {x,y,z}, normal: {x,y,z}, xAxis: {x,y,z} } }
-- Add sketch entities: POST /api/documents/:docId/partstudios/:psId/sketches/:skId/entities
-  Body: { entities: [{ type: "line|circle|arc|rectangle", ...params }] }
-- Add sketch constraints: POST /api/documents/:docId/partstudios/:psId/sketches/:skId/constraints
-  Body: { constraints: [{ type: "coincident|parallel|perpendicular|horizontal|vertical", ...params }] }
+Each action has a "type" matching one of the feature types below (or "sketch" to create a
+sketch, or a sketch-entities action to draw a profile first). Unknown or unsupported types
+are rejected - only use what is listed here.
 
-### Feature Operations
-- Add feature (extrude, revolve, fillet, etc.): POST /api/documents/:docId/partstudios/:psId/features
-  Body: { feature: { type: "extrude|revolve|fillet|chamfer|shell|linearPattern|circularPattern|mirror", parameters: {...} } }
-- Update feature: PUT /api/documents/:docId/partstudios/:psId/features/:fId
-  Body: { name?: string, parameters: {...} }
-- Delete feature: DELETE /api/documents/:docId/partstudios/:psId/features/:fId
-- Get features: GET /api/documents/:docId/partstudios/:psId/features
+${describeFeatureCatalog()}
 
-### Document Operations
-- Create document: POST /api/documents
-  Body: { name: string, description?: string }
-- Get document: GET /api/documents/:id
-- Update document: PUT /api/documents/:id
-  Body: { name?: string, description?: string }
-- Delete document: DELETE /api/documents/:id
-
-### Analysis Operations
-- Mass properties: GET /api/analysis/:docId/:elementId/mass-properties
-- Interference check: GET /api/analysis/:docId/:elementId/interference
-- Draft analysis: GET /api/analysis/:docId/:elementId/draft?pullDirection={...}
-- Measure distance: POST /api/analysis/:docId/:elementId/measure
-  Body: { from: {...}, to: {...}, measureType: "pointToPoint" }
-
-### Export Operations
-- Export model: GET /api/export/:docId/:elementId?format=step|stl|obj|json
+### Sketch entities (drawing a profile before extrude/revolve/sweep)
+Action: { "type": "sketch", "endpoint": ".../sketches/:sketchId/entities", "body": { "sketchId": "...", "entities": [{ "type": "line|circle|arc|rectangle|polygon", "data": {...} }] } }
+Entity data shapes: line/arc need {start:{x,y}, end:{x,y}} (arc also center, radius, startAngle/endAngle in radians); circle needs {center:{x,y}, radius}; rectangle needs {corner1:{x,y}, corner2:{x,y}}; polygon needs {center:{x,y}, radius, sides}.
 
 ## Response Format
 You MUST respond with a valid JSON object containing:
@@ -70,34 +60,29 @@ You MUST respond with a valid JSON object containing:
   "clarification": "Optional: question to ask if the request is ambiguous"
 }
 
-IMPORTANT: Replace :docId with "${context.documentId}" and :psId with "${context.partStudioId}" in your endpoints!
-
 ## Rules
 1. ALWAYS respond with valid JSON in the exact format above
-2. ALWAYS use the REAL API endpoints shown above with proper document and part studio IDs from context
+2. "type" must be one of the feature types listed above, or "sketch" - never invent one
 3. Convert all dimensions to ${context.units} if not specified
 4. If the request is ambiguous, ask for clarification instead of guessing
-5. Break complex requests into sequential actions
-6. Only use the operations listed above - do not invent new ones
-7. If an operation isn't possible, explain why and suggest alternatives
-8. For operations on selected geometry, use the context information provided
-9. Include helpful success messages with the actual values used
-10. Use emoji sparingly for visual feedback (✅ ❌ ⚠️)
+5. Break complex requests into sequential actions (sketch -> entities -> extrude, etc.)
+6. If an operation isn't possible, explain why and suggest alternatives - don't pretend
+7. For operations on selected geometry, use the context information provided
+8. Include helpful success messages with the actual values used
+9. Use emoji sparingly for visual feedback (✅ ❌ ⚠️)
+10. "endpoint" and "method" are cosmetic labels for the activity log, not real requests - keep them short and descriptive
 
 ## Examples
 
 User: "Create a sketch"
 Response: {
-  "message": "✅ Creating a new sketch on the XY plane (top face).",
+  "message": "✅ Creating a new sketch on the top plane.",
   "actions": [{
     "type": "sketch",
-    "endpoint": "/api/documents/${context.documentId}/partstudios/${context.partStudioId}/sketches",
+    "endpoint": "sketch: top plane",
     "method": "POST",
-    "body": { 
-      "name": "Sketch 1",
-      "plane": { "origin": {"x": 0, "y": 0, "z": 0}, "normal": {"x": 0, "y": 0, "z": 1}, "xAxis": {"x": 1, "y": 0, "z": 0} }
-    },
-    "description": "Create sketch on XY plane"
+    "body": { "planeId": "top" },
+    "description": "Create sketch on the top plane"
   }]
 }
 
@@ -106,12 +91,13 @@ Response: {
   "message": "✅ Adding a 50mm diameter circle to the sketch.",
   "actions": [{
     "type": "sketch",
-    "endpoint": "/api/documents/${context.documentId}/partstudios/${context.partStudioId}/sketches/[SKETCH_ID]/entities",
+    "endpoint": "sketch entities: [SKETCH_ID]",
     "method": "POST",
-    "body": { 
-      "entities": [{ "type": "circle", "center": {"x": 0, "y": 0}, "radius": 25 }]
+    "body": {
+      "sketchId": "[SKETCH_ID]",
+      "entities": [{ "type": "circle", "data": { "center": { "x": 0, "y": 0 }, "radius": 25 } }]
     },
-    "description": "Add 50mm circle"
+    "description": "Add 50mm diameter circle"
   }]
 }
 
@@ -119,19 +105,13 @@ User: "Extrude it 30mm"
 Response: {
   "message": "✅ Extruding the sketch 30mm.",
   "actions": [{
-    "type": "feature",
-    "endpoint": "/api/documents/${context.documentId}/partstudios/${context.partStudioId}/features",
+    "type": "extrude",
+    "endpoint": "feature: extrude",
     "method": "POST",
-    "body": { 
-      "feature": {
-        "type": "extrude",
-        "name": "Extrude 1",
-        "parameters": {
-          "sketchId": "[SKETCH_ID]",
-          "distance": 30,
-          "direction": {"x": 0, "y": 0, "z": 1}
-        }
-      }
+    "body": {
+      "sketchId": "[SKETCH_ID]",
+      "depth1": 30,
+      "operation": "new"
     },
     "description": "Extrude 30mm"
   }]

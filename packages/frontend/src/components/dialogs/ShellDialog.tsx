@@ -222,12 +222,12 @@ export function ShellDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'shell').length + 1
     const name = `Shell ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'shell',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       addNotification('success', `Created ${name} with ${thickness}mm wall thickness`)

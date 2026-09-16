@@ -1212,7 +1212,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     const feature = partStudio.features.find((f: any) => f.id === featureId)
     if (!feature) return
     
-    // Open the appropriate dialog based on feature type
+    // Feature type (canonical, camelCase - see featureAdapter.ts) -> dialog id. Dialog ids
+    // themselves stay as registered in EditorShell.DIALOG_REGISTRY.
     const dialogMap: Record<string, string> = {
       'extrude': 'extrude',
       'revolve': 'revolve',
@@ -1222,10 +1223,10 @@ export const useUIStore = create<UIState>((set, get) => ({
       'chamfer': 'chamfer',
       'shell': 'shell',
       'mirror': 'mirror-feature',
-      'linear-pattern': 'linear-pattern',
-      'circular-pattern': 'circular-pattern'
+      'linearPattern': 'linear-pattern',
+      'circularPattern': 'circular-pattern'
     }
-    
+
     const dialogId = dialogMap[feature.type]
     if (!dialogId) {
       console.warn(`No dialog mapping for feature type: ${feature.type}`)

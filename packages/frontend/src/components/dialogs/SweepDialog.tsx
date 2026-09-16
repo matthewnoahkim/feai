@@ -267,12 +267,12 @@ export function SweepDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'sweep').length + 1
     const name = `Sweep ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'sweep',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       addNotification('success', `Created ${name}`)

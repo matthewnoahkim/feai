@@ -248,12 +248,12 @@ export function MirrorFeatureDialog() {
     const typeLabel = mirrorType.charAt(0).toUpperCase() + mirrorType.slice(1)
     const name = `Mirror ${typeLabel} ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'mirror',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       addNotification('success', `Created ${name}`)

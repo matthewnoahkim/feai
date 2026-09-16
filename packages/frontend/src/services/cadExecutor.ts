@@ -4,6 +4,7 @@
 
 import { CadAction } from '../store/chatStore'
 import { useDocumentStore } from '../store/documentStore'
+import { isLiveFeatureType } from '../store/featureAdapter'
 
 export interface ExecutionResult {
   success: boolean
@@ -184,7 +185,17 @@ async function executeAction(
       return await executeMirror(action, partStudioId, store)
     }
     
-    // Default: try to add as a generic feature
+    // Everything the assistant is allowed to create has an explicit branch above or is in
+    // the catalog; anything else (delete/undo/document/analysis/export are dispatched
+    // elsewhere, or simply invalid) is rejected rather than silently creating a dead feature.
+    if (!isLiveFeatureType(action.type)) {
+      return {
+        success: false,
+        action: { ...action, status: 'error' },
+        error: `"${action.type}" is not a feature the modeling engine supports yet.`
+      }
+    }
+
     const feature = await store.addFeature(partStudioId, {
       type: action.type,
       name: body.name || `${action.type} feature`,
@@ -252,32 +263,43 @@ async function executeFeatureFromAPI(
 /**
  * Execute sketch entities (adding shapes to an existing sketch)
  */
+const SKETCH_ENTITY_TYPES = new Set(['line', 'circle', 'arc', 'rectangle', 'polygon', 'spline', 'point'])
+
 async function executeSketchEntities(
   action: CadAction,
   partStudioId: string,
   store: ReturnType<typeof useDocumentStore.getState>
 ): Promise<ExecutionResult> {
   const body = action.body || {}
-  const entities = body.entities || []
-  
-  // For now, we'll create a sketch with these entities if one doesn't exist
-  // In a real implementation, you'd extract the sketchId from the endpoint
-  const sketch = await store.createSketch(partStudioId, 'top')
-  
-  if (sketch) {
-    // Add the entities to the sketch (simplified - actual implementation would use the store)
-    return {
-      success: true,
-      action: { ...action, status: 'success' },
-      createdId: sketch.id,
-      result: { entities }
-    }
+  const entities: any[] = body.entities || []
+
+  const sketchId: string | undefined = body.sketchId ?? action.endpoint?.match(/sketches\/([^/]+)/)?.[1]
+  const sketch = sketchId
+    ? Array.from(store.document?.partStudios ?? []).flatMap(ps => Array.from(ps.sketches.values())).find(s => s.id === sketchId)
+    : undefined
+  const target = sketch ?? (await store.createSketch(partStudioId, body.planeId || 'top'))
+
+  if (!target) {
+    return { success: false, action: { ...action, status: 'error' }, error: 'Failed to resolve a sketch to add entities to' }
   }
-  
+
+  let added = 0
+  for (const raw of entities) {
+    if (!raw || !SKETCH_ENTITY_TYPES.has(raw.type)) continue
+    const { type, construction, data, ...rest } = raw
+    store.addSketchEntity(target.id, { type, construction: !!construction, data: data ?? rest })
+    added++
+  }
+
+  if (added === 0) {
+    return { success: false, action: { ...action, status: 'error' }, error: 'No valid sketch entities in the request' }
+  }
+
   return {
-    success: false,
-    action: { ...action, status: 'error' },
-    error: 'Failed to add sketch entities'
+    success: true,
+    action: { ...action, status: 'success' },
+    createdId: target.id,
+    result: { sketchId: target.id, added }
   }
 }
 

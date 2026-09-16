@@ -5,6 +5,7 @@
 import { create } from 'zustand'
 import { api } from '../api/client'
 import { cadSolverClient } from '../lib/cad-solver/client'
+import { normalizeFeature } from './featureAdapter'
 import type {
   MassProperties as CadMassProperties,
   Plane as CadPlane,
@@ -203,6 +204,43 @@ interface DocumentState {
 
 // Generate unique ID
 const generateId = () => Math.random().toString(36).substring(2, 15)
+
+/** JSON-safe form of a document for persistence (.feai, project data, autosave). Maps
+ * become objects, and parts drop everything the engine rebuilds on load (mesh, edges,
+ * mass properties, server shapeId) — except imported meshes, which are source data. */
+export function serializeDocument(doc: Document): Record<string, any> {
+  return {
+    ...doc,
+    partStudios: doc.partStudios.map(ps => {
+      const importedPartIds = new Set(
+        ps.features.filter(f => f.type === 'import').map(f => f.parameters.partId)
+      )
+      return {
+        ...ps,
+        sketches: Object.fromEntries(ps.sketches),
+        parts: ps.parts.map(p => {
+          const { mesh, edges, massProperties, shapeId, ...rest } = p
+          return importedPartIds.has(p.id) ? { ...rest, mesh } : rest
+        }),
+      }
+    }),
+  }
+}
+
+/** Inverse of serializeDocument: tolerates older payloads (missing arrays, Map already built). */
+export function deserializeDocument(data: any): Document {
+  return {
+    ...data,
+    partStudios: (data.partStudios || []).map((ps: any) => ({
+      ...ps,
+      features: ps.features || [],
+      parts: ps.parts || [],
+      sketches: ps.sketches instanceof Map
+        ? ps.sketches
+        : new Map<string, Sketch>(Object.entries(ps.sketches || {})),
+    })),
+  }
+}
 
 // Deep clone a document for undo/redo
 function cloneDocument(doc: Document): Document {
@@ -540,14 +578,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     
     set({ isLoading: true })
     try {
-      // Convert Maps to plain objects for JSON serialization
-      const serializableDoc = {
-        ...document,
-        partStudios: document.partStudios.map(ps => ({
-          ...ps,
-          sketches: Object.fromEntries(ps.sketches) // Convert Map to object
-        }))
-      }
+      const serializableDoc = serializeDocument(document)
       
       // Prefer the loaded project; fall back to the URL. Both editor routes count -
       // matching only /editor/ silently sent production (/project/<id>/…) saves to localStorage.
@@ -574,16 +605,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   
   loadDocumentFromData: (data: Document) => {
     try {
-      // Convert sketches from plain object to Map if needed
-      const partStudios = data.partStudios.map(ps => ({
-        ...ps,
-        sketches: ps.sketches instanceof Map ? ps.sketches : new Map<string, Sketch>(Object.entries(ps.sketches || {}))
-      }))
-      
+      const deserialized = deserializeDocument(data)
       const normalizedData = {
-        ...data,
-        partStudios
+        ...deserialized,
+        partStudios: deserialized.partStudios.map(ps => ({
+          ...ps,
+          features: ps.features.map(normalizeFeature),
+        })),
       }
+      const partStudios = normalizedData.partStudios
       
       set({ document: normalizedData, isDirty: false, isLoading: false, error: null })
       
@@ -823,10 +853,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     // Save state to undo stack before making changes
     const stateSnapshot = cloneDocument(document)
     
-    const newFeature: Feature = {
+    const newFeature: Feature = normalizeFeature({
       ...feature,
       id: generateId()
-    }
+    })
     
     set(state => {
       if (!state.document) return state
@@ -1629,13 +1659,23 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           break
           
         case 'import': {
-          // Preserve imported parts - find the corresponding part by part ID stored in feature parameters
+          // Imported parts are source data, not regenerable from features. Their persisted
+          // raw mesh is re-solidified here so, like every other body, they have a live
+          // shapeId after a reload or an engine restart.
           const partId = feature.parameters.partId
           const existingPart = partStudio.parts.find(p => p.id === partId)
-          if (existingPart) {
-            parts.push(existingPart)
-            currentBody = existingPart
+          if (!existingPart) break
+          let part = existingPart
+          if (!part.shapeId && part.mesh) {
+            try {
+              const result = await cadSolverClient.importMesh({ positions: part.mesh.vertices, indices: part.mesh.indices })
+              part = { ...part, ...shapeResultToPartFields(result) }
+            } catch (error) {
+              recordError('Imported mesh could not be re-solidified', error)
+            }
           }
+          parts.push(part)
+          currentBody = part
           break
         }
           

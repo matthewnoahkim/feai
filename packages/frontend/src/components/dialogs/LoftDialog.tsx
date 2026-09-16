@@ -265,12 +265,12 @@ export function LoftDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'loft').length + 1
     const name = `Loft ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'loft',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       addNotification('success', `Created ${name}`)
