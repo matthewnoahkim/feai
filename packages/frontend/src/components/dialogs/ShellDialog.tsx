@@ -51,7 +51,7 @@ interface ThicknessOverride {
 }
 
 export function ShellDialog() {
-  const { closeDialog, dialogData, addNotification, selection, setDialogData } = useUIStore()
+  const { closeDialog, dialogData, addNotification, selection, setDialogData, setPickFilter } = useUIStore()
   const { document, addFeature } = useDocumentStore()
   
   // Get active part studio
@@ -66,17 +66,19 @@ export function ShellDialog() {
     return activePartStudio.parts || []
   }, [activePartStudio])
   
-  // Mock faces for demonstration
+  // Real B-rep faces from the modeling engine (part.faces), one entry per topological
+  // face, addressed FreeCAD-style as <partId>-face-<N> (same indexing PartFaces uses in
+  // the viewport, via mesh.faceIndexByTriangle).
   const availableFaces = useMemo(() => {
     const faces: FaceInfo[] = []
     availableParts.forEach((part) => {
-      const faceLabels = ['Top', 'Bottom', 'Front', 'Back', 'Left', 'Right']
-      faceLabels.forEach((label, faceIndex) => {
+      (part.faces || []).forEach((face) => {
+        const index = parseInt(face.faceId.replace(/^f/, ''), 10)
         faces.push({
           partId: part.id,
           partName: part.name,
-          faceId: `${part.id}-face-${faceIndex}`,
-          faceLabel: label,
+          faceId: `${part.id}-face-${index}`,
+          faceLabel: `Face ${index + 1}`,
           isRemoved: false
         })
       })
@@ -114,6 +116,21 @@ export function ShellDialog() {
     return availableFaces.filter(f => f.partId === selectedPart)
   }, [selectedPart, availableFaces])
   
+  // While this panel is open, only faces are pickable in the viewport (FreeCAD's
+  // selection gate) — a shell needs faces-to-remove, never edges/vertices.
+  useEffect(() => {
+    setPickFilter(['face'])
+    return () => setPickFilter([])
+  }, [setPickFilter])
+
+  // Faces picked in the 3D viewport arrive through uiStore selection (type 'face'). As
+  // in FreeCAD's task panels, the removal list mirrors the 3D selection: click selects,
+  // Ctrl-click adds/removes (handled in PartFaces; this just mirrors the result here).
+  useEffect(() => {
+    if (selection.type !== 'face') return
+    setFacesToRemove(selection.ids)
+  }, [selection])
+
   // Toggle face removal
   const toggleFaceRemoval = useCallback((faceId: string) => {
     setFacesToRemove(prev => {

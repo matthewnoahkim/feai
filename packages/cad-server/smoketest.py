@@ -49,6 +49,14 @@ check("box principal moments = 16666.67 (was 0s before fix)",
       all(close(m, 16666.67, 1e-3) for m in mp["principalMoments"]), f"{mp['principalMoments']}")
 check("box has 12 edges", len(box["edges"]) == 12, f"{len(box['edges'])}")
 check("box mesh has 12 triangles", len(box["mesh"]["indices"]) == 36, f"{len(box['mesh']['indices'])//3}")
+check("box has 6 faces", len(box["faces"]) == 6, f"{len(box['faces'])}")
+check("box has 8 vertices", len(box["vertices"]) == 8, f"{len(box['vertices'])}")
+tri_count = len(box["mesh"]["indices"]) // 3
+face_idx_by_tri = box["mesh"]["faceIndexByTriangle"]
+check("faceIndexByTriangle has one entry per triangle", len(face_idx_by_tri) == tri_count,
+      f"{len(face_idx_by_tri)} vs {tri_count}")
+check("faceIndexByTriangle covers all 6 faces, no out-of-range", set(face_idx_by_tri) == set(range(6)),
+      f"{sorted(set(face_idx_by_tri))}")
 
 cyl = post("/primitives", {"type": "cylinder", "params": {"radius": 5, "height": 10}})
 check("cylinder volume = pi*25*10", close(cyl["massProperties"]["volume"], math.pi * 25 * 10),

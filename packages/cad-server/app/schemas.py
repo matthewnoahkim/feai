@@ -35,11 +35,23 @@ class MeshData(BaseModel):
     positions: list[float]
     normals: list[float]
     indices: list[int]
+    faceIndexByTriangle: list[int]  # one entry per triangle; index into ShapeResult.faces
 
 
 class EdgePolyline(BaseModel):
     edgeId: str
     points: list[float]  # flat x,y,z triplets, world space
+
+
+class FaceInfo(BaseModel):
+    faceId: str
+    centroid: list[float]  # x,y,z, a representative point on the face, world space
+    normal: list[float]  # x,y,z, unit normal at that point, world space
+
+
+class VertexInfo(BaseModel):
+    vertexId: str
+    point: list[float]  # x,y,z, world space
 
 
 class MassProperties(BaseModel):
@@ -56,6 +68,8 @@ class ShapeResult(BaseModel):
     shapeId: str
     mesh: MeshData
     edges: list[EdgePolyline]
+    faces: list[FaceInfo]
+    vertices: list[VertexInfo]
     massProperties: MassProperties
 
 

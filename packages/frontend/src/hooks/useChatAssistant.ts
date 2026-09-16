@@ -63,6 +63,7 @@ export function useChatAssistant() {
       partStudioId: document.activeElementId || activePartStudio?.id || null,
       selectedFaceId: selection.type === 'face' ? selection.ids[0] : null,
       selectedEdgeIds: selection.type === 'edge' ? selection.ids : [],
+      selectedVertexIds: selection.type === 'vertex' ? selection.ids : [],
       modelDescription
     })
   }, [document, selection, updateContext])

@@ -23,11 +23,27 @@ export interface MeshData {
   positions: number[]
   normals: number[]
   indices: number[]
+  /** One entry per triangle (indices.length / 3); value is the index into ShapeResult.faces
+   * that triangle belongs to. Lets the viewport highlight/pick a whole face by its triangle range. */
+  faceIndexByTriangle: number[]
 }
 
 export interface EdgePolyline {
   edgeId: string
   points: number[]
+}
+
+export interface FaceInfo {
+  faceId: string
+  /** A representative point on the face (world space) — for UI labeling, not a precise area centroid. */
+  centroid: number[]
+  /** Unit normal at `centroid` (world space). */
+  normal: number[]
+}
+
+export interface VertexInfo {
+  vertexId: string
+  point: number[]
 }
 
 export interface MassProperties {
@@ -44,6 +60,8 @@ export interface ShapeResult {
   shapeId: string
   mesh: MeshData
   edges: EdgePolyline[]
+  faces: FaceInfo[]
+  vertices: VertexInfo[]
   massProperties: MassProperties
 }
 

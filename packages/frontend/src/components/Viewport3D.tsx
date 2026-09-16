@@ -341,6 +341,149 @@ function PartEdges({ part }: { part: any }) {
   )
 }
 
+// Real B-rep face picking from the modeling engine, pickable while a shell/fillet-style
+// dialog opts into it (pickFilter includes 'face'). A face has no line-like primitive to
+// render on its own — instead of one <mesh> per face (which would multiply draw calls on
+// complex parts), this builds a single highlight overlay from the selected/hovered face's
+// own triangle range (via mesh.faceIndexByTriangle) and layers it on top of the real mesh,
+// while an invisible full-mesh proxy handles the actual raycast-to-triangle picking.
+function PartFaces({ part }: { part: any }) {
+  const { pickFilter, selection, setSelection, addToSelection, removeFromSelection, setHovered, hovered } = useUIStore()
+  const pickable = pickFilter.includes('face')
+
+  const geometry = useMemo(() => {
+    if (!part.mesh?.vertices?.length) return null
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(part.mesh.vertices), 3))
+    if (part.mesh.indices?.length) geo.setIndex(Array.from(part.mesh.indices as number[]))
+    return geo
+  }, [part.mesh])
+
+  const faceIndexByTriangle: number[] = part.mesh?.faceIndexByTriangle || []
+
+  const highlightGeometry = useCallback((faceIndex: number) => {
+    if (!geometry) return null
+    const positions = geometry.getAttribute('position') as THREE.BufferAttribute
+    const sourceIndex = geometry.getIndex()
+    const triIndices: number[] = []
+    for (let tri = 0; tri < faceIndexByTriangle.length; tri++) {
+      if (faceIndexByTriangle[tri] !== faceIndex) continue
+      if (sourceIndex) {
+        triIndices.push(sourceIndex.getX(tri * 3), sourceIndex.getX(tri * 3 + 1), sourceIndex.getX(tri * 3 + 2))
+      } else {
+        triIndices.push(tri * 3, tri * 3 + 1, tri * 3 + 2)
+      }
+    }
+    if (triIndices.length === 0) return null
+    const highlight = new THREE.BufferGeometry()
+    highlight.setAttribute('position', positions)
+    highlight.setIndex(triIndices)
+    return highlight
+  }, [geometry, faceIndexByTriangle])
+
+  if (!pickable || !geometry || !part.faces || part.faces.length === 0 || part.visible === false) return null
+
+  const selectedFaceIndex = selection.type === 'face'
+    ? selection.ids.find((id: string) => id.startsWith(`${part.id}-face-`))
+    : null
+  const hoveredFaceIndex = typeof hovered === 'string' && hovered.startsWith(`${part.id}-face-`) ? hovered : null
+
+  const handlePick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    const triangleIndex = e.faceIndex
+    if (triangleIndex == null) return
+    const faceIndex = faceIndexByTriangle[triangleIndex]
+    if (faceIndex == null) return
+    const id = `${part.id}-face-${faceIndex}`
+    const additive = e.ctrlKey || e.metaKey
+    if (additive && selection.type === 'face') {
+      if (selection.ids.includes(id)) removeFromSelection(id)
+      else addToSelection('face', id)
+    } else {
+      setSelection({ type: 'face', ids: [id] })
+    }
+  }
+
+  const handleHover = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation()
+    const triangleIndex = e.faceIndex
+    if (triangleIndex == null) return
+    const faceIndex = faceIndexByTriangle[triangleIndex]
+    if (faceIndex == null) return
+    setHovered(`${part.id}-face-${faceIndex}`)
+  }
+
+  const selectedHighlight = selectedFaceIndex
+    ? highlightGeometry(parseInt(selectedFaceIndex.replace(`${part.id}-face-`, ''), 10))
+    : null
+  const hoveredHighlight = hoveredFaceIndex && hoveredFaceIndex !== selectedFaceIndex
+    ? highlightGeometry(parseInt(hoveredFaceIndex.replace(`${part.id}-face-`, ''), 10))
+    : null
+
+  return (
+    <group>
+      {/* Proxy over the real mesh, handling picking only. Made invisible via a fully
+          transparent material rather than `visible={false}` — Three.js's raycaster (and
+          so every R3F pointer event) skips non-visible objects entirely, which would
+          silently break picking. */}
+      <mesh geometry={geometry} onClick={handlePick} onPointerMove={handleHover} onPointerOut={() => setHovered(null)}>
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {selectedHighlight && (
+        <mesh geometry={selectedHighlight}>
+          <meshBasicMaterial color="#22d3ee" transparent opacity={0.35} depthTest={false} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+      {hoveredHighlight && (
+        <mesh geometry={hoveredHighlight}>
+          <meshBasicMaterial color="#67e8f9" transparent opacity={0.25} depthTest={false} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
+// Real B-rep vertex picking from the modeling engine, pickable while a dialog opts into
+// it (pickFilter includes 'vertex'). Vertices are 0-dimensional, so each renders as a
+// small pickable sphere rather than a line/mesh-range like edges/faces.
+function PartVertices({ part }: { part: any }) {
+  const { pickFilter, selection, setSelection, addToSelection, removeFromSelection, setHovered, hovered } = useUIStore()
+  const pickable = pickFilter.includes('vertex')
+  if (!pickable || !part.vertices || part.vertices.length === 0 || part.visible === false) return null
+
+  return (
+    <group>
+      {part.vertices.map((vertex: { vertexId: string; point: number[] }) => {
+        const index = parseInt(vertex.vertexId.replace(/^v/, ''), 10)
+        const id = `${part.id}-vertex-${index}`
+        const isSelected = selection.type === 'vertex' && selection.ids.includes(id)
+        const isHovered = hovered === id
+        return (
+          <mesh
+            key={id}
+            position={[vertex.point[0], vertex.point[1], vertex.point[2]]}
+            onClick={(e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation()
+              const additive = e.ctrlKey || e.metaKey
+              if (additive && selection.type === 'vertex') {
+                if (selection.ids.includes(id)) removeFromSelection(id)
+                else addToSelection('vertex', id)
+              } else {
+                setSelection({ type: 'vertex', ids: [id] })
+              }
+            }}
+            onPointerOver={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHovered(id) }}
+            onPointerOut={() => setHovered(null)}
+          >
+            <sphereGeometry args={[isSelected || isHovered ? 1.2 : 0.9, 12, 12]} />
+            <meshBasicMaterial color={isSelected ? '#22d3ee' : isHovered ? '#67e8f9' : '#1f2937'} depthTest={false} />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
 // Sketch visualization
 function SketchVisualization() {
   const { sketchMode, isDrawing, drawingPoints } = useUIStore()
@@ -2430,7 +2573,13 @@ function Scene() {
       {parts.map(part => (
         <PartEdges key={`edges-${part.id}`} part={part} />
       ))}
-      
+      {parts.map(part => (
+        <PartFaces key={`faces-${part.id}`} part={part} />
+      ))}
+      {parts.map(part => (
+        <PartVertices key={`vertices-${part.id}`} part={part} />
+      ))}
+
       {/* Completed sketches visualization - always visible */}
       <CompletedSketchesVisualization />
       

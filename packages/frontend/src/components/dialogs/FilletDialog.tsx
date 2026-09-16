@@ -53,7 +53,6 @@ interface FaceInfo {
   partName: string
   faceId: string
   faceLabel: string
-  edgeCount: number
 }
 
 // Radius set for multiple different radii
@@ -97,18 +96,19 @@ export function FilletDialog() {
     return edges
   }, [availableParts])
   
-  // Mock faces for demonstration
+  // Real B-rep faces from the modeling engine (part.faces), one entry per topological
+  // face, addressed FreeCAD-style as <partId>-face-<N> (same indexing PartFaces uses in
+  // the viewport, via mesh.faceIndexByTriangle).
   const availableFaces = useMemo(() => {
     const faces: FaceInfo[] = []
     availableParts.forEach((part) => {
-      const faceLabels = ['Top', 'Bottom', 'Front', 'Back', 'Left', 'Right']
-      faceLabels.forEach((label, faceIndex) => {
+      (part.faces || []).forEach((face) => {
+        const index = parseInt(face.faceId.replace(/^f/, ''), 10)
         faces.push({
           partId: part.id,
           partName: part.name,
-          faceId: `${part.id}-face-${faceIndex}`,
-          faceLabel: label,
-          edgeCount: 4  // Each face has 4 edges for a box
+          faceId: `${part.id}-face-${index}`,
+          faceLabel: `Face ${index + 1}`
         })
       })
     })
@@ -150,18 +150,19 @@ export function FilletDialog() {
     setSelectedEdges(prev => prev.includes(edgeId) ? prev.filter(id => id !== edgeId) : [...prev, edgeId])
   }, [])
 
-  // While this panel is open, only edges are pickable in the viewport (FreeCAD's selection gate).
+  // While this panel is open, only the current selection mode's sub-element kind is
+  // pickable in the viewport (FreeCAD's selection gate).
   useEffect(() => {
-    setPickFilter(['edge'])
+    setPickFilter([selectionMode === 'faces' ? 'face' : 'edge'])
     return () => setPickFilter([])
-  }, [setPickFilter])
+  }, [selectionMode, setPickFilter])
 
-  // Edges picked in the 3D viewport arrive through uiStore selection (type 'edge'). As in
+  // Edges/faces picked in the 3D viewport arrive through uiStore selection. As in
   // FreeCAD's task panels, the list mirrors the 3D selection: click selects, Ctrl-click
   // adds/removes.
   useEffect(() => {
-    if (selection.type !== 'edge') return
-    setSelectedEdges(selection.ids)
+    if (selection.type === 'edge') setSelectedEdges(selection.ids)
+    else if (selection.type === 'face') setSelectedFaces(selection.ids)
   }, [selection])
   
   // Toggle face selection (selects all edges of face)

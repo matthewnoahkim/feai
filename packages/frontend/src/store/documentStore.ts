@@ -80,10 +80,20 @@ export interface Part {
     vertices: number[]
     normals: number[]
     indices: number[]
+    /** One entry per triangle; value is the index into `faces` that triangle belongs to.
+     * Drives face highlighting/picking without needing per-face draw calls. Absent for a
+     * raw imported mesh that never made it through the modeling engine (see importSTLPart's
+     * fallback), since there's no server-side face data to index into. */
+    faceIndexByTriangle?: number[]
   }
   /** Real B-rep edges from the modeling engine, one polyline (flat xyz) per topological
    * edge, id `e<N>` where N is the server-side edge index. Drives edge picking. */
   edges?: Array<{ edgeId: string; points: number[] }>
+  /** Real B-rep faces from the modeling engine, id `f<N>` where N is the server-side face
+   * index (same index space as `mesh.faceIndexByTriangle`). Drives face picking. */
+  faces?: Array<{ faceId: string; centroid: number[]; normal: number[] }>
+  /** Real B-rep vertices from the modeling engine, id `v<N>`. Drives vertex picking. */
+  vertices?: Array<{ vertexId: string; point: number[] }>
   massProperties?: CadMassProperties
   /** Reference to the real B-rep shape in FEAI's modeling engine (packages/cad-server),
    * used to chain booleans/fillets/chamfers onto this body. Absent for imported parts
@@ -219,7 +229,7 @@ export function serializeDocument(doc: Document): Record<string, any> {
         ...ps,
         sketches: Object.fromEntries(ps.sketches),
         parts: ps.parts.map(p => {
-          const { mesh, edges, massProperties, shapeId, ...rest } = p
+          const { mesh, edges, faces, vertices, massProperties, shapeId, ...rest } = p
           return importedPartIds.has(p.id) ? { ...rest, mesh } : rest
         }),
       }
@@ -437,29 +447,42 @@ function resolveRevolveAxis(
   }
 }
 
-function shapeResultToPartFields(result: CadShapeResult): Pick<Part, 'mesh' | 'edges' | 'shapeId' | 'massProperties'> {
+function shapeResultToPartFields(
+  result: CadShapeResult
+): Pick<Part, 'mesh' | 'edges' | 'faces' | 'vertices' | 'shapeId' | 'massProperties'> {
   return {
     mesh: {
       vertices: result.mesh.positions,
       normals: result.mesh.normals,
       indices: result.mesh.indices,
+      faceIndexByTriangle: result.mesh.faceIndexByTriangle,
     },
     edges: result.edges.map(e => ({ edgeId: e.edgeId, points: e.points })),
+    faces: result.faces.map(f => ({ faceId: f.faceId, centroid: f.centroid, normal: f.normal })),
+    vertices: result.vertices.map(v => ({ vertexId: v.vertexId, point: v.point })),
     shapeId: result.shapeId,
     massProperties: result.massProperties,
   }
 }
 
-/** Picked edges arrive as `<partId>-edge-<N>` (FreeCAD's `Edge3`-style sub-element
- * naming, scoped to a part). Returns the server-side indices for `partId`; ids for other
- * parts are ignored. An empty result means "all edges" to the modeling engine. */
-function edgeIndicesFromIds(edgeIds: string[], partId: string): number[] {
+/** Picked sub-elements arrive as `<partId>-<kind>-<N>` (FreeCAD's sub-element-style
+ * naming, scoped to a part), where N is the server-side index into that kind's array
+ * (shape.Edges / shape.Faces / shape.Vertexes). Returns the indices for `partId`; ids
+ * for other parts are ignored. */
+function subShapeIndicesFromIds(ids: string[], partId: string, kind: 'edge' | 'face' | 'vertex'): number[] {
+  const pattern = new RegExp(`^(.*)-${kind}-(\\d+)$`)
   const indices: number[] = []
-  for (const id of edgeIds) {
-    const match = /^(.*)-edge-(\d+)$/.exec(id)
+  for (const id of ids) {
+    const match = pattern.exec(id)
     if (match && match[1] === partId) indices.push(parseInt(match[2], 10))
   }
   return indices
+}
+
+/** Fillet/chamfer's convention: an empty result means "all edges" to the modeling
+ * engine (the chat/AI path, which has no edge ids to give). */
+function edgeIndicesFromIds(edgeIds: string[], partId: string): number[] {
+  return subShapeIndicesFromIds(edgeIds, partId, 'edge')
 }
 
 /** Replaces an existing entry in `parts` by id, or appends a new one — `combineIntoBody`

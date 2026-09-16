@@ -39,6 +39,7 @@ export interface ChatContext {
   partStudioId: string | null
   selectedFaceId: string | null
   selectedEdgeIds: string[]
+  selectedVertexIds: string[]
   units: 'mm' | 'inch' | 'm'
   modelDescription: string
 }
@@ -104,6 +105,7 @@ const DEFAULT_CONTEXT: ChatContext = {
   partStudioId: null,
   selectedFaceId: null,
   selectedEdgeIds: [],
+  selectedVertexIds: [],
   units: 'mm',
   modelDescription: 'Empty model'
 }

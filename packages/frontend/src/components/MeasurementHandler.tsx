@@ -25,31 +25,38 @@ export function MeasurementHandler() {
    * Extract entity information from a mesh hit
    */
   const extractEntityFromIntersection = useCallback((intersection: THREE.Intersection): MeasurementEntity | null => {
-    const { object, point, face } = intersection
-    
+    const { object, point, face, faceIndex } = intersection
+
     if (!face) return null
-    
+
     const mesh = object as THREE.Mesh
-    
+
     // Get face normal in world space
     const normal = face.normal.clone()
     const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld)
     normal.applyMatrix3(normalMatrix).normalize()
-    
-    // For now, treat the hit as a face measurement
-    // In a more sophisticated implementation, we would:
-    // - Detect edge clicks based on proximity to edges
-    // - Detect vertex clicks based on proximity to vertices
-    
+
+    // Resolve the hit triangle back to a real B-rep face id (`<partId>-face-<N>`) via the
+    // part's mesh.faceIndexByTriangle map, so repeated clicks on the same face produce
+    // the same id instead of a fresh `face-${Date.now()}` every time. Edge/vertex
+    // detection by proximity is still unimplemented — every hit is treated as a face.
+    const partId = (mesh.userData as { partId?: string } | undefined)?.partId
+    let id = `face-${Date.now()}`
+    if (partId && faceIndex != null) {
+      const part = document?.partStudios.flatMap(ps => ps.parts).find(p => p.id === partId)
+      const realFaceIndex = part?.mesh?.faceIndexByTriangle?.[faceIndex]
+      if (realFaceIndex != null) id = `${partId}-face-${realFaceIndex}`
+    }
+
     const entity: MeasurementEntity = {
       type: 'face',
-      id: `face-${Date.now()}`,
+      id,
       position: [point.x, point.y, point.z],
       normal: [normal.x, normal.y, normal.z]
     }
-    
+
     return entity
-  }, [])
+  }, [document])
   
   /**
    * Handle click in measurement mode

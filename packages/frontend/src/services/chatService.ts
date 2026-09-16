@@ -29,6 +29,7 @@ const getSystemPrompt = (context: ChatContext): string => `You are CAD Assistant
 - Part Studio ID: ${context.partStudioId || 'Not set'}
 - Selected Face: ${context.selectedFaceId || 'None'}
 - Selected Edges: ${context.selectedEdgeIds.length > 0 ? context.selectedEdgeIds.join(', ') : 'None'}
+- Selected Vertices: ${context.selectedVertexIds.length > 0 ? context.selectedVertexIds.join(', ') : 'None'}
 - Units: ${context.units}
 - Model State: ${context.modelDescription}
 

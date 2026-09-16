@@ -22,6 +22,7 @@ from .schemas import (
     ChamferRequest,
     EdgePolyline,
     ExtrudeRequest,
+    FaceInfo,
     FilletRequest,
     LoftRequest,
     MassProperties,
@@ -34,6 +35,7 @@ from .schemas import (
     RevolveRequest,
     ShapeResult,
     SweepRequest,
+    VertexInfo,
 )
 
 
@@ -363,17 +365,30 @@ def _compute_vertex_normals(positions: list[float], indices: list[int]) -> list[
 
 
 def tessellate(shape: Part.Shape, tolerance: float = 0.5) -> MeshData:
-    # clean=True drops any cached triangulation first; otherwise OCC reuses the existing
-    # mesh and a coarser tolerance silently has no effect.
-    vertices, triangles = shape.tessellate(tolerance, True)
+    """Tessellates face-by-face, rather than the whole shape at once, so each triangle
+    can be attributed to a source face (faceIndexByTriangle) for picking/highlighting —
+    shape.tessellate() alone returns a flat triangle soup with no such mapping.
+    clean=True drops any cached triangulation first; otherwise OCC reuses the existing
+    mesh and a coarser tolerance silently has no effect."""
     positions: list[float] = []
-    for v in vertices:
-        positions.extend([v.x, v.y, v.z])
     indices: list[int] = []
-    for tri in triangles:
-        indices.extend(tri)
+    face_index_by_triangle: list[int] = []
+    vertex_offset = 0
+    for face_idx, face in enumerate(shape.Faces):
+        vertices, triangles = face.tessellate(tolerance, True)
+        for v in vertices:
+            positions.extend([v.x, v.y, v.z])
+        for tri in triangles:
+            indices.extend(idx + vertex_offset for idx in tri)
+            face_index_by_triangle.append(face_idx)
+        vertex_offset += len(vertices)
     normals = _compute_vertex_normals(positions, indices)
-    return MeshData(positions=positions, normals=normals, indices=indices)
+    return MeshData(
+        positions=positions,
+        normals=normals,
+        indices=indices,
+        faceIndexByTriangle=face_index_by_triangle,
+    )
 
 
 def discretize_edges(shape: Part.Shape, points_per_edge: int = 16) -> list[EdgePolyline]:
@@ -387,6 +402,35 @@ def discretize_edges(shape: Part.Shape, points_per_edge: int = 16) -> list[EdgeP
         for pt in points:
             flat.extend([pt.x, pt.y, pt.z])
         result.append(EdgePolyline(edgeId=f"e{i}", points=flat))
+    return result
+
+
+def discretize_faces(shape: Part.Shape) -> list[FaceInfo]:
+    """One FaceInfo per shape.Faces entry, in the same enumerate-order indexing that
+    tessellate()'s faceIndexByTriangle and pattern/shell/direct-edit face selection use.
+    centroid/normal are a representative point for UI labeling and future push/pull
+    direction, not a precise area centroid."""
+    result = []
+    for i, face in enumerate(shape.Faces):
+        try:
+            u_min, u_max, v_min, v_max = face.ParameterRange
+            point = face.valueAt((u_min + u_max) / 2, (v_min + v_max) / 2)
+            normal = face.normalAt((u_min + u_max) / 2, (v_min + v_max) / 2)
+            centroid = [point.x, point.y, point.z]
+            normal_xyz = [normal.x, normal.y, normal.z]
+        except Exception:
+            center = face.CenterOfMass
+            centroid = [center.x, center.y, center.z]
+            normal_xyz = [0.0, 0.0, 1.0]
+        result.append(FaceInfo(faceId=f"f{i}", centroid=centroid, normal=normal_xyz))
+    return result
+
+
+def discretize_vertices(shape: Part.Shape) -> list[VertexInfo]:
+    result = []
+    for i, vertex in enumerate(shape.Vertexes):
+        p = vertex.Point
+        result.append(VertexInfo(vertexId=f"v{i}", point=[p.x, p.y, p.z]))
     return result
 
 
@@ -463,5 +507,7 @@ def shape_to_result(shape: Part.Shape, edge_points: int = 16, tolerance: float =
         shapeId=shape_id,
         mesh=tessellate(shape, tolerance=tolerance),
         edges=discretize_edges(shape, points_per_edge=edge_points),
+        faces=discretize_faces(shape),
+        vertices=discretize_vertices(shape),
         massProperties=mass_properties(shape),
     )
