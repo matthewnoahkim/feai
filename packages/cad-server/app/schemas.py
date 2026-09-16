@@ -141,6 +141,13 @@ class ChamferRequest(BaseModel):
     distance: float
 
 
+class TessellateRequest(BaseModel):
+    """Re-tessellate a stored shape at a chosen coarseness (e.g. a lightweight LOD)."""
+
+    tolerance: float = 0.5
+    edgePoints: int = 16
+
+
 class MeshImportRequest(BaseModel):
     """A triangle mesh (e.g. a parsed STL) to turn into a real solid. Same flat layout as
     MeshData: xyz position triplets and 0-based triangle index triplets."""

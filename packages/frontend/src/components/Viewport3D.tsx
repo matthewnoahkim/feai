@@ -300,8 +300,8 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
 // dialog is open. Mirrors FreeCAD's sub-element selection: hover preselects, click
 // selects, Ctrl-click adds (or removes, if already selected).
 function PartEdges({ part }: { part: any }) {
-  const { activeDialog, selection, setSelection, addToSelection, removeFromSelection, setHovered, hovered } = useUIStore()
-  const pickable = activeDialog === 'fillet' || activeDialog === 'chamfer'
+  const { pickFilter, selection, setSelection, addToSelection, removeFromSelection, setHovered, hovered } = useUIStore()
+  const pickable = pickFilter.includes('edge')
   if (!pickable || !part.edges || part.edges.length === 0 || part.visible === false) return null
 
   return (

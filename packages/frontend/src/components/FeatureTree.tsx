@@ -338,7 +338,7 @@ function FeatureContextMenu({
         })
       }
     } else {
-      openDialog(feature.type, { featureId: feature.id })
+      openFeatureForEdit(feature.id, partStudioId)
     }
     onClose()
   }
@@ -503,7 +503,7 @@ function RollbackBar({
 export function FeatureTree() {
   const { document } = useDocumentStore()
   const { renameFeature, toggleFeatureSuppression, deleteFeature, reorderFeature, toggleBodyVisibility } = useDocumentStore()
-  const { selection, setSelection, enterSketchMode, openDialog, addNotification, activeDialog, rollbackState, rollToFeature, rollToEnd } = useUIStore()
+  const { selection, setSelection, enterSketchMode, openDialog, openFeatureForEdit, addNotification, activeDialog, rollbackState, rollToFeature, rollToEnd } = useUIStore()
   
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['root', 'origin']))
   const [contextMenu, setContextMenu] = useState<{ feature: Feature; partStudioId: string; position: { x: number; y: number } } | null>(null)
@@ -541,7 +541,7 @@ export function FeatureTree() {
         })
       }
     } else {
-      openDialog(feature.type, { featureId: feature.id })
+      openFeatureForEdit(feature.id, partStudioId)
     }
   }
   

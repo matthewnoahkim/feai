@@ -245,7 +245,10 @@ interface UIState {
   selection: Selection
   hovered: string | null
   preselection: string | null
-  
+  /** Sub-element kinds currently pickable in the viewport (FreeCAD's selection gate);
+   * set by the open dialog, e.g. ['edge'] for fillet. Empty = nothing pickable. */
+  pickFilter: SelectionType[]
+
   // View settings
   viewSettings: ViewSettings
   camera: CameraState
@@ -329,6 +332,7 @@ interface UIState {
   removeFromSelection: (id: string) => void
   setHovered: (id: string | null) => void
   setPreselection: (id: string | null) => void
+  setPickFilter: (kinds: SelectionType[]) => void
   
   setViewSetting: <K extends keyof ViewSettings>(key: K, value: ViewSettings[K]) => void
   toggleViewSetting: (key: 'showGrid' | 'showOrigin' | 'showPlanes' | 'showEdges') => void
@@ -768,7 +772,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   selection: { type: 'none', ids: [] },
   hovered: null,
   preselection: null,
-  
+  pickFilter: [],
+
   viewSettings: {
     showGrid: true,
     showOrigin: true,
@@ -895,6 +900,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   setHovered: (id) => set({ hovered: id }),
   
   setPreselection: (id) => set({ preselection: id }),
+  setPickFilter: (kinds) => set({ pickFilter: kinds }),
   
   setViewSetting: (key, value) => set((state) => ({
     viewSettings: { ...state.viewSettings, [key]: value }

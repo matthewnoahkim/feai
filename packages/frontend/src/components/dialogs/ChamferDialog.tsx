@@ -56,7 +56,7 @@ interface FaceInfo {
 }
 
 export function ChamferDialog() {
-  const { closeDialog, dialogData, addNotification, selection, setDialogData } = useUIStore()
+  const { closeDialog, dialogData, addNotification, selection, setDialogData, setPickFilter } = useUIStore()
   const { document, addFeature } = useDocumentStore()
   
   // Get active part studio
@@ -135,6 +135,12 @@ export function ChamferDialog() {
   const toggleEdge = useCallback((edgeId: string) => {
     setSelectedEdges(prev => prev.includes(edgeId) ? prev.filter(id => id !== edgeId) : [...prev, edgeId])
   }, [])
+
+  // While this panel is open, only edges are pickable in the viewport (FreeCAD's selection gate).
+  useEffect(() => {
+    setPickFilter(['edge'])
+    return () => setPickFilter([])
+  }, [setPickFilter])
 
   // Edges picked in the 3D viewport arrive through uiStore selection (type 'edge'). As in
   // FreeCAD's task panels, the list mirrors the 3D selection: click selects, Ctrl-click
@@ -221,12 +227,12 @@ export function ChamferDialog() {
     const featureCount = activePartStudio.features.filter(f => f.type === 'chamfer').length + 1
     const name = `Chamfer ${featureCount}`
     
-    const feature = await addFeature(activePartStudio.id, {
+    const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
       type: 'chamfer',
       name,
       suppressed: false,
       parameters: params
-    })
+    }, useUIStore.getState().dialogData)
     
     if (feature) {
       const dimText = chamferType === 'equal' 

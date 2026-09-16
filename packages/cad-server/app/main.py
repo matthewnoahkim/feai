@@ -23,6 +23,7 @@ from .schemas import (
     RevolveRequest,
     ShapeResult,
     SweepRequest,
+    TessellateRequest,
 )
 
 app = FastAPI(title="FEAI Modeling Engine")
@@ -39,7 +40,7 @@ app.add_middleware(
 )
 
 
-def _run(build_shape, edge_points: int = 16) -> ShapeResult:
+def _run(build_shape, edge_points: int = 16, tolerance: float = 0.5) -> ShapeResult:
     try:
         shape = build_shape()
     except GeometryError as exc:
@@ -48,7 +49,7 @@ def _run(build_shape, edge_points: int = 16) -> ShapeResult:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if shape is None or shape.isNull():
         raise HTTPException(status_code=400, detail="Operation produced an empty shape")
-    return freecad_ops.shape_to_result(shape, edge_points=edge_points)
+    return freecad_ops.shape_to_result(shape, edge_points=edge_points, tolerance=tolerance)
 
 
 @app.get("/health")
@@ -101,6 +102,12 @@ def import_mesh(req: MeshImportRequest) -> ShapeResult:
     # A mesh-derived solid has one straight edge per triangle edge, so 2 points each
     # keeps the edge payload from exploding on large STLs.
     return _run(lambda: freecad_ops.do_import_mesh(req), edge_points=2)
+
+
+@app.post("/shapes/{shape_id}/tessellate", response_model=ShapeResult)
+def tessellate_shape(shape_id: str, req: TessellateRequest) -> ShapeResult:
+    # Same geometry under a fresh shapeId, meshed at the requested coarseness (LOD).
+    return _run(lambda: shape_store.get(shape_id), edge_points=req.edgePoints, tolerance=req.tolerance)
 
 
 @app.delete("/shapes/{shape_id}")

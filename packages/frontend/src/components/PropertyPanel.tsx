@@ -17,6 +17,16 @@ import {
   ChevronRight
 } from 'lucide-react'
 
+// Keyed on the Material picker's ids below. The workflow/FEA material library
+// (workflowStore) is a separate model; unifying them is later work.
+const MATERIAL_DENSITY_KG_M3: Record<string, number> = {
+  steel: 7850,
+  aluminum: 2700,
+  brass: 8500,
+  'plastic-abs': 1050,
+  'plastic-pla': 1240,
+}
+
 interface PropertySectionProps {
   title: string
   icon: React.ReactNode
@@ -306,24 +316,42 @@ export function PropertyPanel() {
             </PropertySection>
             
             <PropertySection title="Mass Properties" icon={<Ruler size={16} />} defaultOpen={false}>
-              <div className="space-y-1 text-xs font-sans">
-                <div className="flex justify-between">
-                  <span className="text-cad-text-dim">Volume:</span>
-                  <span>27,000 mm³</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-cad-text-dim">Surface Area:</span>
-                  <span>5,400 mm²</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-cad-text-dim">Mass:</span>
-                  <span>0.212 kg</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-cad-text-dim">Density:</span>
-                  <span>7.85 g/cm³</span>
-                </div>
-              </div>
+              {(() => {
+                // Real values from the modeling engine; imported raw meshes have none.
+                const mp = selectedPart.massProperties
+                const density = MATERIAL_DENSITY_KG_M3[selectedPart.material || 'steel'] ?? MATERIAL_DENSITY_KG_M3.steel
+                const massKg = mp ? mp.volume * 1e-9 * density : null
+                const fmt = (v: number, digits = 0) => v.toLocaleString(undefined, { maximumFractionDigits: digits })
+                return (
+                  <div className="space-y-1 text-xs font-sans">
+                    <div className="flex justify-between">
+                      <span className="text-cad-text-dim">Volume:</span>
+                      <span>{mp ? `${fmt(mp.volume)} mm³` : '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-cad-text-dim">Surface Area:</span>
+                      <span>{mp ? `${fmt(mp.surfaceArea)} mm²` : '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-cad-text-dim">Mass:</span>
+                      <span>{massKg !== null ? `${fmt(massKg, 3)} kg` : '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-cad-text-dim">Density:</span>
+                      <span>{fmt(density / 1000, 2)} g/cm³</span>
+                    </div>
+                    {mp && (
+                      <div className="flex justify-between">
+                        <span className="text-cad-text-dim">Center of mass:</span>
+                        <span>{mp.centerOfMass.map(c => fmt(c, 1)).join(', ')}</span>
+                      </div>
+                    )}
+                    {!mp && (
+                      <p className="text-cad-text-dim pt-1">No solid geometry yet (imported meshes are re-solidified on load).</p>
+                    )}
+                  </div>
+                )
+              })()}
             </PropertySection>
           </>
         )}

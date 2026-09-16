@@ -244,12 +244,12 @@ export function ExtrudeDialog() {
     const name = `Extrude ${featureCount}`
     
     try {
-      const feature = await addFeature(activePartStudio.id, {
+      const feature = await useDocumentStore.getState().submitFeature(activePartStudio.id, {
         type: 'extrude',
         name,
         suppressed: false,
         parameters: params
-      })
+      }, useUIStore.getState().dialogData)
       
       if (feature) {
         addNotification('success', `Created ${name}`)

@@ -144,7 +144,7 @@ def _wire_for_profile(profile: ProfileEntity, delta: float = 0.0) -> Part.Wire:
 
 def _wire_for_path(path: PathEntity) -> Part.Wire:
     """Builds an open wire at z=0 for a sweep path. Straight lines are the common case;
-    arcs assume {center, radius, startAngle, endAngle} in degrees."""
+    arcs use {center, radius, startAngle, endAngle (radians), clockwise} as SketchCanvas stores them."""
     data = path.data
     if path.type == "line":
         start = data.get("start", {"x": 0, "y": 0})
@@ -153,8 +153,14 @@ def _wire_for_path(path: PathEntity) -> Part.Wire:
         return Part.Wire([edge])
     if path.type == "arc":
         cx, cy, radius = _circle_params(data)
-        start_angle = math.radians(data.get("startAngle", 0))
-        end_angle = math.radians(data.get("endAngle", 180))
+        # SketchCanvas stores these in radians already; `clockwise` picks which way round.
+        start_angle = float(data.get("startAngle", 0.0))
+        end_angle = float(data.get("endAngle", math.pi))
+        if data.get("clockwise"):
+            if end_angle > start_angle:
+                end_angle -= 2 * math.pi
+        elif end_angle < start_angle:
+            end_angle += 2 * math.pi
         mid_angle = (start_angle + end_angle) / 2
         start_pt = Vector(cx + radius * math.cos(start_angle), cy + radius * math.sin(start_angle), 0)
         mid_pt = Vector(cx + radius * math.cos(mid_angle), cy + radius * math.sin(mid_angle), 0)
@@ -357,7 +363,9 @@ def _compute_vertex_normals(positions: list[float], indices: list[int]) -> list[
 
 
 def tessellate(shape: Part.Shape, tolerance: float = 0.5) -> MeshData:
-    vertices, triangles = shape.tessellate(tolerance)
+    # clean=True drops any cached triangulation first; otherwise OCC reuses the existing
+    # mesh and a coarser tolerance silently has no effect.
+    vertices, triangles = shape.tessellate(tolerance, True)
     positions: list[float] = []
     for v in vertices:
         positions.extend([v.x, v.y, v.z])
@@ -448,12 +456,12 @@ def _normalize(shape: Part.Shape) -> Part.Shape:
     return shape
 
 
-def shape_to_result(shape: Part.Shape, edge_points: int = 16) -> ShapeResult:
+def shape_to_result(shape: Part.Shape, edge_points: int = 16, tolerance: float = 0.5) -> ShapeResult:
     shape = _normalize(shape)
     shape_id = shape_store.put(shape)
     return ShapeResult(
         shapeId=shape_id,
-        mesh=tessellate(shape),
+        mesh=tessellate(shape, tolerance=tolerance),
         edges=discretize_edges(shape, points_per_edge=edge_points),
         massProperties=mass_properties(shape),
     )

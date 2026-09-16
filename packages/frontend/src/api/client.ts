@@ -129,39 +129,6 @@ export const api = {
     })
   },
   
-  // Assemblies
-  async getAssembly(documentId: string, assemblyId: string) {
-    return request<any>(`/documents/${documentId}/assemblies/${assemblyId}`)
-  },
-  
-  async addInstance(documentId: string, assemblyId: string, instance: any) {
-    return request<{ instance: any }>(`/documents/${documentId}/assemblies/${assemblyId}/instances`, {
-      method: 'POST',
-      body: JSON.stringify(instance)
-    })
-  },
-  
-  async addMate(documentId: string, assemblyId: string, mate: any) {
-    return request<{ mate: any }>(`/documents/${documentId}/assemblies/${assemblyId}/mates`, {
-      method: 'POST',
-      body: JSON.stringify(mate)
-    })
-  },
-  
-  // Export
-  async exportModel(documentId: string, elementId: string, format: 'step' | 'stl' | 'obj') {
-    return request<{ downloadUrl: string }>(`/export/${documentId}/${elementId}?format=${format}`)
-  },
-  
-  // Analysis
-  async getMassProperties(documentId: string, elementId: string) {
-    return request<any>(`/analysis/${documentId}/${elementId}/mass-properties`)
-  },
-  
-  async checkInterference(documentId: string, elementId: string) {
-    return request<any>(`/analysis/${documentId}/${elementId}/interference`)
-  },
-
   // FEA
   async generateMesh(partStudioId: string, settings: any) {
     return request<any>('/fea/mesh', {

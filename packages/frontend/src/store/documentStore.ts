@@ -164,6 +164,13 @@ interface DocumentState {
   setActiveElement: (id: string, type: 'partStudio' | 'assembly') => void
   addFeature: (partStudioId: string, feature: Omit<Feature, 'id'>) => Promise<Feature | null>
   updateFeature: (partStudioId: string, featureId: string, params: Record<string, any>) => Promise<void>
+  /** Dialog submit: updates the feature being edited (dialogData.isEditing/featureId from
+   * openFeatureForEdit) instead of appending a duplicate; otherwise adds a new one. */
+  submitFeature: (
+    partStudioId: string,
+    feature: Omit<Feature, 'id'>,
+    dialogData: { isEditing?: boolean; featureId?: string } | null | undefined
+  ) => Promise<Feature | null>
   deleteFeature: (partStudioId: string, featureId: string) => Promise<void>
   copyFeature: (partStudioId: string, featureId: string) => Promise<Feature | null>
   toggleFeatureSuppression: (partStudioId: string, featureId: string) => void
@@ -542,9 +549,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         }))
       }
       
-      // Get project ID from URL or current project
-      const projectIdMatch = window.location.pathname.match(/\/editor\/(.+)/)
-      const projectId = projectIdMatch ? projectIdMatch[1] : null
+      // Prefer the loaded project; fall back to the URL. Both editor routes count -
+      // matching only /editor/ silently sent production (/project/<id>/…) saves to localStorage.
+      const projectStore = await import('./projectStore').then(m => m.useProjectStore.getState())
+      const urlMatch = window.location.pathname.match(/\/(?:editor|project)\/([^/]+)/)
+      const projectId = projectStore.currentProject?.id ?? (urlMatch ? urlMatch[1] : null)
       
       if (projectId) {
         const { saveProjectData } = await import('./projectStore').then(m => m.useProjectStore.getState())
@@ -860,6 +869,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     return newFeature
   },
   
+  submitFeature: async (partStudioId, feature, dialogData) => {
+    if (dialogData?.isEditing && dialogData.featureId) {
+      const featureId = dialogData.featureId
+      await get().updateFeature(partStudioId, featureId, feature.parameters)
+      const studio = get().document?.partStudios.find(ps => ps.id === partStudioId)
+      return studio?.features.find(f => f.id === featureId) ?? null
+    }
+    return get().addFeature(partStudioId, feature)
+  },
+
   updateFeature: async (partStudioId, featureId, params) => {
     const { document, undoStack } = get()
     if (!document) return
