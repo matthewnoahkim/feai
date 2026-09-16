@@ -502,6 +502,7 @@ export default function SchematicPage() {
     canConnect,
     startDrag,
     endDrag,
+    draggingNodeType,
     setLastSaved,
     updateNode,
   } = useSchematicStore();
@@ -614,18 +615,24 @@ export default function SchematicPage() {
   // Handle drag over canvas
   const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    
+    // Safari restricts dataTransfer.getData() to the 'drop'/'dragend' events (its
+    // "protected mode" follows the DnD spec strictly here, unlike Chrome/Firefox which
+    // allow reading it during dragover too) — getData('nodeType') below would silently
+    // return '' on Safari. Read the type from our own drag state (set by startDrag in
+    // handleToolboxDragStart) instead of dataTransfer, which is reliable everywhere.
+    e.dataTransfer.dropEffect = 'move';
+
     if (!canvasRef.current) return;
-    
+
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left - NODE_WIDTH / 2;
     const y = e.clientY - rect.top - NODE_HEIGHT / 2;
     const freePos = { x: Math.max(0, x), y: Math.max(0, y) };
-    
+
     const isNew = e.dataTransfer.types.includes('nodetype');
-    const nodeType = isNew 
-      ? (e.dataTransfer.getData('nodeType') || 'geometry') as NodeType
-      : draggingNodeId 
+    const nodeType = isNew
+      ? (draggingNodeType || 'geometry') as NodeType
+      : draggingNodeId
         ? nodes.find(n => n.id === draggingNodeId)?.type || 'geometry'
         : 'geometry';
     
@@ -666,7 +673,7 @@ export default function SchematicPage() {
         nearNode: null,
       });
     }
-  }, [canvasRef, draggingNodeId, nodes, findNearestConnectableNode, calculateConnectedPosition]);
+  }, [canvasRef, draggingNodeId, draggingNodeType, nodes, findNearestConnectableNode, calculateConnectedPosition]);
 
   // Handle drop on canvas
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
@@ -765,24 +772,42 @@ export default function SchematicPage() {
     window.open(`/project/${projectId}/${config.route}`, '_blank');
   };
 
+  // Ghost cleanup is done on `dragend` rather than a same-tick `setTimeout(fn, 0)` —
+  // Safari captures the drag image asynchronously relative to dragstart, so removing the
+  // element on the next macrotask can race ahead of that capture and break the drag
+  // entirely on Safari (Chrome/Firefox capture it synchronously during dragstart, so the
+  // same-tick removal happened to work there).
   const handleNodeDragStart = (nodeId: string, e: React.DragEvent) => {
     setDraggingNodeId(nodeId);
-    // Create a ghost image
+    e.dataTransfer.effectAllowed = 'move';
+    // Create a ghost image (transparent — the app renders its own drag preview via
+    // dragPreview state, positioned from onDragOver's cursor coordinates)
     const ghost = document.createElement('div');
     ghost.style.opacity = '0';
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 0, 0);
-    setTimeout(() => document.body.removeChild(ghost), 0);
+    // `currentTarget` is only valid while the event is dispatching (true of native DOM
+    // events too, not a React quirk) — capture the node now, before the async dragend.
+    const target = e.currentTarget;
+    target.addEventListener('dragend', function onEnd() {
+      target.removeEventListener('dragend', onEnd);
+      if (ghost.parentNode) document.body.removeChild(ghost);
+    });
   };
 
   const handleToolboxDragStart = (type: NodeType, e: React.DragEvent) => {
     startDrag(type);
-    // Create a ghost image
+    e.dataTransfer.effectAllowed = 'move';
+    // Create a ghost image (transparent — see handleNodeDragStart)
     const ghost = document.createElement('div');
     ghost.style.opacity = '0';
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 0, 0);
-    setTimeout(() => document.body.removeChild(ghost), 0);
+    const target = e.currentTarget;
+    target.addEventListener('dragend', function onEnd() {
+      target.removeEventListener('dragend', onEnd);
+      if (ghost.parentNode) document.body.removeChild(ghost);
+    });
   };
 
   const handleSaveProjectName = async () => {
