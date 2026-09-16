@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { Plus, Folder, MoreVertical, Trash2, Edit2, Clock, ChevronDown, LogOut, FolderOpen, Calendar, Edit3, Pencil, Search, LayoutList, PanelRightClose, PanelRight, Download, Upload } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { openTabWhenReady } from '@/utils/openInNewTab';
 
 interface FolderType {
   id: string;
@@ -180,6 +181,11 @@ export default function DashboardClient() {
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
 
+    // Opened synchronously, within this click's user gesture — Safari's popup blocker
+    // can silently block (or downgrade to a background window) a window.open() called
+    // only after the `await fetch` below resolves, since that's outside the gesture.
+    const pendingTab = openTabWhenReady();
+
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -196,22 +202,27 @@ export default function DashboardClient() {
         setShowNewProjectModal(false);
         setNewProjectName('');
         setNewProjectDescription('');
-        window.open(`/project/${project.id}/schematic`, '_blank');
+        pendingTab.navigateTo(`/project/${project.id}/schematic`);
       } else if (response.status === 401) {
+        pendingTab.close();
         // Session expired, redirect to login
         alert('Your session has expired. Please sign in again.');
         signOut({ callbackUrl: '/login' });
       } else {
+        pendingTab.close();
         const error = await response.json().catch(() => ({}));
         alert(error?.error?.message || 'Failed to create project. Please try again.');
       }
     } catch (error) {
+      pendingTab.close();
       console.error('Failed to create project:', error);
       alert('Failed to create project. Please try again.');
     }
   };
 
   const handleOpenProject = async (projectId: string) => {
+    // See handleCreateProject above for why this opens before the `await` below.
+    const pendingTab = openTabWhenReady();
     try {
       await fetch(`/api/projects/${projectId}`, {
         method: 'PATCH',
@@ -224,7 +235,7 @@ export default function DashboardClient() {
         )
       );
     } catch (_) {}
-    window.open(`/project/${projectId}/schematic`, '_blank');
+    pendingTab.navigateTo(`/project/${projectId}/schematic`);
   };
 
   const handleMoveToFolder = async (projectId: string, folderId: string | null) => {

@@ -23,6 +23,7 @@ import { useSchematicStore, NodeType, SchematicNode, Connection } from '@/store/
 import { Logo } from '@/components/Logo';
 import { useProjectStore } from '@/store/projectStore';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { openInNewTab } from '@/utils/openInNewTab';
 
 // Node dimensions
 const NODE_WIDTH = 160;
@@ -30,6 +31,7 @@ const NODE_HEIGHT = 80;
 const ROW_HEIGHT = 28;
 const CONNECTION_SPACING = 200; // Horizontal spacing between connected nodes
 const SNAP_DISTANCE = 60; // Distance threshold for auto-connection
+const DRAG_START_THRESHOLD = 4; // px of pointer movement before a pointerdown becomes a drag (vs. a click)
 
 // Consistent navy blue color for all nodes
 const NODE_COLOR = '#1e3a5f';
@@ -145,25 +147,23 @@ function getRowStatuses(
 }
 
 // Toolbox item component
-function ToolboxItem({ 
-  type, 
-  onDragStart 
-}: { 
-  type: NodeType; 
-  onDragStart: (type: NodeType, e: React.DragEvent) => void;
+function ToolboxItem({
+  type,
+  onPointerDownStart
+}: {
+  type: NodeType;
+  onPointerDownStart: (type: NodeType, e: React.PointerEvent) => void;
 }) {
   const config = NODE_CONFIGS[type];
   const Icon = config.icon;
-  
+
   return (
     <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('nodeType', type);
-        e.dataTransfer.setData('isNew', 'true');
-        onDragStart(type, e);
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        onPointerDownStart(type, e);
       }}
-      className="flex items-center gap-3 p-3 bg-white border border-gray-200 cursor-grab hover:border-gray-400 hover:shadow-sm transition-all select-none active:cursor-grabbing"
+      className="flex items-center gap-3 p-3 bg-white border border-gray-200 cursor-grab hover:border-gray-400 hover:shadow-sm transition-all select-none active:cursor-grabbing touch-none"
       style={{ borderLeftColor: NODE_COLOR, borderLeftWidth: 4 }}
     >
       <GripVertical className="w-4 h-4 text-gray-400" />
@@ -219,7 +219,7 @@ function SchematicNodeComponent({
   onSelect,
   onDelete,
   onOpenWorkspace,
-  onDragStart,
+  onPointerDownStart,
   connections,
   rowStatuses,
 }: {
@@ -228,7 +228,7 @@ function SchematicNodeComponent({
   onSelect: () => void;
   onDelete: () => void;
   onOpenWorkspace: () => void;
-  onDragStart: (nodeId: string, e: React.DragEvent) => void;
+  onPointerDownStart: (nodeId: string, nodeType: NodeType, e: React.PointerEvent) => void;
   connections: Connection[];
   rowStatuses: RowStatus[];
 }) {
@@ -239,14 +239,12 @@ function SchematicNodeComponent({
 
   return (
     <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('nodeId', node.id);
-        e.dataTransfer.setData('isNew', 'false');
-        onDragStart(node.id, e);
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        onPointerDownStart(node.id, node.type, e);
       }}
       className={`
-        absolute bg-white border-2 shadow-md transition-shadow cursor-move select-none
+        absolute bg-white border-2 shadow-md transition-shadow cursor-move select-none touch-none
         ${isSelected ? 'border-blue-500 shadow-lg z-10' : 'border-gray-300 hover:border-gray-400'}
       `}
       style={{
@@ -485,9 +483,8 @@ export default function SchematicPage() {
     willConnect: boolean;
     nearNode: SchematicNode | null;
   } | null>(null);
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  
-  const { 
+
+  const {
     setProject,
     projectName,
     setProjectName,
@@ -502,7 +499,6 @@ export default function SchematicPage() {
     canConnect,
     startDrag,
     endDrag,
-    draggingNodeType,
     setLastSaved,
     updateNode,
   } = useSchematicStore();
@@ -612,156 +608,154 @@ export default function SchematicPage() {
     }
   }, []);
 
-  // Handle drag over canvas
-  const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    // Safari restricts dataTransfer.getData() to the 'drop'/'dragend' events (its
-    // "protected mode" follows the DnD spec strictly here, unlike Chrome/Firefox which
-    // allow reading it during dragover too) — getData('nodeType') below would silently
-    // return '' on Safari. Read the type from our own drag state (set by startDrag in
-    // handleToolboxDragStart) instead of dataTransfer, which is reliable everywhere.
-    e.dataTransfer.dropEffect = 'move';
+  // --- Drag and drop, via Pointer Events rather than the native HTML5 Drag and Drop API ---
+  //
+  // The native API (draggable/dragstart/dragover/drop/dataTransfer) is standardized but
+  // several of its behaviors are spec-ambiguous enough that Safari and Chrome/Firefox
+  // implement them differently in practice (dataTransfer.getData() readability during
+  // dragover, custom setDragImage timing) — see git history on this file for the specific
+  // issues that turned up. Pointer Events (pointerdown/pointermove/pointerup) have none of
+  // that ambiguity: they're just coordinate tracking, identical across every engine
+  // (Safari included, since Safari 13), so this sidesteps the whole class of bug rather
+  // than chasing each spec difference individually.
+  //
+  // A ref, not state, so pointermove doesn't re-render on every pixel; only its effect
+  // (dragPreview) goes through state.
+  const dragSessionRef = useRef<{
+    kind: 'new' | 'move';
+    nodeType: NodeType;
+    nodeId?: string; // only for 'move'
+    pointerId: number;
+    startX: number;
+    startY: number;
+    active: boolean; // becomes true once movement exceeds DRAG_START_THRESHOLD
+  } | null>(null);
 
+  const updatePreviewFromPointer = useCallback((clientX: number, clientY: number, nodeType: NodeType, excludeId?: string) => {
     if (!canvasRef.current) return;
-
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - NODE_WIDTH / 2;
-    const y = e.clientY - rect.top - NODE_HEIGHT / 2;
+    const x = clientX - rect.left - NODE_WIDTH / 2;
+    const y = clientY - rect.top - NODE_HEIGHT / 2;
     const freePos = { x: Math.max(0, x), y: Math.max(0, y) };
 
-    const isNew = e.dataTransfer.types.includes('nodetype');
-    const nodeType = isNew
-      ? (draggingNodeType || 'geometry') as NodeType
-      : draggingNodeId
-        ? nodes.find(n => n.id === draggingNodeId)?.type || 'geometry'
-        : 'geometry';
-    
     // When moving an existing block, always show preview at cursor (free movement)
-    if (draggingNodeId) {
-      setDragPreview({
-        x: freePos.x,
-        y: freePos.y,
-        type: nodeType,
-        willConnect: false,
-        nearNode: null,
-      });
+    if (excludeId) {
+      setDragPreview({ x: freePos.x, y: freePos.y, type: nodeType, willConnect: false, nearNode: null });
       return;
     }
-    
+
     // New node from toolbox: snap to connect if near another node
-    const nearNode = findNearestConnectableNode(
-      e.clientX - rect.left, 
-      e.clientY - rect.top, 
-      nodeType,
-      undefined
-    );
-    
+    const nearNode = findNearestConnectableNode(clientX - rect.left, clientY - rect.top, nodeType, undefined);
     if (nearNode) {
       const connectedPos = calculateConnectedPosition(nearNode, nodeType);
-      setDragPreview({
-        x: connectedPos.x,
-        y: connectedPos.y,
-        type: nodeType,
-        willConnect: true,
-        nearNode,
-      });
+      setDragPreview({ x: connectedPos.x, y: connectedPos.y, type: nodeType, willConnect: true, nearNode });
     } else {
-      setDragPreview({
-        ...freePos,
-        type: nodeType,
-        willConnect: false,
-        nearNode: null,
-      });
+      setDragPreview({ ...freePos, type: nodeType, willConnect: false, nearNode: null });
     }
-  }, [canvasRef, draggingNodeId, draggingNodeType, nodes, findNearestConnectableNode, calculateConnectedPosition]);
+  }, [findNearestConnectableNode, calculateConnectedPosition]);
 
-  // Handle drop on canvas
-  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    
-    const isNew = e.dataTransfer.getData('isNew') === 'true';
-    const nodeType = e.dataTransfer.getData('nodeType') as NodeType;
-    const existingNodeId = e.dataTransfer.getData('nodeId');
-    
-    if (!canvasRef.current) return;
-    
+  const finishDragAt = useCallback((clientX: number, clientY: number) => {
+    const session = dragSessionRef.current;
+    if (!session || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    
-    if (isNew && nodeType) {
-      // Creating new node
-      let x = e.clientX - rect.left - NODE_WIDTH / 2;
-      let y = e.clientY - rect.top - NODE_HEIGHT / 2;
-      
-      // Check for nearby node to connect to
-      const nearNode = findNearestConnectableNode(
-        e.clientX - rect.left, 
-        e.clientY - rect.top, 
-        nodeType
-      );
-      
-      if (nearNode) {
-        const connectedPos = calculateConnectedPosition(nearNode, nodeType);
-        x = connectedPos.x;
-        y = connectedPos.y;
-      }
-      
-      const newNodeId = addNode(nodeType, Math.max(0, x), Math.max(0, y));
-      
-      // Auto-connect if dropped near a valid node
-      if (nearNode && newNodeId) {
-        const nearConfig = NODE_CONFIGS[nearNode.type];
-        const newConfig = NODE_CONFIGS[nodeType];
-        
-        if (newConfig.order > nearConfig.order) {
-          // New node is downstream
-          addConnection(nearNode.id, newNodeId);
-        } else {
-          // New node is upstream
-          addConnection(newNodeId, nearNode.id);
+    // Only commit if released within the canvas — matches the old native-drop behavior,
+    // where releasing outside the canvas div never fired a `drop` event there at all.
+    const withinCanvas = session.active &&
+      clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+
+    if (withinCanvas) {
+      if (session.kind === 'new') {
+        let x = clientX - rect.left - NODE_WIDTH / 2;
+        let y = clientY - rect.top - NODE_HEIGHT / 2;
+
+        const nearNode = findNearestConnectableNode(clientX - rect.left, clientY - rect.top, session.nodeType);
+        if (nearNode) {
+          const connectedPos = calculateConnectedPosition(nearNode, session.nodeType);
+          x = connectedPos.x;
+          y = connectedPos.y;
         }
-      }
-    } else if (existingNodeId) {
-      // Moving existing node: use drop position so blocks can be moved freely
-      const x = e.clientX - rect.left - NODE_WIDTH / 2;
-      const y = e.clientY - rect.top - NODE_HEIGHT / 2;
-      
-      const movingNode = nodes.find(n => n.id === existingNodeId);
-      if (!movingNode) return;
-      
-      // Optionally add connection if dropped near another node (position stays free)
-      const nearNode = findNearestConnectableNode(
-        e.clientX - rect.left, 
-        e.clientY - rect.top, 
-        movingNode.type,
-        existingNodeId
-      );
-      if (nearNode) {
-        const alreadyConnected = connections.some(
-          c => (c.sourceId === nearNode.id && c.targetId === existingNodeId) ||
-               (c.sourceId === existingNodeId && c.targetId === nearNode.id)
-        );
-        if (!alreadyConnected) {
+
+        const newNodeId = addNode(session.nodeType, Math.max(0, x), Math.max(0, y));
+
+        if (nearNode && newNodeId) {
           const nearConfig = NODE_CONFIGS[nearNode.type];
-          const movingConfig = NODE_CONFIGS[movingNode.type];
-          if (movingConfig.order > nearConfig.order) {
-            addConnection(nearNode.id, existingNodeId);
+          const newConfig = NODE_CONFIGS[session.nodeType];
+          if (newConfig.order > nearConfig.order) {
+            addConnection(nearNode.id, newNodeId);
           } else {
-            addConnection(existingNodeId, nearNode.id);
+            addConnection(newNodeId, nearNode.id);
           }
         }
+      } else if (session.kind === 'move' && session.nodeId) {
+        const x = clientX - rect.left - NODE_WIDTH / 2;
+        const y = clientY - rect.top - NODE_HEIGHT / 2;
+
+        const movingNode = nodes.find(n => n.id === session.nodeId);
+        if (movingNode) {
+          const nearNode = findNearestConnectableNode(clientX - rect.left, clientY - rect.top, movingNode.type, session.nodeId);
+          if (nearNode) {
+            const alreadyConnected = connections.some(
+              c => (c.sourceId === nearNode.id && c.targetId === session.nodeId) ||
+                   (c.sourceId === session.nodeId && c.targetId === nearNode.id)
+            );
+            if (!alreadyConnected) {
+              const nearConfig = NODE_CONFIGS[nearNode.type];
+              const movingConfig = NODE_CONFIGS[movingNode.type];
+              if (movingConfig.order > nearConfig.order) {
+                addConnection(nearNode.id, session.nodeId);
+              } else {
+                addConnection(session.nodeId, nearNode.id);
+              }
+            }
+          }
+          moveNode(session.nodeId, Math.max(0, x), Math.max(0, y));
+        }
       }
-      
-      moveNode(existingNodeId, Math.max(0, x), Math.max(0, y));
     }
-    
+
     setDragPreview(null);
-    setDraggingNodeId(null);
     endDrag();
+    dragSessionRef.current = null;
   }, [addNode, moveNode, addConnection, findNearestConnectableNode, calculateConnectedPosition, nodes, connections, endDrag]);
 
-  const handleCanvasDragLeave = useCallback(() => {
-    setDragPreview(null);
-  }, []);
+  // Global listeners, always attached but no-ops unless a session is in progress — the
+  // pointer moves off the toolbox item/node that started the drag almost immediately, so
+  // tracking has to happen at the window level rather than on the source element.
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      const session = dragSessionRef.current;
+      if (!session || session.pointerId !== e.pointerId) return;
+      if (!session.active) {
+        const dx = e.clientX - session.startX;
+        const dy = e.clientY - session.startY;
+        if (Math.hypot(dx, dy) < DRAG_START_THRESHOLD) return;
+        session.active = true;
+        if (session.kind === 'new') startDrag(session.nodeType);
+      }
+      updatePreviewFromPointer(e.clientX, e.clientY, session.nodeType, session.kind === 'move' ? session.nodeId : undefined);
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      const session = dragSessionRef.current;
+      if (!session || session.pointerId !== e.pointerId) return;
+      if (session.active) {
+        finishDragAt(e.clientX, e.clientY);
+      } else {
+        // Never moved past the threshold — this was a click, not a drag; the browser's
+        // own click/dblclick synthesis (unaffected by these listeners) handles it.
+        dragSessionRef.current = null;
+      }
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [updatePreviewFromPointer, finishDragAt, startDrag]);
 
   const handleCanvasClick = () => {
     selectNode(null);
@@ -769,45 +763,30 @@ export default function SchematicPage() {
 
   const handleOpenWorkspace = (node: SchematicNode) => {
     const config = NODE_CONFIGS[node.type];
-    window.open(`/project/${projectId}/${config.route}`, '_blank');
+    openInNewTab(`/project/${projectId}/${config.route}`);
   };
 
-  // Ghost cleanup is done on `dragend` rather than a same-tick `setTimeout(fn, 0)` —
-  // Safari captures the drag image asynchronously relative to dragstart, so removing the
-  // element on the next macrotask can race ahead of that capture and break the drag
-  // entirely on Safari (Chrome/Firefox capture it synchronously during dragstart, so the
-  // same-tick removal happened to work there).
-  const handleNodeDragStart = (nodeId: string, e: React.DragEvent) => {
-    setDraggingNodeId(nodeId);
-    e.dataTransfer.effectAllowed = 'move';
-    // Create a ghost image (transparent — the app renders its own drag preview via
-    // dragPreview state, positioned from onDragOver's cursor coordinates)
-    const ghost = document.createElement('div');
-    ghost.style.opacity = '0';
-    document.body.appendChild(ghost);
-    e.dataTransfer.setDragImage(ghost, 0, 0);
-    // `currentTarget` is only valid while the event is dispatching (true of native DOM
-    // events too, not a React quirk) — capture the node now, before the async dragend.
-    const target = e.currentTarget;
-    target.addEventListener('dragend', function onEnd() {
-      target.removeEventListener('dragend', onEnd);
-      if (ghost.parentNode) document.body.removeChild(ghost);
-    });
+  const handleNodePointerDownStart = (nodeId: string, nodeType: NodeType, e: React.PointerEvent) => {
+    dragSessionRef.current = {
+      kind: 'move',
+      nodeType,
+      nodeId,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      active: false,
+    };
   };
 
-  const handleToolboxDragStart = (type: NodeType, e: React.DragEvent) => {
-    startDrag(type);
-    e.dataTransfer.effectAllowed = 'move';
-    // Create a ghost image (transparent — see handleNodeDragStart)
-    const ghost = document.createElement('div');
-    ghost.style.opacity = '0';
-    document.body.appendChild(ghost);
-    e.dataTransfer.setDragImage(ghost, 0, 0);
-    const target = e.currentTarget;
-    target.addEventListener('dragend', function onEnd() {
-      target.removeEventListener('dragend', onEnd);
-      if (ghost.parentNode) document.body.removeChild(ghost);
-    });
+  const handleToolboxPointerDownStart = (type: NodeType, e: React.PointerEvent) => {
+    dragSessionRef.current = {
+      kind: 'new',
+      nodeType: type,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      active: false,
+    };
   };
 
   const handleSaveProjectName = async () => {
@@ -918,7 +897,7 @@ export default function SchematicPage() {
               <ToolboxItem
                 key={type}
                 type={type}
-                onDragStart={handleToolboxDragStart}
+                onPointerDownStart={handleToolboxPointerDownStart}
               />
             ))}
           </div>
@@ -947,9 +926,6 @@ export default function SchematicPage() {
               `,
               backgroundSize: '20px 20px',
             }}
-            onDrop={handleCanvasDrop}
-            onDragOver={handleCanvasDragOver}
-            onDragLeave={handleCanvasDragLeave}
             onClick={handleCanvasClick}
           >
             {/* Connection lines */}
@@ -964,7 +940,7 @@ export default function SchematicPage() {
                 onSelect={() => selectNode(node.id)}
                 onDelete={() => removeNode(node.id)}
                 onOpenWorkspace={() => handleOpenWorkspace(node)}
-                onDragStart={handleNodeDragStart}
+                onPointerDownStart={handleNodePointerDownStart}
                 connections={connections}
                 rowStatuses={getRowStatuses(
                   node,
