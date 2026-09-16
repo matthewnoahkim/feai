@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { useMaterialLibraryStore } from '@/store/materialLibraryStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { feaSolverClient } from '@/lib/fea-solver/client';
@@ -92,7 +93,6 @@ export default function ResultsPage() {
 
   const {
     meshData,
-    materials,
     defaultMaterialId,
     boundaryConditions,
     loads,
@@ -107,6 +107,7 @@ export default function ResultsPage() {
     updateStepStatus,
     setCurrentStep,
   } = useWorkflowStore();
+  const materials = useMaterialLibraryStore((s) => s.materials);
 
   const { fetchProject } = useProjectStore();
   const { document, loadDocumentFromData } = useDocumentStore();

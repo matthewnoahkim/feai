@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 export * from './fea';
 export * from './projects';
 export * from './folders';
+export * from './materials';
 export * from './auth';
 export * from './env';
 

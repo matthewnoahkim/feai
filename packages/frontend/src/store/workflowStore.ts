@@ -7,19 +7,6 @@ import { persist } from 'zustand/middleware';
 
 export type WorkflowStep = 'engineering-data' | 'geometry' | 'mesh' | 'setup' | 'results';
 
-export interface CustomMaterial {
-  id: string;
-  name: string;
-  youngsModulus: number;      // Pa
-  poissonsRatio: number;
-  density: number;            // kg/m³
-  yieldStrength?: number;     // Pa
-  ultimateStrength?: number;  // Pa
-  thermalExpansion?: number;  // 1/K
-  color?: string;
-  isCustom: boolean;
-}
-
 export interface BoundaryConditionDef {
   id: string;
   type: 'fixed' | 'displacement' | 'symmetry' | 'elastic_support';
@@ -148,11 +135,11 @@ interface WorkflowState {
   
   // Step completion status
   stepStatus: Record<WorkflowStep, 'pending' | 'in-progress' | 'complete'>;
-  
-  // Engineering Data
-  materials: CustomMaterial[];
+
+  // Engineering Data — which material (from the account-wide materialLibraryStore) is
+  // active for this project. The materials themselves live there now, not here.
   defaultMaterialId: string | null;
-  
+
   // Geometry
   geometryReady: boolean;
   
@@ -178,9 +165,6 @@ interface WorkflowState {
   updateStepStatus: (step: WorkflowStep, status: 'pending' | 'in-progress' | 'complete') => void;
   
   // Material actions
-  addMaterial: (material: Omit<CustomMaterial, 'id'>) => void;
-  updateMaterial: (id: string, updates: Partial<CustomMaterial>) => void;
-  removeMaterial: (id: string) => void;
   setDefaultMaterial: (id: string | null) => void;
   
   // Geometry actions
@@ -230,74 +214,6 @@ const INITIAL_STEP_STATUS: Record<WorkflowStep, 'pending' | 'in-progress' | 'com
   'results': 'pending',
 };
 
-// Default materials library
-const DEFAULT_MATERIALS: CustomMaterial[] = [
-  {
-    id: 'steel-1018',
-    name: 'Steel AISI 1018',
-    youngsModulus: 205e9,
-    poissonsRatio: 0.29,
-    density: 7870,
-    yieldStrength: 370e6,
-    ultimateStrength: 440e6,
-    color: '#71797E',
-    isCustom: false,
-  },
-  {
-    id: 'aluminum-6061',
-    name: 'Aluminum 6061-T6',
-    youngsModulus: 68.9e9,
-    poissonsRatio: 0.33,
-    density: 2700,
-    yieldStrength: 276e6,
-    ultimateStrength: 310e6,
-    color: '#A8A9AD',
-    isCustom: false,
-  },
-  {
-    id: 'titanium-ti6al4v',
-    name: 'Titanium Ti-6Al-4V',
-    youngsModulus: 113.8e9,
-    poissonsRatio: 0.342,
-    density: 4430,
-    yieldStrength: 880e6,
-    ultimateStrength: 950e6,
-    color: '#878681',
-    isCustom: false,
-  },
-  {
-    id: 'stainless-304',
-    name: 'Stainless Steel 304',
-    youngsModulus: 193e9,
-    poissonsRatio: 0.29,
-    density: 8000,
-    yieldStrength: 215e6,
-    ultimateStrength: 505e6,
-    color: '#C0C0C0',
-    isCustom: false,
-  },
-  {
-    id: 'abs-plastic',
-    name: 'ABS Plastic',
-    youngsModulus: 2.3e9,
-    poissonsRatio: 0.35,
-    density: 1050,
-    yieldStrength: 45e6,
-    color: '#2C2C2C',
-    isCustom: false,
-  },
-  {
-    id: 'nylon-66',
-    name: 'Nylon 6/6',
-    youngsModulus: 3.0e9,
-    poissonsRatio: 0.39,
-    density: 1140,
-    yieldStrength: 82e6,
-    color: '#F5F5DC',
-    isCustom: false,
-  },
-];
-
 export const useWorkflowStore = create<WorkflowState>()(
   persist(
     (set, get) => ({
@@ -305,10 +221,9 @@ export const useWorkflowStore = create<WorkflowState>()(
       projectId: null,
       currentStep: 'engineering-data',
       stepStatus: { ...INITIAL_STEP_STATUS },
-      
-      materials: [...DEFAULT_MATERIALS],
-      defaultMaterialId: 'steel-1018',
-      
+
+      defaultMaterialId: null,
+
       geometryReady: false,
       
       meshSettings: { ...DEFAULT_MESH_SETTINGS },
@@ -351,24 +266,6 @@ export const useWorkflowStore = create<WorkflowState>()(
       })),
 
       // Material actions
-      addMaterial: (material) => {
-        const id = `custom-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-        set((state) => ({
-          materials: [...state.materials, { ...material, id, isCustom: true }],
-        }));
-      },
-      
-      updateMaterial: (id, updates) => set((state) => ({
-        materials: state.materials.map((m) =>
-          m.id === id ? { ...m, ...updates } : m
-        ),
-      })),
-      
-      removeMaterial: (id) => set((state) => ({
-        materials: state.materials.filter((m) => m.id !== id),
-        defaultMaterialId: state.defaultMaterialId === id ? null : state.defaultMaterialId,
-      })),
-      
       setDefaultMaterial: (id) => set({ defaultMaterialId: id }),
 
       // Geometry actions
@@ -455,7 +352,6 @@ export const useWorkflowStore = create<WorkflowState>()(
       name: 'feai-workflow-storage',
       partialize: (state) => ({
         projectId: state.projectId,
-        materials: state.materials,
         defaultMaterialId: state.defaultMaterialId,
         meshSettings: state.meshSettings,
         meshData: state.meshData,

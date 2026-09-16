@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { Box, Save } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useWorkflowStore } from '@/store/workflowStore';
+import { useMaterialLibraryStore } from '@/store/materialLibraryStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { useSchematicStore } from '@/store/schematicStore';
@@ -32,7 +33,8 @@ export default function GeometryPage() {
   const params = useParams();
   const projectId = params.projectId as string;
 
-  const { materials, defaultMaterialId, setGeometryReady, updateStepStatus, setCurrentStep } = useWorkflowStore();
+  const { defaultMaterialId, setGeometryReady, updateStepStatus, setCurrentStep } = useWorkflowStore();
+  const materials = useMaterialLibraryStore((s) => s.materials);
   const { currentProject } = useProjectStore();
   const { document } = useDocumentStore();
   const { getNodesByType, markNodeComplete } = useSchematicStore();

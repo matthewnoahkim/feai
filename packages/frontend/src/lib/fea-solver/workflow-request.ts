@@ -19,8 +19,8 @@ import type {
   BoundaryConditionDef,
   LoadDef,
   MeshData,
-  CustomMaterial,
 } from '@/store/workflowStore';
+import type { Material } from '@/store/materialLibraryStore';
 import { workflowMaterialIdToApiPreset } from './map-material';
 import { workflowMeshToGmshMsh22, type GmshMeshNode, type GmshMeshElement } from './mesh-to-gmsh';
 import { encodeFileMeshData } from './integration-config';
@@ -235,7 +235,7 @@ export function buildAnalysisRequestFromWorkflow(input: {
   meshData: MeshData;
   boundaryConditions: BoundaryConditionDef[];
   loads: LoadDef[];
-  materials: CustomMaterial[];
+  materials: Material[];
   defaultMaterialId: string | null;
 }): { ok: true; request: AnalysisRequest } | { ok: false; error: string } {
   const unsupported = unsupportedWorkflowTargetMessage(input.boundaryConditions, input.loads);
@@ -243,7 +243,7 @@ export function buildAnalysisRequestFromWorkflow(input: {
 
   const material =
     input.materials.find((m) => m.id === input.defaultMaterialId) || input.materials[0];
-  const apiPreset = workflowMaterialIdToApiPreset(material?.id ?? null);
+  const apiPreset = workflowMaterialIdToApiPreset(material ?? null);
 
   const boundary_conditions: BoundaryCondition[] = [];
   for (const bc of input.boundaryConditions.filter((b) => b.enabled)) {

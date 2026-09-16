@@ -21,10 +21,11 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  accounts Account[]
-  sessions Session[]
-  projects Project[]
-  folders  Folder[]
+  accounts  Account[]
+  sessions  Session[]
+  projects  Project[]
+  folders   Folder[]
+  materials Material[]
 
   @@map("users")
 }
@@ -103,4 +104,44 @@ model Project {
   @@index([userId])
   @@index([folderId])
   @@map("projects")
+}
+
+// A user's account-wide material library: the 6 built-in presets (lazily seeded per user,
+// see src/lib/materials/seed-presets.ts) plus any custom materials they create. Shared
+// across all of that user's projects — not per-project data. Display/bookkeeping only:
+// the actual FEA solve still only recognizes a small fixed preset catalog (see
+// presetKey below and src/lib/fea-solver/map-material.ts).
+model Material {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name     String
+  category String // 'steel'|'aluminum'|'titanium'|'stainless'|'plastic'|'nylon'|'composite'|'ceramic'|'other'
+                   // — validated by the Zod schema's enum, not a DB enum (no enums used elsewhere in this schema)
+
+  youngsModulus       Float // Pa
+  poissonsRatio       Float
+  density             Float // kg/m^3
+  yieldStrength       Float?
+  ultimateStrength    Float?
+  thermalExpansion    Float?
+  thermalConductivity Float?
+  specificHeat        Float?
+  color               String?
+
+  image String? @db.Text // data:image/jpeg;base64,... — user-uploaded only, never a stock/fetched image
+
+  isPreset  Boolean @default(false)
+  presetKey String? // set only on the 6 lazily-seeded preset rows; carries the historical literal id
+                     // ('steel-1018', etc.) that map-material.ts keys off so solve mapping keeps working
+                     // once preset ids are real cuid()s instead of those old literals
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, presetKey]) // upsert target for per-user preset seeding; Postgres treats each NULL
+                                  // presetKey (every custom material) as distinct, so this never caps customs
+  @@index([userId])
+  @@map("materials")
 }
