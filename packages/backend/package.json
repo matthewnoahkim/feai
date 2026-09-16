@@ -16,7 +16,6 @@
     "db:studio:local": "dotenv -e ../../.env -- prisma studio"
   },
   "dependencies": {
-    "@feai/kernel": "^1.0.0",
     "@feai/shared": "^1.0.0",
     "@prisma/client": "^5.7.1",
     "@types/cookie-parser": "^1.4.10",

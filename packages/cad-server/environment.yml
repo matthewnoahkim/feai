@@ -1,0 +1,11 @@
+name: feai-cad-server
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - freecad=1.1.*
+  - pip
+  - pip:
+      - fastapi>=0.115,<1
+      - uvicorn[standard]>=0.30,<1
+      - pydantic>=2.8,<3

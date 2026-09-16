@@ -2,14 +2,14 @@
   "name": "feai",
   "version": "1.0.0",
   "private": true,
-  "description": "Web-based CAD Software with AI-Powered FEA",
+  "description": "Web-based CAD Software with Finite Element Analysis Intelligence (FEAI)",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "dev": "dotenv -e .env -- npm run dev -w @feai/frontend",
-    "build": "npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build:next -w @feai/frontend",
-    "build:local": "dotenv -e .env -- npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/kernel && npm run build -w @feai/frontend",
+    "build": "npm run db:generate && npm run build -w @feai/shared && npm run build:next -w @feai/frontend",
+    "build:local": "dotenv -e .env -- npm run db:generate && npm run build -w @feai/shared && npm run build -w @feai/frontend",
     "start": "dotenv -e .env -- npm run start -w @feai/frontend",
     "db:push": "dotenv -e .env -- npx prisma db push --schema=packages/frontend/prisma/schema.prisma",
     "db:generate": "npx prisma generate --schema=packages/frontend/prisma/schema.prisma",

@@ -4,7 +4,7 @@ const nextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com'],
   },
-  transpilePackages: ['@feai/shared', '@feai/kernel'],
+  transpilePackages: ['@feai/shared'],
   experimental: {},
   async headers() {
     return [

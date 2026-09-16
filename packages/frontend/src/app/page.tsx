@@ -40,7 +40,7 @@ export default function HomePage() {
               }}
             >
               Finite Element Analysis<br />
-              <span style={{ fontWeight: 600 }}>assisted with AI.</span>
+              <span style={{ fontWeight: 600 }}>Intelligence.</span>
             </h1>
             
             <HomeClient variant="primary" />

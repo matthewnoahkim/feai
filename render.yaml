@@ -1,0 +1,28 @@
+# Render Blueprint for FEAI's modeling engine (packages/cad-server).
+# Apply it from the Render dashboard: New -> Blueprint -> pick this repo.
+# The Next.js frontend stays on Vercel; it only needs NEXT_PUBLIC_CAD_API_URL
+# pointed at this service's public URL.
+services:
+  - type: web
+    name: feai-cad-server
+    runtime: docker
+    region: oregon
+    # Not `free`: the free tier spins down on idle, which drops the in-memory shape
+    # store and adds cold starts. `starter` (512MB) is at real risk of OOM with
+    # FreeCAD + OpenCASCADE loaded; `standard` (2GB) is the safe floor. Downgrade at
+    # your own risk.
+    plan: standard
+    # The Dockerfile COPYs relative to packages/cad-server, so the build context must
+    # be that directory, not the repo root.
+    dockerfilePath: ./packages/cad-server/Dockerfile
+    dockerContext: ./packages/cad-server
+    healthCheckPath: /health
+    # Must stay 1: shapeIds live in process memory, so a second instance would 404 on
+    # shapes the first one created. Scaling out needs a shared store first.
+    numInstances: 1
+    autoDeploy: true
+    envVars:
+      # Comma-separated list of allowed browser origins, e.g. https://feai.app
+      # Set the real value in the Render dashboard; it is deliberately not committed.
+      - key: CAD_ALLOWED_ORIGINS
+        sync: false

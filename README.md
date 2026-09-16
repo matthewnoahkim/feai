@@ -1,4 +1,4 @@
-# FEAI - Professional 3D CAD Powered by AI
+# FEAI - Finite Element Analysis Intelligence
 
 AI-assisted CAD software with integrated modeling, analysis, and real-time collaboration.
 
@@ -37,7 +37,7 @@ feai/
 ├── package.json                  # Root workspace config
 ├── packages/
 │   ├── shared/                   # Shared TypeScript types (document, fea, geometry, etc.)
-│   ├── kernel/                   # CAD kernel (modeling, sketch, fea, io, geometry, math)
+│   ├── cad-server/                # FEAI's modeling engine (Python/FastAPI, built on FreeCAD's Part module)
 │   ├── frontend/                 # Next.js app (Vercel / standalone)
 │   │   ├── src/
 │   │   │   ├── app/              # Next.js App Router (routes, layouts, api/)
@@ -77,6 +77,19 @@ feai/
 - Google OAuth 2.0
 - JWT authentication
 
+## Modeling engine
+
+`packages/cad-server` does FEAI's real solid modeling (primitives, extrude, revolve,
+sweep, loft, boolean ops, fillet/chamfer) via FreeCAD's Python API. Like the FEA
+solver above, it's a standalone service the frontend calls over HTTP
+(`NEXT_PUBLIC_CAD_API_URL`, default `http://localhost:8000`) — not part of the Vercel
+deployment. See `packages/cad-server/README.md` for how to run it, and
+`/THIRD_PARTY_NOTICES.md` for required attribution (FreeCAD is LGPL2.1+/GPL2+ — not
+shown as "FreeCAD" in the product UI, but the license requires the notice to exist and
+be accurate). FreeCAD itself is vendored at `third_party/freecad` for reference; the
+service actually runs the prebuilt conda-forge package, not a from-source build of that
+checkout — see `third_party/freecad/README-VENDOR.md`.
+
 ## .feai project export/import
 
 Projects can be exported as encrypted `.feai` files and re-imported on the same or another account.
@@ -100,10 +113,11 @@ Generate a signing key pair: use `generateSigningKeyPair()` from `@/lib/feai` (e
 
 **Root Directory must be `packages/frontend`** for OAuth (and all Next.js API routes) to work. When Root Directory is the repo root, Vercel treats the repo root as the app root; your Next.js app and its `/api/auth/*` routes live in `packages/frontend`, so those routes are not registered and return 404. With Root Directory = `packages/frontend`, the deployment root is the Next.js app, so `/api/auth/callback/google` and other API routes are served correctly.
 
-The repo is set up so the build still has access to workspace packages (`@feai/shared`, `@feai/kernel`):
+The repo is set up so the build still has access to workspace packages (`@feai/shared`):
 
 - **vercel.json**: `installCommand: "cd ../.. && npm install"` (install from repo root), `buildCommand: "npm run build"`, `outputDirectory: ".next"`.
-- **packages/frontend/package.json**: `"build": "cd ../.. && npm run build"` so when Vercel runs `npm run build` from `packages/frontend`, it runs the full monorepo build (shared → kernel → frontend). The root uses `build:next` for the frontend step to avoid a build loop.
+- **packages/frontend/package.json**: `"build": "cd ../.. && npm run build"` so when Vercel runs `npm run build` from `packages/frontend`, it runs the full monorepo build (shared → frontend). The root uses `build:next` for the frontend step to avoid a build loop.
+- **packages/cad-server** is Python, not part of this npm build — it's deployed separately (see "Modeling engine" above), and needs `NEXT_PUBLIC_CAD_API_URL` set wherever it's hosted.
 
 In Vercel: set **Root Directory** to `packages/frontend`. Do not override Build/Install Command. Set env vars: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DATABASE_URL`. In Google Cloud Console, add **Authorized redirect URI**: `https://yourdomain.com/api/auth/callback/google`.
 
