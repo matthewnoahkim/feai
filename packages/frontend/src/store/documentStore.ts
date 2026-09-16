@@ -5,7 +5,12 @@
 import { create } from 'zustand'
 import { api } from '../api/client'
 import { cadSolverClient } from '../lib/cad-solver/client'
-import type { Plane as CadPlane, ProfileEntity as CadProfileEntity, ShapeResult as CadShapeResult } from '../lib/cad-solver/types'
+import type {
+  MassProperties as CadMassProperties,
+  Plane as CadPlane,
+  ProfileEntity as CadProfileEntity,
+  ShapeResult as CadShapeResult,
+} from '../lib/cad-solver/types'
 
 export type SketchConstraintType = 
   | 'coincident'     // Two points share location, or point on curve
@@ -75,7 +80,10 @@ export interface Part {
     normals: number[]
     indices: number[]
   }
-  edges?: Array<{ start: number[]; end: number[] }>
+  /** Real B-rep edges from the modeling engine, one polyline (flat xyz) per topological
+   * edge, id `e<N>` where N is the server-side edge index. Drives edge picking. */
+  edges?: Array<{ edgeId: string; points: number[] }>
+  massProperties?: CadMassProperties
   /** Reference to the real B-rep shape in FEAI's modeling engine (packages/cad-server),
    * used to chain booleans/fillets/chamfers onto this body. Absent for imported parts
    * with no server-side shape. */
@@ -178,7 +186,7 @@ interface DocumentState {
   regenerateModel: (partStudioId: string) => Promise<void>
   
   // Import operations
-  importSTLPart: (partStudioId: string, name: string, mesh: { vertices: number[], normals: number[], indices: number[] }) => void
+  importSTLPart: (partStudioId: string, name: string, mesh: { vertices: number[], normals: number[], indices: number[] }) => Promise<void>
   
   // Document operations
   updateDocumentName: (name: string) => void
@@ -384,25 +392,29 @@ function resolveRevolveAxis(
   }
 }
 
-function shapeResultToPartFields(result: CadShapeResult): Pick<Part, 'mesh' | 'edges' | 'shapeId'> {
-  const edges: Array<{ start: number[]; end: number[] }> = []
-  for (const edge of result.edges) {
-    for (let i = 0; i + 5 < edge.points.length; i += 3) {
-      edges.push({
-        start: [edge.points[i], edge.points[i + 1], edge.points[i + 2]],
-        end: [edge.points[i + 3], edge.points[i + 4], edge.points[i + 5]],
-      })
-    }
-  }
+function shapeResultToPartFields(result: CadShapeResult): Pick<Part, 'mesh' | 'edges' | 'shapeId' | 'massProperties'> {
   return {
     mesh: {
       vertices: result.mesh.positions,
       normals: result.mesh.normals,
       indices: result.mesh.indices,
     },
-    edges,
+    edges: result.edges.map(e => ({ edgeId: e.edgeId, points: e.points })),
     shapeId: result.shapeId,
+    massProperties: result.massProperties,
   }
+}
+
+/** Picked edges arrive as `<partId>-edge-<N>` (FreeCAD's `Edge3`-style sub-element
+ * naming, scoped to a part). Returns the server-side indices for `partId`; ids for other
+ * parts are ignored. An empty result means "all edges" to the modeling engine. */
+function edgeIndicesFromIds(edgeIds: string[], partId: string): number[] {
+  const indices: number[] = []
+  for (const id of edgeIds) {
+    const match = /^(.*)-edge-(\d+)$/.exec(id)
+    if (match && match[1] === partId) indices.push(parseInt(match[2], 10))
+  }
+  return indices
 }
 
 /** Replaces an existing entry in `parts` by id, or appends a new one — `combineIntoBody`
@@ -430,12 +442,15 @@ async function combineIntoBody(
   currentBody: Part | null,
   operation: string,
   newResult: CadShapeResult,
-  bodyName: string
+  bodyName: string,
+  bodyId: string
 ): Promise<Part> {
   const fields = shapeResultToPartFields(newResult)
 
   if (operation === 'new' || !currentBody) {
-    return { id: generateId(), name: bodyName, color: '#6b7280', ...fields }
+    // Deterministic id (from the creating feature) so picked edge ids like
+    // `<partId>-edge-3` survive the next regenerate instead of silently unmatching.
+    return { id: bodyId, name: bodyName, color: '#6b7280', ...fields }
   }
 
   const booleanOp =
@@ -1576,10 +1591,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     // Process features to generate geometry
     const parts: Part[] = []
     let currentBody: Part | null = null
-    
+    const featureErrors: Record<string, string> = {}
+
     for (const feature of partStudio.features) {
       if (feature.suppressed) continue
-      
+
+      // Surface failures on the feature itself (FeatureTree renders feature.error)
+      // instead of only logging - a silent no-op is worse than a visible error.
+      const recordError = (message: string, error?: unknown) => {
+        const detail = error instanceof Error ? error.message : error ? String(error) : ''
+        featureErrors[feature.id] = detail ? `${message}: ${detail}` : message
+        console.error(message, error ?? '')
+      }
+
       switch (feature.type) {
         case 'sketch':
           // Sketches don't create geometry directly
@@ -1633,7 +1657,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             if (!profile) continue
             try {
               const result = await cadSolverClient.extrude({ profile, plane: sketchPlane(sketch), params: extrudeParams })
-              currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`))
+              currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`, `body-${feature.id}-${entity.id}`))
               createdAny = true
             } catch (error) {
               console.error('Extrude failed for profile', entity.id, error)
@@ -1649,9 +1673,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 type: 'box',
                 params: { width, depth: footprintDepth, height: extrudeParams.depth1 }
               })
-              currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`))
+              currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`, `body-${feature.id}`))
             } catch (error) {
-              console.error('Extrude fallback primitive failed:', error)
+              recordError('Extrude failed', error)
             }
           }
           break
@@ -1702,11 +1726,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 params: { radius: featureParams.radius || 15, height: featureParams.height || 30 }
               })
             } catch (error) {
-              console.error('Revolve fallback primitive failed:', error)
+              recordError('Revolve failed', error)
               break
             }
           }
-          currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`))
+          currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`, `body-${feature.id}`))
           break
         }
 
@@ -1759,11 +1783,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             try {
               result = await cadSolverClient.makePrimitive({ type: 'cylinder', params: { radius: 10, height: 50 } })
             } catch (error) {
-              console.error('Sweep fallback primitive failed:', error)
+              recordError('Sweep failed', error)
               break
             }
           }
-          currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`))
+          currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`, `body-${feature.id}`))
           break
         }
 
@@ -1812,49 +1836,45 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             try {
               result = await cadSolverClient.makePrimitive({ type: 'cone', params: { radius1: 15, radius2: 0, height: 50 } })
             } catch (error) {
-              console.error('Loft fallback primitive failed:', error)
+              recordError('Loft failed', error)
               break
             }
           }
-          currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`))
+          currentBody = applyBody(parts, currentBody, await combineIntoBody(currentBody, operation, result, `Part from ${feature.name}`, `body-${feature.id}`))
           break
         }
 
         case 'fillet': {
-          // The edge-picker UI (FilletDialog) doesn't yet resolve picks to real B-rep
-          // edge indices - it selects from a mocked edge list. Until that's wired to
-          // real picking, apply to the first N real edges (N = number "selected").
           if (!currentBody?.shapeId) {
-            console.warn('Fillet skipped: no server-side shape on the current body')
+            recordError('Fillet skipped: the current body has no modeling-engine shape')
             break
           }
-          const edgeCount = (feature.parameters.edges || []).length
-          if (edgeCount === 0) break
-          const edgeIndices = Array.from({ length: edgeCount }, (_, i) => i)
+          // Picked ids (`<partId>-edge-N`) map to real server indices; an empty list means
+          // all edges, which is what the chat/AI path sends since it has no ids to give.
+          const edgeIndices = edgeIndicesFromIds(feature.parameters.edges || [], currentBody.id)
           const radius = feature.parameters.radius || 5
           try {
             const result = await cadSolverClient.fillet({ shapeId: currentBody.shapeId, edgeIndices, radius })
             currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
           } catch (error) {
-            console.error('Fillet failed:', error)
+            recordError('Fillet failed', error)
           }
           break
         }
 
         case 'chamfer': {
           if (!currentBody?.shapeId) {
-            console.warn('Chamfer skipped: no server-side shape on the current body')
+            recordError('Chamfer skipped: the current body has no modeling-engine shape')
             break
           }
-          const edgeCount = (feature.parameters.edges || []).length
-          if (edgeCount === 0) break
-          const edgeIndices = Array.from({ length: edgeCount }, (_, i) => i)
-          const distance = feature.parameters.distance ?? feature.parameters.size ?? feature.parameters.radius ?? 2
+          const edgeIndices = edgeIndicesFromIds(feature.parameters.edges || [], currentBody.id)
+          // ChamferDialog sends distance1 (plus distance2/angle); the chat path sends distance.
+          const distance = feature.parameters.distance1 ?? feature.parameters.distance ?? 2
           try {
             const result = await cadSolverClient.chamfer({ shapeId: currentBody.shapeId, edgeIndices, distance })
             currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
           } catch (error) {
-            console.error('Chamfer failed:', error)
+            recordError('Chamfer failed', error)
           }
           break
         }
@@ -1870,7 +1890,15 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       if (!state.document) return state
       
       const partStudios = state.document.partStudios.map(ps =>
-        ps.id === partStudioId ? { ...ps, parts } : ps
+        ps.id === partStudioId
+          ? {
+              ...ps,
+              parts,
+              features: ps.features.map(f =>
+                featureErrors[f.id] === f.error ? f : { ...f, error: featureErrors[f.id] }
+              ),
+            }
+          : ps
       )
       
       return {
@@ -1879,16 +1907,28 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     })
   },
   
-  importSTLPart: (partStudioId, name, mesh) => {
+  importSTLPart: async (partStudioId, name, mesh) => {
     const partId = generateId()
     const featureId = generateId()
-    
+
+    // Route the mesh through the modeling engine so the imported body gets a real solid
+    // (shapeId) that later booleans/fillets can use; keep the raw mesh if that fails.
+    let fields: Partial<Part> = { mesh }
+    let error: string | undefined
+    try {
+      const result = await cadSolverClient.importMesh({ positions: mesh.vertices, indices: mesh.indices })
+      fields = shapeResultToPartFields(result)
+    } catch (err) {
+      error = `Imported as a raw mesh (no solid): ${err instanceof Error ? err.message : String(err)}`
+      console.error('Mesh import via modeling engine failed:', err)
+    }
+
     set(state => {
       if (!state.document) return state
-      
+
       const partStudios = state.document.partStudios.map(ps => {
         if (ps.id !== partStudioId) return ps
-        
+
         return {
           ...ps,
           features: [...ps.features, {
@@ -1896,17 +1936,18 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             type: 'import',
             name: `Imported: ${name}`,
             suppressed: false,
-            parameters: { filename: name, partId: partId }
+            parameters: { filename: name, partId: partId },
+            error
           }],
           parts: [...ps.parts, {
             id: partId,
             name: name,
             color: '#6b7280',
-            mesh: mesh
+            ...fields
           }]
         }
       })
-      
+
       return {
         document: { ...state.document, partStudios },
         isDirty: true

@@ -121,14 +121,20 @@ export interface BooleanRequest {
 
 export interface FilletRequest {
   shapeId: string
-  edgeIndices: number[]
+  edgeIndices: number[] // 0-based server edge indices; empty = all edges
   radius: number
 }
 
 export interface ChamferRequest {
   shapeId: string
-  edgeIndices: number[]
+  edgeIndices: number[] // empty = all edges
   distance: number
+}
+
+export interface MeshImportRequest {
+  positions: number[]
+  indices: number[]
+  tolerance?: number
 }
 
 export interface CadApiErrorBody {

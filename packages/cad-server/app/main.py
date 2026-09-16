@@ -18,6 +18,7 @@ from .schemas import (
     ExtrudeRequest,
     FilletRequest,
     LoftRequest,
+    MeshImportRequest,
     PrimitiveRequest,
     RevolveRequest,
     ShapeResult,
@@ -38,7 +39,7 @@ app.add_middleware(
 )
 
 
-def _run(build_shape) -> ShapeResult:
+def _run(build_shape, edge_points: int = 16) -> ShapeResult:
     try:
         shape = build_shape()
     except GeometryError as exc:
@@ -47,7 +48,7 @@ def _run(build_shape) -> ShapeResult:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if shape is None or shape.isNull():
         raise HTTPException(status_code=400, detail="Operation produced an empty shape")
-    return freecad_ops.shape_to_result(shape)
+    return freecad_ops.shape_to_result(shape, edge_points=edge_points)
 
 
 @app.get("/health")
@@ -93,6 +94,13 @@ def fillet(req: FilletRequest) -> ShapeResult:
 @app.post("/chamfer", response_model=ShapeResult)
 def chamfer(req: ChamferRequest) -> ShapeResult:
     return _run(lambda: freecad_ops.do_chamfer(req))
+
+
+@app.post("/import/mesh", response_model=ShapeResult)
+def import_mesh(req: MeshImportRequest) -> ShapeResult:
+    # A mesh-derived solid has one straight edge per triangle edge, so 2 points each
+    # keeps the edge payload from exploding on large STLs.
+    return _run(lambda: freecad_ops.do_import_mesh(req), edge_points=2)
 
 
 @app.delete("/shapes/{shape_id}")

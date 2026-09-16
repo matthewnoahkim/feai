@@ -96,8 +96,10 @@ One endpoint per operation, all returning `{ shapeId, mesh, edges, massPropertie
 - `POST /sweep` — `{ profile, profilePlane, path, pathPlane, params }`
 - `POST /loft` — `{ profiles: [{ profile, plane }, ...], params }`
 - `POST /boolean` — `{ op: "union"|"cut"|"intersect", baseShapeId, toolShapeId }`
-- `POST /fillet` — `{ shapeId, edgeIndices, radius }`
-- `POST /chamfer` — `{ shapeId, edgeIndices, distance }`
+- `POST /fillet` — `{ shapeId, edgeIndices, radius }` (empty `edgeIndices` = all edges)
+- `POST /chamfer` — `{ shapeId, edgeIndices, distance }` (empty `edgeIndices` = all edges)
+- `POST /import/mesh` — `{ positions, indices, tolerance? }` — turn a triangle mesh (e.g. a
+  parsed STL) into a real solid with a `shapeId`, so booleans/fillets work on imports
 - `DELETE /shapes/{shapeId}` — release a shape from the in-memory store
 - `GET /health`
 

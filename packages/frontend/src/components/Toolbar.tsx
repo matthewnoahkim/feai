@@ -376,7 +376,7 @@ export function Toolbar() {
         const partStudioId = newDoc.partStudios[0].id
         
         // Use the store method to import the part
-        importSTLPart(partStudioId, docName, mesh)
+        await importSTLPart(partStudioId, docName, mesh)
         
         addNotification('success', `Imported ${file.name} (${triangleCount} triangles)`)
       } else {

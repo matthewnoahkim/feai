@@ -12,6 +12,7 @@ import math
 from typing import Any
 
 import FreeCAD
+import Mesh
 import Part
 from FreeCAD import Matrix, Placement, Vector
 
@@ -25,6 +26,7 @@ from .schemas import (
     LoftRequest,
     MassProperties,
     MeshData,
+    MeshImportRequest,
     Plane,
     PathEntity,
     PrimitiveRequest,
@@ -276,7 +278,12 @@ def do_boolean(req: BooleanRequest) -> Part.Shape:
 
 
 def _selected_edges(shape: Part.Shape, edge_indices: list[int]) -> list:
-    edges = [shape.Edges[i] for i in edge_indices if 0 <= i < len(shape.Edges)]
+    """Empty edge_indices means every edge — what a user means by "fillet the box" from
+    the chat, where the model has no edge ids to give."""
+    if not edge_indices:
+        edges = list(shape.Edges)
+    else:
+        edges = [shape.Edges[i] for i in edge_indices if 0 <= i < len(shape.Edges)]
     if not edges:
         raise GeometryError("No valid edge indices provided")
     return edges
@@ -290,6 +297,33 @@ def do_fillet(req: FilletRequest) -> Part.Shape:
 def do_chamfer(req: ChamferRequest) -> Part.Shape:
     shape = shape_store.get(req.shapeId)
     return shape.makeChamfer(req.distance, _selected_edges(shape, req.edgeIndices))
+
+
+def do_import_mesh(req: MeshImportRequest) -> Part.Shape:
+    """Turns a triangle mesh (e.g. a parsed STL) into a real solid, so imported parts get
+    a shapeId that later booleans/fillets can use instead of staying a dead mesh."""
+    if len(req.positions) % 3 or len(req.indices) % 3:
+        raise GeometryError("positions and indices must be flat xyz / triangle triplets")
+    points = [Vector(*req.positions[i:i + 3]) for i in range(0, len(req.positions), 3)]
+    facets = []
+    for i in range(0, len(req.indices), 3):
+        try:
+            facets.append((points[req.indices[i]], points[req.indices[i + 1]], points[req.indices[i + 2]]))
+        except IndexError as exc:
+            raise GeometryError("triangle index out of range") from exc
+    if not facets:
+        raise GeometryError("Mesh has no triangles")
+
+    shape = Part.Shape()
+    shape.makeShapeFromMesh(Mesh.Mesh(facets).Topology, req.tolerance)
+    solid = Part.makeSolid(shape)
+    if solid.isNull():
+        raise GeometryError("Mesh is not a closed volume; cannot make a solid")
+    if solid.Volume < 0:
+        solid.reverse()
+    if solid.Volume <= 0:
+        raise GeometryError("Mesh is not a closed volume; cannot make a solid")
+    return solid
 
 
 # ============================================================================
@@ -414,12 +448,12 @@ def _normalize(shape: Part.Shape) -> Part.Shape:
     return shape
 
 
-def shape_to_result(shape: Part.Shape) -> ShapeResult:
+def shape_to_result(shape: Part.Shape, edge_points: int = 16) -> ShapeResult:
     shape = _normalize(shape)
     shape_id = shape_store.put(shape)
     return ShapeResult(
         shapeId=shape_id,
         mesh=tessellate(shape),
-        edges=discretize_edges(shape),
+        edges=discretize_edges(shape, points_per_edge=edge_points),
         massProperties=mass_properties(shape),
     )

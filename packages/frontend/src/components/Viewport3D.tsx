@@ -296,6 +296,51 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
   )
 }
 
+// Real B-rep edge polylines from the modeling engine, pickable while a fillet/chamfer
+// dialog is open. Mirrors FreeCAD's sub-element selection: hover preselects, click
+// selects, Ctrl-click adds (or removes, if already selected).
+function PartEdges({ part }: { part: any }) {
+  const { activeDialog, selection, setSelection, addToSelection, removeFromSelection, setHovered, hovered } = useUIStore()
+  const pickable = activeDialog === 'fillet' || activeDialog === 'chamfer'
+  if (!pickable || !part.edges || part.edges.length === 0 || part.visible === false) return null
+
+  return (
+    <group>
+      {part.edges.map((edge: { edgeId: string; points: number[] }) => {
+        const index = parseInt(edge.edgeId.replace(/^e/, ''), 10)
+        const id = `${part.id}-edge-${index}`
+        const points: [number, number, number][] = []
+        for (let i = 0; i + 2 < edge.points.length; i += 3) {
+          points.push([edge.points[i], edge.points[i + 1], edge.points[i + 2]])
+        }
+        if (points.length < 2) return null
+        const isSelected = selection.type === 'edge' && selection.ids.includes(id)
+        const isHovered = hovered === id
+        return (
+          <Line
+            key={id}
+            points={points}
+            color={isSelected ? '#22d3ee' : isHovered ? '#67e8f9' : '#1f2937'}
+            lineWidth={isSelected || isHovered ? 3 : 1.5}
+            onClick={(e: ThreeEvent<MouseEvent>) => {
+              e.stopPropagation()
+              const additive = e.ctrlKey || e.metaKey
+              if (additive && selection.type === 'edge') {
+                if (selection.ids.includes(id)) removeFromSelection(id)
+                else addToSelection('edge', id)
+              } else {
+                setSelection({ type: 'edge', ids: [id] })
+              }
+            }}
+            onPointerOver={(e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); setHovered(id) }}
+            onPointerOut={() => setHovered(null)}
+          />
+        )
+      })}
+    </group>
+  )
+}
+
 // Sketch visualization
 function SketchVisualization() {
   const { sketchMode, isDrawing, drawingPoints } = useUIStore()
@@ -1462,48 +1507,28 @@ function FilletPreview() {
   // If no selections, nothing to preview
   if (selectedEdges.length === 0 && selectedFaces.length === 0) return null
   
-  // Create preview geometry - show edge indicators
   const previewElements: JSX.Element[] = []
-  
-  // For each selected edge, create a small torus-like indicator
-  selectedEdges.forEach((edgeId: string, index: number) => {
-    // Parse edge position from ID (simplified demo)
-    const parts = edgeId.split('-edge-')
-    if (parts.length < 2) return
-    
-    const edgeIndex = parseInt(parts[1]) || 0
-    
-    // Calculate approximate edge position based on index
-    // This is a simplified visualization - real CAD would use actual geometry
-    const edgePositions = [
-      [0, 15, 15], [0, 15, -15], [-15, 15, 0], [15, 15, 0],  // Top edges
-      [0, -15, 15], [0, -15, -15], [-15, -15, 0], [15, -15, 0],  // Bottom edges
-      [-15, 0, 15], [15, 0, 15], [-15, 0, -15], [15, 0, -15]  // Vertical edges
-    ]
-    
-    const pos = edgePositions[edgeIndex % edgePositions.length] || [0, 0, 0]
-    
-    // Determine edge orientation
-    const isHorizontalX = edgeIndex < 4 || (edgeIndex >= 4 && edgeIndex < 8)
-    const isVertical = edgeIndex >= 8
-    
+
+  // Highlight the real edge polylines that were picked, with a radius marker at each midpoint
+  selectedEdges.forEach((edgeId: string) => {
+    const match = /^(.*)-edge-(\d+)$/.exec(edgeId)
+    if (!match) return
+    const part = activePartStudio.parts.find(p => p.id === match[1])
+    const edge = part?.edges?.find(e => e.edgeId === `e${match[2]}`)
+    if (!edge) return
+    const points: [number, number, number][] = []
+    for (let i = 0; i + 2 < edge.points.length; i += 3) {
+      points.push([edge.points[i], edge.points[i + 1], edge.points[i + 2]])
+    }
+    if (points.length < 2) return
+    const mid = points[Math.floor(points.length / 2)]
+
     previewElements.push(
-      <group key={`edge-${edgeId}`} position={[pos[0], pos[1], pos[2]]}>
-        {/* Edge highlight line */}
-        <mesh rotation={isVertical ? [0, 0, 0] : isHorizontalX ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.5, 0.5, 30, 8]} />
-          <meshStandardMaterial color="#22d3ee" transparent opacity={0.8} />
-        </mesh>
-        
-        {/* Fillet radius indicator */}
-        <mesh>
-          <torusGeometry args={[radius, radius * 0.3, 8, 16]} />
-          <meshStandardMaterial 
-            color="#22d3ee" 
-            transparent 
-            opacity={0.5}
-            side={THREE.DoubleSide}
-          />
+      <group key={`edge-${edgeId}`}>
+        <Line points={points} color="#22d3ee" lineWidth={4} />
+        <mesh position={mid}>
+          <sphereGeometry args={[Math.max(radius * 0.5, 0.5), 12, 12]} />
+          <meshStandardMaterial color="#22d3ee" transparent opacity={0.5} />
         </mesh>
       </group>
     )
@@ -1567,40 +1592,27 @@ function ChamferPreview() {
   if (selectedEdges.length === 0 && selectedFaces.length === 0) return null
   
   const previewElements: JSX.Element[] = []
-  
-  // For each selected edge, create a beveled indicator
-  selectedEdges.forEach((edgeId: string, index: number) => {
-    const parts = edgeId.split('-edge-')
-    if (parts.length < 2) return
-    
-    const edgeIndex = parseInt(parts[1]) || 0
-    
-    const edgePositions = [
-      [0, 15, 15], [0, 15, -15], [-15, 15, 0], [15, 15, 0],
-      [0, -15, 15], [0, -15, -15], [-15, -15, 0], [15, -15, 0],
-      [-15, 0, 15], [15, 0, 15], [-15, 0, -15], [15, 0, -15]
-    ]
-    
-    const pos = edgePositions[edgeIndex % edgePositions.length] || [0, 0, 0]
-    const isVertical = edgeIndex >= 8
-    
+
+  // Highlight the real edge polylines that were picked, with a bevel-size marker at each midpoint
+  selectedEdges.forEach((edgeId: string) => {
+    const match = /^(.*)-edge-(\d+)$/.exec(edgeId)
+    if (!match) return
+    const part = activePartStudio.parts.find(p => p.id === match[1])
+    const edge = part?.edges?.find(e => e.edgeId === `e${match[2]}`)
+    if (!edge) return
+    const points: [number, number, number][] = []
+    for (let i = 0; i + 2 < edge.points.length; i += 3) {
+      points.push([edge.points[i], edge.points[i + 1], edge.points[i + 2]])
+    }
+    if (points.length < 2) return
+    const mid = points[Math.floor(points.length / 2)]
+
     previewElements.push(
-      <group key={`chamfer-edge-${edgeId}`} position={[pos[0], pos[1], pos[2]]}>
-        {/* Edge highlight line */}
-        <mesh rotation={isVertical ? [0, 0, 0] : [0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.5, 0.5, 30, 8]} />
-          <meshStandardMaterial color="#f97316" transparent opacity={0.8} />
-        </mesh>
-        
-        {/* Chamfer bevel indicator - triangular prism shape */}
-        <mesh rotation={isVertical ? [0, Math.PI / 4, 0] : [Math.PI / 4, 0, 0]}>
-          <boxGeometry args={[distance1, distance2, 30]} />
-          <meshStandardMaterial 
-            color="#f97316" 
-            transparent 
-            opacity={0.4}
-            side={THREE.DoubleSide}
-          />
+      <group key={`chamfer-edge-${edgeId}`}>
+        <Line points={points} color="#f97316" lineWidth={4} />
+        <mesh position={mid}>
+          <boxGeometry args={[Math.max(distance1, 0.5), Math.max(distance2, 0.5), Math.max(distance1, 0.5)]} />
+          <meshStandardMaterial color="#f97316" transparent opacity={0.4} />
         </mesh>
       </group>
     )
@@ -2409,11 +2421,14 @@ function Scene() {
 
       {/* Part geometry */}
       {parts.map(part => (
-        <PartMesh 
-          key={part.id} 
-          part={part} 
+        <PartMesh
+          key={part.id}
+          part={part}
           isSelected={selection.ids.includes(part.id)}
         />
+      ))}
+      {parts.map(part => (
+        <PartEdges key={`edges-${part.id}`} part={part} />
       ))}
       
       {/* Completed sketches visualization - always visible */}

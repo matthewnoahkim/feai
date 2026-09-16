@@ -128,6 +128,21 @@ check("chamfer all 12 box edges reduces volume", 0 < cham["massProperties"]["vol
 check("chamfer removes more than fillet", cham["massProperties"]["volume"] < fil["massProperties"]["volume"],
       f"chamfer {cham['massProperties']['volume']} < fillet {fil['massProperties']['volume']}")
 
+# --- empty edgeIndices = all edges (the chat/AI path sends no ids) -----------
+fil_all = post("/fillet", {"shapeId": box["shapeId"], "edgeIndices": [], "radius": 1})
+check("fillet with [] == fillet with all 12 explicit",
+      close(fil_all["massProperties"]["volume"], fil["massProperties"]["volume"]),
+      f"{fil_all['massProperties']['volume']} vs {fil['massProperties']['volume']}")
+
+# --- mesh import roundtrip (parsed STL -> real solid) --------------------------
+imp = post("/import/mesh", {"positions": box["mesh"]["positions"], "indices": box["mesh"]["indices"]})
+check("import box tessellation -> solid volume 1000", close(imp["massProperties"]["volume"], 1000),
+      f"{imp['massProperties']['volume']}")
+check("imported solid has a shapeId", bool(imp["shapeId"]), imp["shapeId"])
+cut2 = post("/boolean", {"op": "cut", "baseShapeId": imp["shapeId"], "toolShapeId": cyl["shapeId"]})
+check("boolean works on an imported solid", close(cut2["massProperties"]["volume"], expected_cut),
+      f"{cut2['massProperties']['volume']} vs {expected_cut}")
+
 # --- error handling ----------------------------------------------------------
 try:
     post("/boolean", {"op": "cut", "baseShapeId": "does-not-exist", "toolShapeId": cyl["shapeId"]})

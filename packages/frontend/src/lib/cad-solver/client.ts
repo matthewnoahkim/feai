@@ -14,6 +14,7 @@ import type {
   ExtrudeRequest,
   FilletRequest,
   LoftRequest,
+  MeshImportRequest,
   PrimitiveRequest,
   RevolveRequest,
   ShapeResult,
@@ -83,6 +84,10 @@ export async function deleteShape(shapeId: string): Promise<void> {
   await fetch(`${API_BASE_URL}/shapes/${shapeId}`, { method: 'DELETE' })
 }
 
+export async function importMesh(request: MeshImportRequest): Promise<ShapeResult> {
+  return post<ShapeResult>('/import/mesh', request)
+}
+
 export const cadSolverClient = {
   makePrimitive,
   extrude,
@@ -93,6 +98,7 @@ export const cadSolverClient = {
   fillet,
   chamfer,
   deleteShape,
+  importMesh,
 }
 
 export default cadSolverClient

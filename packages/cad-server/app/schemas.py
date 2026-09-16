@@ -131,11 +131,20 @@ class BooleanRequest(BaseModel):
 
 class FilletRequest(BaseModel):
     shapeId: str
-    edgeIndices: list[int]  # 0-based, into the shape's own Edges list
+    edgeIndices: list[int]  # 0-based, into the shape's own Edges list; empty = all edges
     radius: float
 
 
 class ChamferRequest(BaseModel):
     shapeId: str
-    edgeIndices: list[int]
+    edgeIndices: list[int]  # empty = all edges
     distance: float
+
+
+class MeshImportRequest(BaseModel):
+    """A triangle mesh (e.g. a parsed STL) to turn into a real solid. Same flat layout as
+    MeshData: xyz position triplets and 0-based triangle index triplets."""
+
+    positions: list[float]
+    indices: list[int]
+    tolerance: float = 0.05

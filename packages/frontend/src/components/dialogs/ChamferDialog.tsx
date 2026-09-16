@@ -71,21 +71,18 @@ export function ChamferDialog() {
     return activePartStudio.parts || []
   }, [activePartStudio])
   
-  // Mock edges for demonstration
+  // Real B-rep edges from the modeling engine (part.edges), one entry per topological
+  // edge, addressed FreeCAD-style (`Edge3`) as <partId>-edge-<N>
   const availableEdges = useMemo(() => {
     const edges: EdgeInfo[] = []
     availableParts.forEach((part) => {
-      const edgeLabels = [
-        'Top-Front', 'Top-Back', 'Top-Left', 'Top-Right',
-        'Bottom-Front', 'Bottom-Back', 'Bottom-Left', 'Bottom-Right',
-        'Front-Left', 'Front-Right', 'Back-Left', 'Back-Right'
-      ]
-      edgeLabels.forEach((label, edgeIndex) => {
+      (part.edges || []).forEach((edge) => {
+        const index = parseInt(edge.edgeId.replace(/^e/, ''), 10)
         edges.push({
           partId: part.id,
           partName: part.name,
-          edgeId: `${part.id}-edge-${edgeIndex}`,
-          edgeLabel: label
+          edgeId: `${part.id}-edge-${index}`,
+          edgeLabel: `Edge ${index + 1}`
         })
       })
     })
@@ -136,28 +133,16 @@ export function ChamferDialog() {
   
   // Toggle edge selection
   const toggleEdge = useCallback((edgeId: string) => {
-    setSelectedEdges(prev => {
-      if (prev.includes(edgeId)) {
-        return prev.filter(id => id !== edgeId)
-      }
-      
-      if (tangentPropagation) {
-        const edge = availableEdges.find(e => e.edgeId === edgeId)
-        if (edge) {
-          const partEdges = availableEdges.filter(e => e.partId === edge.partId)
-          const similar = partEdges
-            .filter(e => {
-              const edgeDir = edge.edgeLabel.split('-')[0]
-              return e.edgeLabel.includes(edgeDir) && !prev.includes(e.edgeId)
-            })
-            .map(e => e.edgeId)
-          return [...prev, edgeId, ...similar.slice(0, 3)]
-        }
-      }
-      
-      return [...prev, edgeId]
-    })
-  }, [tangentPropagation, availableEdges])
+    setSelectedEdges(prev => prev.includes(edgeId) ? prev.filter(id => id !== edgeId) : [...prev, edgeId])
+  }, [])
+
+  // Edges picked in the 3D viewport arrive through uiStore selection (type 'edge'). As in
+  // FreeCAD's task panels, the list mirrors the 3D selection: click selects, Ctrl-click
+  // adds/removes.
+  useEffect(() => {
+    if (selection.type !== 'edge') return
+    setSelectedEdges(selection.ids)
+  }, [selection])
   
   // Toggle face selection
   const toggleFace = useCallback((faceId: string) => {
@@ -356,7 +341,7 @@ export function ChamferDialog() {
                       {part.name}
                     </p>
                     <div className="grid grid-cols-2 gap-1 pl-4">
-                      {availableEdges.filter(e => e.partId === part.id).slice(0, 8).map((edge) => (
+                      {availableEdges.filter(e => e.partId === part.id).map((edge) => (
                         <label
                           key={edge.edgeId}
                           className={`
