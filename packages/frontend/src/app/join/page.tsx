@@ -3,6 +3,8 @@ import { LandingFooter, LandingNav } from '@/components/landing/Chrome';
 import { Reveal } from '@/components/landing/Reveal';
 import { TiltCard } from '@/components/landing/TiltCard';
 import { ParallaxLayer } from '@/components/landing/ParallaxLayer';
+import { ScrollProgress } from '@/components/landing/ScrollProgress';
+import { Accordion } from '@/components/landing/Accordion';
 
 const ROLES = [
   {
@@ -27,10 +29,30 @@ const ROLES = [
 
 const MAILTO = 'mailto:matthew@feai.app?subject=' + encodeURIComponent("I'd like to join FEAI") + '&body=' + encodeURIComponent('Hi — I\'m interested in joining FEAI.\n\nRole I\'m interested in: \nBackground: \nLink to work (GitHub/portfolio/paper): \n');
 
+const FAQ = [
+  {
+    q: 'Do I need FEA or CAD experience?',
+    a: "It depends on the role. For mechanical/simulation work, yes — we need people who already know meshing, boundary conditions, and solvers well enough to judge whether a result is right. For software and research roles, we care more about your ability to work through hard, well-specified problems; you can pick up the domain from us.",
+  },
+  {
+    q: 'Is this remote?',
+    a: "We're a small, early team and currently work closely together in person, but we're open to remote for the right person, especially for research and mechanical engineering roles where deep, focused work matters more than being in the same room.",
+  },
+  {
+    q: "What's the interview process?",
+    a: "There's no portal or multi-week pipeline. You email us, we talk about what you've built and what you want to work on, and if it looks like a fit we'll usually work through a real problem together — something close to what you'd actually do here.",
+  },
+  {
+    q: 'What stage is the company at?',
+    a: 'Early. The CAD kernel and modeling workflow are live and used daily; FEA meshing, solving, and the assistant layer are actively being built. Joining now means shaping how those systems work, not maintaining something already decided.',
+  },
+];
+
 export default function JoinPage() {
   return (
     <div className="public-theme landing-theme">
       <div className="relative min-h-screen">
+        <ScrollProgress />
         <ParallaxLayer className="pointer-events-none absolute inset-x-0 top-0 h-[50vh] l-grid-bg l-fade-bottom" />
         <LandingNav current="join" />
 
@@ -73,6 +95,18 @@ export default function JoinPage() {
               </p>
               <a href={MAILTO} className="l-btn l-btn-primary">Email matthew@feai.app <span aria-hidden>→</span></a>
             </TiltCard>
+          </Reveal>
+
+          <Reveal>
+            <div className="mb-16 mt-20">
+              <p className="l-eyebrow mb-4 text-center">Questions</p>
+              <h2 className="mx-auto mb-10 max-w-xl text-center text-2xl font-light tracking-tight sm:text-3xl">
+                Before you email us.
+              </h2>
+              <div className="mx-auto max-w-2xl">
+                <Accordion items={FAQ} />
+              </div>
+            </div>
           </Reveal>
 
           <p className="mt-10 text-center text-sm">

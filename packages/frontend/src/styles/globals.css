@@ -277,6 +277,144 @@
 }
 .l-pulse { animation: l-pulse-glow 2.4s ease-in-out infinite; }
 
+/* Fixed scroll-position bar rendered just under the nav (ScrollProgress.tsx). Scales
+   from a fixed-width track rather than animating width, so the browser can composite it
+   on the GPU instead of laying out every scroll frame. */
+.l-progress-track {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 2px;
+  background: var(--l-border);
+}
+.l-progress-bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  transform: scaleX(0);
+  background: var(--l-accent);
+  box-shadow: 0 0 8px var(--l-accent-glow);
+}
+
+/* Cursor-follow spotlight over the hero (CursorGlow.tsx sets --spot-x/--spot-y/--spot-o
+   on pointer move). The gradient is on a full-bleed overlay, not the cursor's own element,
+   so it never intercepts clicks on the content it sits behind. */
+.l-spotlight-zone { position: relative; }
+.l-spotlight {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--spot-o, 0);
+  transition: opacity 300ms ease;
+  background: radial-gradient(480px circle at var(--spot-x, 50%) var(--spot-y, 50%), var(--l-accent-glow), transparent 70%);
+}
+.l-spotlight-zone > :not(.l-spotlight) { position: relative; z-index: 1; }
+
+/* StickyScroll.tsx: dims steps until they cross the active band, and crossfades the
+   pinned visual when the active step changes. */
+.l-sticky-step { opacity: 0.35; transition: opacity 400ms ease; }
+.l-sticky-step.is-active { opacity: 1; }
+.l-fade-swap { animation: l-reveal 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* StageDiagram.tsx: one continuous track + fill line (rather than a segment per stage) so
+   the fill height animates as a single smooth scroll-linked draw, plus the dot/row accent
+   highlight for whichever stage is active. */
+.l-stage-line-track {
+  position: absolute;
+  left: 8px;
+  top: 14px;
+  bottom: 14px;
+  width: 1px;
+  background: var(--l-border);
+}
+.l-stage-line-fill {
+  position: absolute;
+  left: 8px;
+  top: 14px;
+  width: 1px;
+  background: var(--l-accent);
+  box-shadow: 0 0 6px var(--l-accent-glow);
+  transition: height 150ms linear;
+}
+.l-stage-dot {
+  position: absolute;
+  left: 3px;
+  top: 4px;
+  width: 11px;
+  height: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  line-height: 1;
+  border: 1px solid var(--l-border-strong);
+  background: var(--l-surface);
+  color: var(--l-accent);
+  transition: border-color 300ms ease, box-shadow 300ms ease, transform 300ms ease;
+}
+.l-stage-dot.is-active {
+  border-color: var(--l-accent);
+  box-shadow: 0 0 0 3px var(--l-accent-glow);
+  transform: scale(1.15);
+}
+.l-stage-row { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.55rem 0; opacity: 0.55; transition: opacity 300ms ease; }
+.l-stage-row.is-active { opacity: 1; }
+.l-stage-title { font-size: 0.92rem; }
+
+/* Accordion.tsx: grid-rows 0fr/1fr trick animates height without a measured max-height. */
+.l-accordion-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--l-text);
+}
+.l-accordion-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 1.1rem;
+  color: var(--l-accent);
+  transition: transform 250ms ease;
+}
+.l-accordion-icon.is-open { transform: rotate(45deg); }
+.l-accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms ease;
+}
+.l-accordion-panel.is-open { grid-template-rows: 1fr; }
+
+/* PartVisual.tsx: typing cursor in the "prompt" mode, and the pulsing selection dots in
+   "prompt"/"action" mode. */
+@keyframes l-blink { 0%, 45% { opacity: 1; } 50%, 95% { opacity: 0; } 100% { opacity: 1; } }
+.l-blink-cursor { animation: l-blink 1s step-end infinite; }
+@keyframes l-pulse-dot { 0%, 100% { r: 3.2; opacity: 1; } 50% { r: 4.4; opacity: 0.6; } }
+.l-pulse-dot { animation: l-pulse-dot 1.8s ease-in-out infinite; transform-origin: center; }
+
+/* StickyScroll.tsx: the "0X / 0Y" readout above the pinned visual and its mini fill bar —
+   a second, section-scoped progress indicator distinct from the page-wide ScrollProgress. */
+.l-section-progress { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.l-section-progress-track { position: relative; flex: 1; height: 2px; background: var(--l-border); overflow: hidden; }
+.l-section-progress-fill { position: absolute; inset: 0; width: 100%; transform-origin: left; background: var(--l-accent); transition: transform 150ms linear; }
+
+/* ScrollMarquee.tsx: two copies of the content track side by side, shifted left by a
+   position rAF drives from autoplay speed plus scroll velocity — see the component for why
+   this isn't a plain CSS @keyframes loop. */
+.l-marquee-viewport { overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent); mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent); }
+.l-marquee-track { display: flex; width: max-content; will-change: transform; }
+.l-marquee-item { display: flex; align-items: center; gap: 0.5rem; padding: 0 1.5rem; white-space: nowrap; }
+
 @media (prefers-reduced-motion: reduce) {
   .l-reveal { animation: none; }
   .l-scanline::after { animation: none; display: none; }
@@ -285,6 +423,14 @@
   .l-tilt { transition: none; }
   .l-grid-drift { transition: none; background-position: 0 0 !important; }
   .l-pulse { animation: none; }
+  .l-progress-bar { transition: none; }
+  .l-sticky-step { opacity: 1; transition: none; }
+  .l-fade-swap { animation: none; }
+  .l-stage-line-fill, .l-stage-dot, .l-stage-row { transition: none; }
+  .l-accordion-panel { transition: none; }
+  .l-blink-cursor, .l-pulse-dot { animation: none; }
+  .l-section-progress-fill { transition: none; }
+  .l-marquee-track { transform: none !important; }
 }
 
 * {

@@ -5,23 +5,31 @@ import { Reveal } from './Reveal'
 import { TiltCard } from './TiltCard'
 import { AnimatedNumber } from './AnimatedNumber'
 import { ParallaxLayer } from './ParallaxLayer'
+import { ScrollProgress } from './ScrollProgress'
+import { CursorGlow } from './CursorGlow'
+import { ScrollScale } from './ScrollScale'
+import { ScrollMarquee } from './ScrollMarquee'
+import { StickyScroll } from './StickyScroll'
 
 const WORKFLOW = [
   {
     index: '01',
     title: 'Design',
+    visual: 'kernel' as const,
     body: 'Sketch profiles, then extrude, revolve, sweep and loft them into real solids. Booleans, fillets and chamfers run on a true B-rep kernel, not a mesh approximation.',
     tags: ['B-REP', 'PARAMETRIC', 'EDGE PICKING'],
   },
   {
     index: '02',
     title: 'Mesh',
+    visual: 'mesh' as const,
     body: 'Generate tetrahedral or hexahedral finite element meshes from the same geometry, with element-quality checks before anything is solved.',
     tags: ['C3D4 / C3D10', 'C3D8 / C3D20', 'QUALITY'],
   },
   {
     index: '03',
     title: 'Simulate',
+    visual: 'results' as const,
     body: 'Apply supports, loads, pressure and thermal conditions, run the analysis, and read stress, strain and displacement fields in the same viewport.',
     tags: ['STATIC', 'THERMAL', 'CSV / VTU'],
   },
@@ -129,12 +137,13 @@ const CHAT_ACTION = `{
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen">
+      <ScrollProgress />
       <ParallaxLayer className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] l-grid-bg l-fade-bottom" />
 
       <LandingNav />
 
       {/* Hero */}
-      <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-12 md:grid-cols-2 md:pt-20">
+      <CursorGlow className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-12 md:grid-cols-2 md:pt-20">
         <div className="l-reveal">
           <div className="mb-6 flex flex-wrap gap-2">
             <span className="l-badge"><span className="dot l-pulse" />Engine · online</span>
@@ -157,7 +166,7 @@ export default function LandingPage() {
           <p className="l-eyebrow mt-10">Parametric CAD today · intelligent FEA is where it's going</p>
         </div>
 
-        <div className="l-reveal tech-frame p-2" style={{ animationDelay: '120ms' }}>
+        <ScrollScale className="l-reveal tech-frame p-2" style={{ animationDelay: '120ms' }}>
           <div className="relative">
             <HeroSceneLoader />
             <div className="l-scanline" aria-hidden />
@@ -167,27 +176,21 @@ export default function LandingPage() {
               <span>V = 30 862.76 mm³ · A = 9 946.91 mm²</span>
             </div>
           </div>
+        </ScrollScale>
+      </CursorGlow>
+
+      {/* Stack ticker */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="border-y py-4" style={{ borderColor: 'var(--l-border)' }}>
+          <ScrollMarquee items={CAPABILITIES.map(c => c.name.toUpperCase())} />
         </div>
-      </section>
+      </div>
 
       {/* Workflow */}
       <section className="mx-auto max-w-6xl px-6 py-20">
         <p className="l-eyebrow mb-3">Workflow</p>
         <h2 className="mb-10 text-2xl font-light tracking-tight sm:text-3xl">From sketch to stress field, in order.</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          {WORKFLOW.map((step, i) => (
-            <Reveal key={step.index} delay={i * 100}>
-              <TiltCard className="l-card h-full p-6">
-                <div className="l-index mb-4">{step.index}/</div>
-                <h3 className="mb-3 text-xl font-medium">{step.title}</h3>
-                <p className="mb-5 text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{step.body}</p>
-                <div className="flex flex-wrap gap-2">
-                  {step.tags.map(t => <span key={t} className="l-badge">{t}</span>)}
-                </div>
-              </TiltCard>
-            </Reveal>
-          ))}
-        </div>
+        <StickyScroll steps={WORKFLOW} />
       </section>
 
       {/* Chat to CAD */}
