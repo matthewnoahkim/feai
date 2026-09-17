@@ -1,6 +1,10 @@
 import Link from 'next/link'
 import HeroSceneLoader from './HeroSceneLoader'
 import { LandingFooter, LandingNav } from './Chrome'
+import { Reveal } from './Reveal'
+import { TiltCard } from './TiltCard'
+import { AnimatedNumber } from './AnimatedNumber'
+import { ParallaxLayer } from './ParallaxLayer'
 
 const WORKFLOW = [
   {
@@ -38,14 +42,16 @@ const CAPABILITIES: { name: string; detail: string; status: 'live' | 'planned' }
   { name: 'Constraints & assemblies', detail: 'solver-driven sketches, mates', status: 'planned' },
 ]
 
-// Volumes are the engine's own results for these shapes (they're also the smoke-test cases).
+// Volumes are the engine's own results for these shapes (they're also the smoke-test
+// cases) — kept as plain numbers, not pre-formatted strings, so AnimatedNumber can count
+// up to them instead of just printing static text.
 const GALLERY = [
-  { label: 'box 10³', value: 'V = 1000.00 mm³', svg: BoxGlyph },
-  { label: 'cylinder r5 h10', value: 'V = 785.40 mm³', svg: CylinderGlyph },
-  { label: 'sphere r5', value: 'V = 523.60 mm³', svg: SphereGlyph },
-  { label: 'cone r5 h10', value: 'V = 261.80 mm³', svg: ConeGlyph },
-  { label: 'torus R10 r2 · revolve', value: 'V = 789.57 mm³', svg: TorusGlyph },
-  { label: 'box − ¼ cylinder · cut', value: 'V = 803.65 mm³', svg: CutGlyph },
+  { label: 'box 10³', volume: 1000.00, svg: BoxGlyph },
+  { label: 'cylinder r5 h10', volume: 785.40, svg: CylinderGlyph },
+  { label: 'sphere r5', volume: 523.60, svg: SphereGlyph },
+  { label: 'cone r5 h10', volume: 261.80, svg: ConeGlyph },
+  { label: 'torus R10 r2 · revolve', volume: 789.57, svg: TorusGlyph },
+  { label: 'box − ¼ cylinder · cut', volume: 803.65, svg: CutGlyph },
 ]
 
 const glyphProps = { viewBox: '0 0 120 90', fill: 'none', stroke: 'currentColor', strokeWidth: 1.25, strokeLinejoin: 'round' as const }
@@ -123,7 +129,7 @@ const CHAT_ACTION = `{
 export default function LandingPage() {
   return (
     <div className="relative min-h-screen">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] l-grid-bg l-fade-bottom" aria-hidden />
+      <ParallaxLayer className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] l-grid-bg l-fade-bottom" />
 
       <LandingNav />
 
@@ -131,7 +137,7 @@ export default function LandingPage() {
       <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-12 md:grid-cols-2 md:pt-20">
         <div className="l-reveal">
           <div className="mb-6 flex flex-wrap gap-2">
-            <span className="l-badge"><span className="dot" />Engine · online</span>
+            <span className="l-badge"><span className="dot l-pulse" />Engine · online</span>
             <span className="l-badge">B-rep kernel</span>
             <span className="l-badge">FEA native</span>
           </div>
@@ -169,22 +175,24 @@ export default function LandingPage() {
         <p className="l-eyebrow mb-3">Workflow</p>
         <h2 className="mb-10 text-2xl font-light tracking-tight sm:text-3xl">From sketch to stress field, in order.</h2>
         <div className="grid gap-4 md:grid-cols-3">
-          {WORKFLOW.map(step => (
-            <div key={step.index} className="l-card p-6">
-              <div className="l-index mb-4">{step.index}/</div>
-              <h3 className="mb-3 text-xl font-medium">{step.title}</h3>
-              <p className="mb-5 text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{step.body}</p>
-              <div className="flex flex-wrap gap-2">
-                {step.tags.map(t => <span key={t} className="l-badge">{t}</span>)}
-              </div>
-            </div>
+          {WORKFLOW.map((step, i) => (
+            <Reveal key={step.index} delay={i * 100}>
+              <TiltCard className="l-card h-full p-6">
+                <div className="l-index mb-4">{step.index}/</div>
+                <h3 className="mb-3 text-xl font-medium">{step.title}</h3>
+                <p className="mb-5 text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{step.body}</p>
+                <div className="flex flex-wrap gap-2">
+                  {step.tags.map(t => <span key={t} className="l-badge">{t}</span>)}
+                </div>
+              </TiltCard>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* Chat to CAD */}
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-20 md:grid-cols-2">
-        <div>
+        <Reveal>
           <p className="l-eyebrow mb-3">Chat to CAD</p>
           <h2 className="mb-5 text-2xl font-light tracking-tight sm:text-3xl">Every prompt becomes a feature you can inspect.</h2>
           <p className="text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>
@@ -192,14 +200,16 @@ export default function LandingPage() {
             extrudes, revolves and fillets you'd create by hand — so everything it builds shows up
             in the feature tree, can be edited, and can be undone.
           </p>
-        </div>
-        <div className="tech-frame p-1">
-          <div className="flex items-center justify-between border-b px-4 py-2 l-eyebrow" style={{ borderColor: 'var(--l-border)' }}>
-            <span>action · 1 of 3</span>
-            <span style={{ color: 'var(--l-accent)' }}>applied</span>
+        </Reveal>
+        <Reveal delay={120}>
+          <div className="tech-frame p-1">
+            <div className="flex items-center justify-between border-b px-4 py-2 l-eyebrow" style={{ borderColor: 'var(--l-border)' }}>
+              <span>action · 1 of 3</span>
+              <span style={{ color: 'var(--l-accent)' }}>applied</span>
+            </div>
+            <pre className="l-code m-0 border-0">{CHAT_ACTION}</pre>
           </div>
-          <pre className="l-code m-0 border-0">{CHAT_ACTION}</pre>
-        </div>
+        </Reveal>
       </section>
 
       {/* Capabilities */}
@@ -212,16 +222,18 @@ export default function LandingPage() {
           <p className="l-mono text-xs" style={{ color: 'var(--l-dim)' }}>solid = shipped · dashed = in progress</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {CAPABILITIES.map(c => (
-            <div key={c.name} className="l-card flex flex-col gap-3 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <span className="font-medium">{c.name}</span>
-                <span className={`l-badge ${c.status === 'planned' ? 'is-planned' : ''}`}>
-                  {c.status === 'live' ? <><span className="dot" />live</> : 'planned'}
-                </span>
-              </div>
-              <span className="l-mono text-xs" style={{ color: 'var(--l-dim)' }}>{c.detail}</span>
-            </div>
+          {CAPABILITIES.map((c, i) => (
+            <Reveal key={c.name} delay={(i % 4) * 80}>
+              <TiltCard className="l-card flex h-full flex-col gap-3 p-5" maxTilt={5}>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-medium">{c.name}</span>
+                  <span className={`l-badge ${c.status === 'planned' ? 'is-planned' : ''}`}>
+                    {c.status === 'live' ? <><span className="dot l-pulse" />live</> : 'planned'}
+                  </span>
+                </div>
+                <span className="l-mono text-xs" style={{ color: 'var(--l-dim)' }}>{c.detail}</span>
+              </TiltCard>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -235,16 +247,18 @@ export default function LandingPage() {
           actual results — matching the closed-form answer to floating-point precision.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {GALLERY.map(item => {
+          {GALLERY.map((item, i) => {
             const Glyph = item.svg
             return (
-              <div key={item.label} className="l-card p-5" style={{ color: 'var(--l-accent)' }}>
-                <div className="mb-4 aspect-[4/3] w-full opacity-90"><Glyph /></div>
-                <div className="flex items-center justify-between l-mono text-xs">
-                  <span style={{ color: 'var(--l-text)' }}>{item.label}</span>
-                  <span style={{ color: 'var(--l-dim)' }}>{item.value}</span>
-                </div>
-              </div>
+              <Reveal key={item.label} delay={(i % 3) * 100}>
+                <TiltCard className="l-card p-5" style={{ color: 'var(--l-accent)' }}>
+                  <div className="mb-4 aspect-[4/3] w-full opacity-90"><Glyph /></div>
+                  <div className="flex items-center justify-between l-mono text-xs">
+                    <span style={{ color: 'var(--l-text)' }}>{item.label}</span>
+                    <span style={{ color: 'var(--l-dim)' }}>V = <AnimatedNumber value={item.volume} /> mm³</span>
+                  </div>
+                </TiltCard>
+              </Reveal>
             )
           })}
         </div>
@@ -252,38 +266,61 @@ export default function LandingPage() {
 
       {/* FEA strip */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <p className="l-eyebrow mb-3">Where this is going</p>
-        <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">The CAD is the foundation. The analysis is the point.</h2>
-        <p className="mb-10 max-w-2xl text-base" style={{ color: 'var(--l-muted)' }}>
-          Next on the roadmap: analysis setup proposed from the geometry itself, surrogate models
-          that estimate results before a full solve, and result interpretation you can interrogate
-          in chat.
-        </p>
+        <Reveal>
+          <p className="l-eyebrow mb-3">Where this is going</p>
+          <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">The CAD is the foundation. The analysis is the point.</h2>
+          <p className="mb-10 max-w-2xl text-base" style={{ color: 'var(--l-muted)' }}>
+            Next on the roadmap: analysis setup proposed from the geometry itself, surrogate models
+            that estimate results before a full solve, and result interpretation you can interrogate
+            in chat.
+          </p>
+        </Reveal>
         <div className="tech-frame grid gap-px md:grid-cols-3" style={{ background: 'var(--l-border)' }}>
           {[
             ['Mesh', 'Tet and hex elements, linear or quadratic, sized to the feature. Quality metrics before you solve.'],
             ['Boundary conditions', 'Fixed and displacement supports, symmetry, gravity, pressure, point and surface forces, thermal loads.'],
             ['Results', 'Stress, strain and displacement fields in the viewport; export CSV and VTU for downstream tools.'],
-          ].map(([title, body]) => (
-            <div key={title} className="p-6" style={{ background: 'var(--l-surface)' }}>
-              <h3 className="mb-2 font-medium">{title}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{body}</p>
-            </div>
+          ].map(([title, body], i) => (
+            <Reveal key={title} delay={i * 100} className="h-full">
+              <div className="h-full p-6" style={{ background: 'var(--l-surface)' }}>
+                <h3 className="mb-2 font-medium">{title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{body}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
+      {/* Careers */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <Reveal>
+          <TiltCard className="l-card flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center" maxTilt={3}>
+            <div>
+              <p className="l-eyebrow mb-3">We're hiring</p>
+              <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Building the kernel, the solver, and the model in between.</h2>
+              <p className="max-w-xl text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>
+                Skilled developers, engineers and researchers who want to work on real solid modeling
+                and real physics — not another chatbot wrapper.
+              </p>
+            </div>
+            <Link href="/join" className="l-btn l-btn-primary flex-shrink-0">See open roles <span aria-hidden>→</span></Link>
+          </TiltCard>
+        </Reveal>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto max-w-6xl px-6 py-24 text-center">
-        <p className="l-eyebrow mb-4">Ownership</p>
-        <h2 className="mx-auto mb-5 max-w-2xl text-3xl font-light tracking-tight sm:text-4xl">
-          Your projects are signed, encrypted archives you can take anywhere.
-        </h2>
-        <p className="mx-auto mb-8 max-w-xl text-base" style={{ color: 'var(--l-muted)' }}>
-          Export a project as a single <span className="l-mono">.feai</span> file, re-import it on
-          any account. Nothing about your geometry is locked in.
-        </p>
-        <Link href="/dashboard" className="l-btn l-btn-primary">Start building <span aria-hidden>→</span></Link>
+        <Reveal>
+          <p className="l-eyebrow mb-4">Ownership</p>
+          <h2 className="mx-auto mb-5 max-w-2xl text-3xl font-light tracking-tight sm:text-4xl">
+            Your projects are signed, encrypted archives you can take anywhere.
+          </h2>
+          <p className="mx-auto mb-8 max-w-xl text-base" style={{ color: 'var(--l-muted)' }}>
+            Export a project as a single <span className="l-mono">.feai</span> file, re-import it on
+            any account. Nothing about your geometry is locked in.
+          </p>
+          <Link href="/dashboard" className="l-btn l-btn-primary">Start building <span aria-hidden>→</span></Link>
+        </Reveal>
       </section>
 
       <LandingFooter />

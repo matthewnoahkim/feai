@@ -6,6 +6,29 @@ import { CadAction } from '../store/chatStore'
 import { useDocumentStore } from '../store/documentStore'
 import { isLiveFeatureType } from '../store/featureAdapter'
 
+/** Normalizes a short axis reference ('x'|'y'|'z', as the assistant tends to say it) into
+ * the '<axis>-axis' form documentStore.ts's regenerateModel actually resolves via
+ * resolvePatternDirectionVector — anything else (a real edge/axis id) passes through
+ * unchanged rather than being coerced. */
+function normalizeAxisRef(value: string | undefined | null, fallback: string): string {
+  if (!value) return fallback
+  if (value === 'x' || value === 'x-axis') return 'x-axis'
+  if (value === 'y' || value === 'y-axis') return 'y-axis'
+  if (value === 'z' || value === 'z-axis') return 'z-axis'
+  return value
+}
+
+/** Normalizes a short plane reference ('top'|'front'|'right') into the '<plane>-plane'
+ * form MirrorFeatureDialog/regenerateModel's resolveMirrorPlane actually reads; a real
+ * picked face id ('<partId>-face-<N>') passes through unchanged. */
+function normalizeMirrorPlaneRef(value: string | undefined | null): string {
+  if (!value) return 'top-plane'
+  if (value === 'top' || value === 'top-plane') return 'top-plane'
+  if (value === 'front' || value === 'front-plane') return 'front-plane'
+  if (value === 'right' || value === 'right-plane') return 'right-plane'
+  return value
+}
+
 export interface ExecutionResult {
   success: boolean
   action: CadAction
@@ -585,9 +608,16 @@ async function executeShell(
     name: body.name || `Shell ${body.thickness || 2}mm`,
     suppressed: false,
     parameters: {
+      // `...body` first, as a base — the explicit keys below must come after so they
+      // win over any raw/shorthand value of the same name body already carries (an
+      // object spread earlier would let body's raw value silently clobber the
+      // normalized one instead).
+      ...body,
       thickness: body.thickness || 2,
-      faces: body.faces || [],
-      ...body
+      // regenerateModel's shell case reads `facesToRemove` (matching ShellDialog); shell
+      // requires at least one real picked face (confirmed: cad-server rejects an empty
+      // list — there's no "all faces" or "no faces" fallback the way fillet/chamfer has).
+      facesToRemove: body.facesToRemove || body.faces || [],
     }
   })
   
@@ -621,13 +651,17 @@ async function executeLinearPattern(
     name: body.name || `Linear Pattern`,
     suppressed: false,
     parameters: {
+      // regenerateModel's linearPattern case reads direction1/count1/spacing1 and
+      // (only if useDirection2 is set) direction2/count2/spacing2, as 'x-axis' etc.
+      // `...body` first — see executeShell's comment on why order matters here.
+      ...body,
       count1: body.count || body.count1 || 3,
       spacing1: body.spacing || body.spacing1 || 20,
-      direction1: body.direction || 'x',
+      direction1: normalizeAxisRef(body.direction || body.direction1, 'x-axis'),
+      useDirection2: (body.count2 ?? 1) > 1 || !!body.direction2,
       count2: body.count2 || 1,
       spacing2: body.spacing2 || 20,
-      direction2: body.direction2 || 'y',
-      ...body
+      direction2: normalizeAxisRef(body.direction2, 'y-axis'),
     }
   })
   
@@ -661,10 +695,13 @@ async function executeCircularPattern(
     name: body.name || `Circular Pattern`,
     suppressed: false,
     parameters: {
-      count: body.count || 6,
-      angle: body.angle || 360,
-      axis: body.axis || 'z',
-      ...body
+      // regenerateModel's circularPattern case reads instanceCount/axis/fullCircle/totalAngle.
+      // `...body` first — see executeShell's comment on why order matters here.
+      ...body,
+      instanceCount: body.count || body.instanceCount || 6,
+      axis: normalizeAxisRef(body.axis, 'z-axis'),
+      fullCircle: body.angle == null || body.angle >= 360,
+      totalAngle: body.angle || 360,
     }
   })
   
@@ -698,8 +735,11 @@ async function executeMirror(
     name: body.name || `Mirror`,
     suppressed: false,
     parameters: {
-      plane: body.plane || 'right',
-      ...body
+      // regenerateModel's mirror case reads planeId/operation, not plane.
+      // `...body` first — see executeShell's comment on why order matters here.
+      ...body,
+      planeId: normalizeMirrorPlaneRef(body.plane || body.planeId),
+      operation: body.operation || 'add',
     }
   })
   

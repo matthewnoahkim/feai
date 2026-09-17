@@ -485,6 +485,63 @@ function edgeIndicesFromIds(edgeIds: string[], partId: string): number[] {
   return subShapeIndicesFromIds(edgeIds, partId, 'edge')
 }
 
+/** Shell's convention differs from fillet/chamfer's: an empty faceIndices list is never
+ * shorthand for "all faces" — but unlike what an earlier version of this comment assumed,
+ * it's not a valid "fully enclosed shell" either. Confirmed against a real FreeCAD 1.1.3
+ * build: cad-server's /shell rejects an empty list outright (OCC's
+ * BRepOffsetAPI_MakeThickSolid has no zero-opening mode), so at least one face must
+ * always be picked. */
+function faceIndicesFromIds(faceIds: string[], partId: string): number[] {
+  return subShapeIndicesFromIds(faceIds, partId, 'face')
+}
+
+/** Pattern dialogs (Linear/CircularPatternDialog) currently offer 'x-axis'|'y-axis'|
+ * 'z-axis' plus a few mock part-scoped ids ('<partId>-edge-x/y/z', '<partId>-center-axis')
+ * that don't yet reference real picked geometry — real edge/axis picking is a soft
+ * dependency for this MVP (see the patterns/mirror/shell plan). This resolves whichever
+ * of those a dialog sent into a world-space unit vector; anything unrecognized falls
+ * back to `fallback`. */
+function resolvePatternDirectionVector(
+  directionId: string | null | undefined,
+  flip: boolean | undefined,
+  fallback: [number, number, number] = [1, 0, 0]
+): [number, number, number] {
+  let vector: [number, number, number]
+  if (directionId === 'x-axis' || directionId?.endsWith('-edge-x')) vector = [1, 0, 0]
+  else if (directionId === 'y-axis' || directionId?.endsWith('-edge-y')) vector = [0, 1, 0]
+  else if (directionId === 'z-axis' || directionId?.endsWith('-edge-z') || directionId?.endsWith('-center-axis')) vector = [0, 0, 1]
+  else vector = fallback
+  return flip ? [-vector[0], -vector[1], -vector[2]] : vector
+}
+
+/** MirrorFeatureDialog's plane ids are either a fixed world reference plane through the
+ * origin (matching createSketch's exact 'top'/'front'/'right' convention) or a picked
+ * face on the current body (`<partId>-face-<N>`) — for the latter, use the face's real
+ * Phase-0B centroid/normal rather than a guess, now that real per-face data exists. */
+function resolveMirrorPlane(
+  planeId: string | null | undefined,
+  currentBody: Part | null
+): { origin: [number, number, number]; normal: [number, number, number] } {
+  if (currentBody) {
+    const faceIndices = faceIndicesFromIds([planeId || ''], currentBody.id)
+    const face = faceIndices.length > 0 ? currentBody.faces?.[faceIndices[0]] : undefined
+    if (face) {
+      return {
+        origin: [face.centroid[0], face.centroid[1], face.centroid[2]],
+        normal: [face.normal[0], face.normal[1], face.normal[2]],
+      }
+    }
+  }
+  switch (planeId) {
+    case 'front-plane':
+      return { origin: [0, 0, 0], normal: [0, 1, 0] }
+    case 'right-plane':
+      return { origin: [0, 0, 0], normal: [1, 0, 0] }
+    default: // 'top-plane' and any unrecognized id
+      return { origin: [0, 0, 0], normal: [0, 0, 1] }
+  }
+}
+
 /** Replaces an existing entry in `parts` by id, or appends a new one — `combineIntoBody`
  * returns a fresh object (never mutates in place), so the parts array needs updating
  * either way. */
@@ -1957,6 +2014,101 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
           } catch (error) {
             recordError('Chamfer failed', error)
+          }
+          break
+        }
+
+        // Patterns/mirror/shell operate on the whole current body's shapeId (like
+        // fillet/chamfer above), not on an individual feature or face within it —
+        // cad-server has no feature-history graph to pattern a sub-feature against.
+        // LinearPatternDialog/CircularPatternDialog/MirrorFeatureDialog's richer
+        // per-feature/per-face modes, skip-instances, and centered/reapply options
+        // aren't backed by a real operation yet and are ignored here.
+        case 'linearPattern': {
+          if (!currentBody?.shapeId) {
+            recordError('Linear pattern skipped: the current body has no modeling-engine shape')
+            break
+          }
+          const p = feature.parameters
+          const direction1 = resolvePatternDirectionVector(p.direction1, p.flip1)
+          const count1 = Math.max(1, Math.round(p.count1 ?? 2))
+          const spacing1 = p.spacing1 ?? 20
+          const useDirection2 = !!p.useDirection2 && (p.count2 ?? 0) > 1
+          try {
+            const result = await cadSolverClient.linearPattern({
+              shapeId: currentBody.shapeId,
+              direction1,
+              count1,
+              spacing1,
+              direction2: useDirection2 ? resolvePatternDirectionVector(p.direction2, p.flip2, [0, 1, 0]) : undefined,
+              count2: useDirection2 ? Math.max(1, Math.round(p.count2)) : undefined,
+              spacing2: useDirection2 ? (p.spacing2 ?? 20) : undefined,
+            })
+            currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
+          } catch (error) {
+            recordError('Linear pattern failed', error)
+          }
+          break
+        }
+
+        case 'circularPattern': {
+          if (!currentBody?.shapeId) {
+            recordError('Circular pattern skipped: the current body has no modeling-engine shape')
+            break
+          }
+          const p = feature.parameters
+          // Reference-axis patterns rotate around the body's own center by default
+          // (falls back to the world origin only if mass properties aren't available yet).
+          const axisPoint = (currentBody.massProperties?.centerOfMass as [number, number, number] | undefined) ?? [0, 0, 0]
+          const axisDirection = resolvePatternDirectionVector(p.axis, false, [0, 0, 1])
+          const count = Math.max(1, Math.round(p.instanceCount ?? 6))
+          const angle = p.fullCircle === false ? (p.totalAngle ?? 360) : 360
+          try {
+            const result = await cadSolverClient.circularPattern({
+              shapeId: currentBody.shapeId, axisPoint, axisDirection, count, angle,
+            })
+            currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
+          } catch (error) {
+            recordError('Circular pattern failed', error)
+          }
+          break
+        }
+
+        case 'mirror': {
+          if (!currentBody?.shapeId) {
+            recordError('Mirror skipped: the current body has no modeling-engine shape')
+            break
+          }
+          const p = feature.parameters
+          const plane = resolveMirrorPlane(p.planeId, currentBody)
+          // 'new'/'remove'/'intersect' result operations aren't wired to a real op yet
+          // (cad-server's /mirror only ever fuses onto or replaces the body it's given);
+          // any operation other than 'add' still runs as a merge, same as 'add' would.
+          const merge = p.operation !== 'new'
+          try {
+            const result = await cadSolverClient.mirror({
+              shapeId: currentBody.shapeId, planeOrigin: plane.origin, planeNormal: plane.normal, merge,
+            })
+            currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
+          } catch (error) {
+            recordError('Mirror failed', error)
+          }
+          break
+        }
+
+        case 'shell': {
+          if (!currentBody?.shapeId) {
+            recordError('Shell skipped: the current body has no modeling-engine shape')
+            break
+          }
+          const p = feature.parameters
+          const faceIndices = faceIndicesFromIds(p.facesToRemove || [], currentBody.id)
+          const thickness = p.thickness || 2
+          try {
+            const result = await cadSolverClient.shell({ shapeId: currentBody.shapeId, faceIndices, thickness })
+            currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
+          } catch (error) {
+            recordError('Shell failed', error)
           }
           break
         }

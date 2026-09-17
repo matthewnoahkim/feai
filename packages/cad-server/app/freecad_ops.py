@@ -20,20 +20,24 @@ from . import shape_store
 from .schemas import (
     BooleanRequest,
     ChamferRequest,
+    CircularPatternRequest,
     EdgePolyline,
     ExtrudeRequest,
     FaceInfo,
     FilletRequest,
+    LinearPatternRequest,
     LoftRequest,
     MassProperties,
     MeshData,
     MeshImportRequest,
+    MirrorRequest,
     Plane,
     PathEntity,
     PrimitiveRequest,
     ProfileEntity,
     RevolveRequest,
     ShapeResult,
+    ShellRequest,
     SweepRequest,
     VertexInfo,
 )
@@ -305,6 +309,112 @@ def do_fillet(req: FilletRequest) -> Part.Shape:
 def do_chamfer(req: ChamferRequest) -> Part.Shape:
     shape = shape_store.get(req.shapeId)
     return shape.makeChamfer(req.distance, _selected_edges(shape, req.edgeIndices))
+
+
+def _selected_faces(shape: Part.Shape, face_indices: list[int]) -> list:
+    """Unlike _selected_edges, an empty face_indices is NOT shorthand for "all faces" —
+    for shell that would mean removing every face (a degenerate, empty result), so empty
+    here means "no faces to remove" (a fully enclosed hollow shell) instead."""
+    return [shape.Faces[i] for i in face_indices if 0 <= i < len(shape.Faces)]
+
+
+def _fuse_all(shapes: list) -> Part.Shape:
+    result = shapes[0]
+    for shape in shapes[1:]:
+        result = result.fuse(shape)
+    return result
+
+
+def do_linear_pattern(req: LinearPatternRequest) -> Part.Shape:
+    """Repeats the current body along one or two directions and fuses the instances into
+    one shape. Scoped to the whole body (like fillet/chamfer's shapeId), not a single
+    feature within it — cad-server has no feature-history graph to pattern a sub-feature
+    against."""
+    shape = shape_store.get(req.shapeId)
+    if req.count1 < 1:
+        raise GeometryError("Pattern count must be at least 1")
+
+    direction1 = Vector(*req.direction1)
+    if direction1.Length < 1e-9:
+        raise GeometryError("Pattern direction cannot be zero-length")
+    direction1.normalize()
+
+    instances = [shape]
+    for i in range(1, req.count1):
+        copy = shape.copy()
+        copy.translate(direction1 * (req.spacing1 * i))
+        instances.append(copy)
+
+    if req.direction2 and req.count2 and req.count2 > 1:
+        direction2 = Vector(*req.direction2)
+        if direction2.Length > 1e-9:
+            direction2.normalize()
+            spacing2 = req.spacing2 or 0.0
+            for j in range(1, req.count2):
+                offset2 = direction2 * (spacing2 * j)
+                for base_instance in list(instances):
+                    copy = base_instance.copy()
+                    copy.translate(offset2)
+                    instances.append(copy)
+
+    return _fuse_all(instances)
+
+
+def do_circular_pattern(req: CircularPatternRequest) -> Part.Shape:
+    """Repeats the current body around an axis and fuses the instances. Same whole-body
+    scoping as do_linear_pattern."""
+    shape = shape_store.get(req.shapeId)
+    if req.count < 1:
+        raise GeometryError("Pattern count must be at least 1")
+
+    axis_point = Vector(*req.axisPoint)
+    axis_dir = Vector(*req.axisDirection)
+    if axis_dir.Length < 1e-9:
+        raise GeometryError("Pattern axis direction cannot be zero-length")
+    axis_dir.normalize()
+
+    angle_step = req.angle / req.count
+    instances = [shape]
+    for i in range(1, req.count):
+        copy = shape.copy()
+        copy.rotate(axis_point, axis_dir, angle_step * i)
+        instances.append(copy)
+
+    return _fuse_all(instances)
+
+
+def do_mirror(req: MirrorRequest) -> Part.Shape:
+    shape = shape_store.get(req.shapeId)
+    plane_origin = Vector(*req.planeOrigin)
+    plane_normal = Vector(*req.planeNormal)
+    if plane_normal.Length < 1e-9:
+        raise GeometryError("Mirror plane normal cannot be zero-length")
+    plane_normal.normalize()
+
+    mirrored = shape.mirror(plane_origin, plane_normal)
+    if req.merge:
+        return shape.fuse(mirrored)
+    return mirrored
+
+
+def do_shell(req: ShellRequest) -> Part.Shape:
+    shape = shape_store.get(req.shapeId)
+    if req.thickness <= 0:
+        raise GeometryError("Shell thickness must be positive")
+    faces = _selected_faces(shape, req.faceIndices)
+    if not faces:
+        # Confirmed against a real FreeCAD 1.1.3 build: shape.makeThickness([], ...) is
+        # not a "fully enclosed hollow shell" — it raises ValueError("Null input shape").
+        # OCC's BRepOffsetAPI_MakeThickSolid has no zero-opening mode, so this isn't
+        # something to work around here; reject it honestly instead of forwarding OCC's
+        # cryptic message.
+        raise GeometryError("Shell requires at least one face to remove — a fully enclosed hollow shell (no faceIndices) isn't supported")
+    try:
+        # Negative offset hollows inward (removing material); positive would thicken the
+        # shape outward instead, which "shell this body to a wall thickness" never means.
+        return shape.makeThickness(faces, -req.thickness, 1e-3)
+    except Exception as exc:
+        raise GeometryError(f"Shell operation failed: {exc}") from exc
 
 
 def do_import_mesh(req: MeshImportRequest) -> Part.Shape:

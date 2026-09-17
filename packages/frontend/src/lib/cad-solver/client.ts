@@ -11,13 +11,17 @@ import type {
   BooleanRequest,
   CadApiErrorBody,
   ChamferRequest,
+  CircularPatternRequest,
   ExtrudeRequest,
   FilletRequest,
+  LinearPatternRequest,
   LoftRequest,
   MeshImportRequest,
+  MirrorRequest,
   PrimitiveRequest,
   RevolveRequest,
   ShapeResult,
+  ShellRequest,
   SweepRequest,
 } from './types'
 
@@ -88,6 +92,22 @@ export async function importMesh(request: MeshImportRequest): Promise<ShapeResul
   return post<ShapeResult>('/import/mesh', request)
 }
 
+export async function linearPattern(request: LinearPatternRequest): Promise<ShapeResult> {
+  return post<ShapeResult>('/pattern/linear', request)
+}
+
+export async function circularPattern(request: CircularPatternRequest): Promise<ShapeResult> {
+  return post<ShapeResult>('/pattern/circular', request)
+}
+
+export async function mirror(request: MirrorRequest): Promise<ShapeResult> {
+  return post<ShapeResult>('/mirror', request)
+}
+
+export async function shell(request: ShellRequest): Promise<ShapeResult> {
+  return post<ShapeResult>('/shell', request)
+}
+
 export const cadSolverClient = {
   makePrimitive,
   extrude,
@@ -99,6 +119,10 @@ export const cadSolverClient = {
   chamfer,
   deleteShape,
   importMesh,
+  linearPattern,
+  circularPattern,
+  mirror,
+  shell,
 }
 
 export default cadSolverClient

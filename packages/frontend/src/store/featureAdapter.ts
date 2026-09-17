@@ -73,10 +73,29 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
     type: 'chamfer', status: 'live', summary: 'Bevel edges of the current body.',
     params: { distance1: 'mm', edges: 'as fillet' },
   },
-  { type: 'linearPattern', status: 'planned', summary: 'Repeat a body along one or two directions.', params: {} },
-  { type: 'circularPattern', status: 'planned', summary: 'Repeat a body about an axis.', params: {} },
-  { type: 'mirror', status: 'planned', summary: 'Mirror a body about a plane.', params: {} },
-  { type: 'shell', status: 'planned', summary: 'Hollow a body to a wall thickness.', params: {} },
+  {
+    type: 'linearPattern', status: 'live',
+    summary: 'Repeat the current body along one or two directions and fuse the copies together.',
+    params: {
+      direction1: "'x-axis' | 'y-axis' | 'z-axis'", count1: 'total instances incl. the original', spacing1: 'mm',
+      flip1: 'boolean', useDirection2: 'boolean', direction2: "same as direction1", count2: '', spacing2: 'mm', flip2: 'boolean',
+    },
+  },
+  {
+    type: 'circularPattern', status: 'live',
+    summary: 'Repeat the current body around an axis through its center and fuse the copies together.',
+    params: { axis: "'x-axis' | 'y-axis' | 'z-axis'", instanceCount: 'total instances incl. the original', fullCircle: 'boolean', totalAngle: 'degrees, used when fullCircle is false' },
+  },
+  {
+    type: 'mirror', status: 'live',
+    summary: 'Mirror the current body about a plane and fuse the mirrored copy onto it.',
+    params: { planeId: "'top-plane' | 'front-plane' | 'right-plane' | '<partId>-face-<N>'", operation: "'new' | 'add' | 'remove' | 'intersect'" },
+  },
+  {
+    type: 'shell', status: 'live',
+    summary: 'Hollow out the current body to a wall thickness, removing the given faces to open it up.',
+    params: { facesToRemove: "['<partId>-face-<N>', …] — empty = a fully enclosed hollow shell", thickness: 'mm' },
+  },
 ]
 
 /** Types the store handles that the assistant does not create directly. */

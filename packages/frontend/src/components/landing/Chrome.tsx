@@ -3,7 +3,7 @@ import { Logo } from '@/components/Logo'
 
 // Shared nav + footer for the public marketing pages (home, technical approach).
 
-export function LandingNav({ current }: { current?: 'technical' }) {
+export function LandingNav({ current }: { current?: 'technical' | 'join' }) {
   return (
     <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
       <Link href="/" className="logo-link flex items-center gap-3">
@@ -17,6 +17,13 @@ export function LandingNav({ current }: { current?: 'technical' }) {
           style={current === 'technical' ? { color: 'var(--l-text)', textDecoration: 'underline' } : undefined}
         >
           Technical approach
+        </Link>
+        <Link
+          href="/join"
+          className="hidden sm:inline hover:underline"
+          style={current === 'join' ? { color: 'var(--l-text)', textDecoration: 'underline' } : undefined}
+        >
+          Join us
         </Link>
         <Link href="/login" className="hidden sm:inline hover:underline">Sign in</Link>
         <Link href="/dashboard" className="l-btn l-btn-primary !px-4 !py-2 text-sm">Open editor</Link>
@@ -34,6 +41,7 @@ export function LandingFooter() {
           <span className="text-sm font-semibold tracking-[0.2em]">FEAI</span>
         </div>
         <div className="flex items-center gap-6 text-sm" style={{ color: 'var(--l-muted)' }}>
+          <Link href="/join" className="hover:underline">Careers</Link>
           <a href="mailto:matthew@feai.app" className="hover:underline">Contact</a>
           <Link href="/terms" className="hover:underline">Terms</Link>
           <Link href="/privacy" className="hover:underline">Privacy</Link>

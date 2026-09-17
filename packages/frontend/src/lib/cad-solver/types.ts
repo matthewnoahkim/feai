@@ -155,6 +155,41 @@ export interface MeshImportRequest {
   tolerance?: number
 }
 
+export interface LinearPatternRequest {
+  shapeId: string
+  direction1: number[]
+  count1: number // total instances along direction1, including the original (>=1)
+  spacing1: number
+  direction2?: number[] | null
+  count2?: number | null
+  spacing2?: number | null
+}
+
+export interface CircularPatternRequest {
+  shapeId: string
+  axisPoint: number[]
+  axisDirection: number[]
+  count: number // total instances around the axis, including the original (>=1)
+  angle?: number // total spread; default 360
+}
+
+export interface MirrorRequest {
+  shapeId: string
+  planeOrigin: number[]
+  planeNormal: number[]
+  merge?: boolean // fuse the mirrored copy onto the original rather than replacing it (default true)
+}
+
+export interface ShellRequest {
+  shapeId: string
+  // 0-based, into the shape's own Faces list; faces to remove (open up). Must be
+  // non-empty — confirmed against a real FreeCAD 1.1.3 build that a fully enclosed
+  // hollow shell (no faces removed) isn't supported. NOT shorthand for "all faces"
+  // either, the way fillet/chamfer's edgeIndices is for "all edges".
+  faceIndices: number[]
+  thickness: number
+}
+
 export interface CadApiErrorBody {
   detail: string
 }

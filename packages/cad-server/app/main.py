@@ -15,13 +15,17 @@ from .freecad_ops import GeometryError
 from .schemas import (
     BooleanRequest,
     ChamferRequest,
+    CircularPatternRequest,
     ExtrudeRequest,
     FilletRequest,
+    LinearPatternRequest,
     LoftRequest,
     MeshImportRequest,
+    MirrorRequest,
     PrimitiveRequest,
     RevolveRequest,
     ShapeResult,
+    ShellRequest,
     SweepRequest,
     TessellateRequest,
 )
@@ -95,6 +99,26 @@ def fillet(req: FilletRequest) -> ShapeResult:
 @app.post("/chamfer", response_model=ShapeResult)
 def chamfer(req: ChamferRequest) -> ShapeResult:
     return _run(lambda: freecad_ops.do_chamfer(req))
+
+
+@app.post("/pattern/linear", response_model=ShapeResult)
+def pattern_linear(req: LinearPatternRequest) -> ShapeResult:
+    return _run(lambda: freecad_ops.do_linear_pattern(req))
+
+
+@app.post("/pattern/circular", response_model=ShapeResult)
+def pattern_circular(req: CircularPatternRequest) -> ShapeResult:
+    return _run(lambda: freecad_ops.do_circular_pattern(req))
+
+
+@app.post("/mirror", response_model=ShapeResult)
+def mirror(req: MirrorRequest) -> ShapeResult:
+    return _run(lambda: freecad_ops.do_mirror(req))
+
+
+@app.post("/shell", response_model=ShapeResult)
+def shell(req: ShellRequest) -> ShapeResult:
+    return _run(lambda: freecad_ops.do_shell(req))
 
 
 @app.post("/import/mesh", response_model=ShapeResult)

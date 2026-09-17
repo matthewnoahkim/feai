@@ -142,6 +142,47 @@ check("fillet with [] == fillet with all 12 explicit",
       close(fil_all["massProperties"]["volume"], fil["massProperties"]["volume"]),
       f"{fil_all['massProperties']['volume']} vs {fil['massProperties']['volume']}")
 
+# --- patterns / mirror / shell ------------------------------------------------
+lin = post("/pattern/linear", {
+    "shapeId": box["shapeId"], "direction1": [1, 0, 0], "count1": 3, "spacing1": 15,
+})
+check("linear pattern 3x non-overlapping -> 3x volume", close(lin["massProperties"]["volume"], 3000),
+      f"{lin['massProperties']['volume']}")
+
+circ = post("/pattern/circular", {
+    "shapeId": box["shapeId"], "axisPoint": [50, 50, 0], "axisDirection": [0, 0, 1],
+    "count": 4, "angle": 360,
+})
+check("circular pattern 4x non-overlapping -> 4x volume", close(circ["massProperties"]["volume"], 4000),
+      f"{circ['massProperties']['volume']}")
+
+mir = post("/mirror", {
+    "shapeId": box["shapeId"], "planeOrigin": [20, 0, 0], "planeNormal": [1, 0, 0], "merge": True,
+})
+check("mirror about a non-intersecting plane -> exactly 2x volume", close(mir["massProperties"]["volume"], 2000),
+      f"{mir['massProperties']['volume']}")
+
+shell = post("/shell", {"shapeId": box["shapeId"], "faceIndices": [0], "thickness": 1})
+# The result is the remaining wall material: outer volume minus the cavity carved out.
+# Cavity = (w-2t)(d-2t)(h-t) (cube, so this holds regardless of which face is index 0):
+# open-face direction has no wall on that end (h-t), the other two dims are walled on
+# both sides (w-2t, d-2t).
+cavity = (10 - 2 * 1) * (10 - 2 * 1) * (10 - 1)
+expected_shell = 1000 - cavity
+check("shell 10-cube removing one face, wall=1 -> outer minus (w-2t)(d-2t)(h-t) cavity",
+      close(shell["massProperties"]["volume"], expected_shell),
+      f"{shell['massProperties']['volume']} vs {expected_shell}")
+
+# Confirmed against real FreeCAD 1.1.3: an empty faceIndices isn't a "fully enclosed
+# hollow shell" — OCC's BRepOffsetAPI_MakeThickSolid has no zero-opening mode and raises
+# "Null input shape". do_shell rejects this itself with a clear 400 instead of that
+# cryptic message.
+try:
+    post("/shell", {"shapeId": box["shapeId"], "faceIndices": [], "thickness": 1})
+    check("shell with no faces removed -> 400 (unsupported)", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("shell with no faces removed -> 400 (unsupported)", e.code == 400, f"HTTP {e.code}")
+
 # --- mesh import roundtrip (parsed STL -> real solid) --------------------------
 imp = post("/import/mesh", {"positions": box["mesh"]["positions"], "indices": box["mesh"]["indices"]})
 check("import box tessellation -> solid volume 1000", close(imp["massProperties"]["volume"], 1000),

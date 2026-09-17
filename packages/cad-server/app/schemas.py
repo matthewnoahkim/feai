@@ -169,3 +169,39 @@ class MeshImportRequest(BaseModel):
     positions: list[float]
     indices: list[int]
     tolerance: float = 0.05
+
+
+class LinearPatternRequest(BaseModel):
+    shapeId: str
+    direction1: list[float]
+    count1: int  # total instances along direction1, including the original (>=1)
+    spacing1: float
+    direction2: Optional[list[float]] = None
+    count2: Optional[int] = None
+    spacing2: Optional[float] = None
+
+
+class CircularPatternRequest(BaseModel):
+    shapeId: str
+    axisPoint: list[float]
+    axisDirection: list[float]
+    count: int  # total instances around the axis, including the original (>=1)
+    angle: float = 360  # total spread; per-instance step is angle / count
+
+
+class MirrorRequest(BaseModel):
+    shapeId: str
+    planeOrigin: list[float]
+    planeNormal: list[float]
+    merge: bool = True  # fuse the mirrored copy onto the original rather than replacing it
+
+
+class ShellRequest(BaseModel):
+    shapeId: str
+    # 0-based, into the shape's own Faces list; faces to remove (open up). Must be
+    # non-empty — confirmed against a real FreeCAD 1.1.3 build that a fully enclosed
+    # hollow shell (no faces removed) is not supported (OCC's BRepOffsetAPI_MakeThickSolid
+    # has no zero-opening mode; it raises "Null input shape"). Unlike fillet/chamfer's
+    # edgeIndices, this is NOT shorthand for "all faces" either — see _selected_faces.
+    faceIndices: list[int]
+    thickness: float
