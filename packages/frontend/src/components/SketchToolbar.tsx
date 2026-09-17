@@ -772,6 +772,12 @@ export function SketchToolbar() {
             description="Lock position"
             onClick={() => handleToolSelect('constraint-fixed')}
           />
+          <FlyoutItem
+            icon={<FlipHorizontal2 size={16} />}
+            label="Symmetric"
+            description="Two entities mirrored about a line — select both, then the mirror line"
+            onClick={() => handleToolSelect('constraint-symmetric')}
+          />
           <SectionDivider />
           <div className="px-3 py-2 text-xs text-cad-text-dim">
             <p className="mb-1"><strong>Usage:</strong></p>

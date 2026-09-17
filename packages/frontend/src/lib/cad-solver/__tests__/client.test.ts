@@ -52,6 +52,21 @@ test('importMesh hits /import/mesh', async () => {
   expect(fetchMock.mock.calls[0][0]).toMatch(/\/import\/mesh$/);
 });
 
+test('tetrahedralMesh POSTs JSON to /mesh/tetrahedral and returns the parsed body', async () => {
+  const result = {
+    nodes: [{ id: 1, x: 0, y: 0, z: 0 }],
+    elements: [{ id: 1, nodeIds: [1, 2, 3, 4] }],
+    boundaryFaces: [{ faceIndex: 0, triangles: [[1, 2, 3]] }],
+  };
+  fetchMock.mockResolvedValue(ok(result));
+
+  await expect(cadSolverClient.tetrahedralMesh({ shapeId: 's1', maxElementSize: 5 })).resolves.toEqual(result);
+
+  const [url, init] = fetchMock.mock.calls[0];
+  expect(url).toMatch(/\/mesh\/tetrahedral$/);
+  expect(JSON.parse(init.body)).toEqual({ shapeId: 's1', maxElementSize: 5 });
+});
+
 test('non-2xx responses throw CadApiError carrying the server detail and status', async () => {
   fetchMock.mockResolvedValue(fail(404, 'Unknown shapeId: x'));
   const promise = cadSolverClient.fillet({ shapeId: 'x', edgeIndices: [], radius: 1 });

@@ -12,6 +12,8 @@ import type {
   CadApiErrorBody,
   ChamferRequest,
   CircularPatternRequest,
+  DirectEditRequest,
+  ExportRequest,
   ExtrudeRequest,
   FilletRequest,
   LinearPatternRequest,
@@ -22,7 +24,10 @@ import type {
   RevolveRequest,
   ShapeResult,
   ShellRequest,
+  StepImportRequest,
   SweepRequest,
+  TetMeshResult,
+  TetrahedralMeshRequest,
 } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_CAD_API_URL || 'http://localhost:8000'
@@ -108,6 +113,50 @@ export async function shell(request: ShellRequest): Promise<ShapeResult> {
   return post<ShapeResult>('/shell', request)
 }
 
+/** A STEP/IGES file can contain multiple independent solids, so this returns one
+ * ShapeResult per top-level solid rather than a single ShapeResult — a real deviation
+ * from every other op in this file, matching cad-server's /import/step contract. */
+export async function importStep(request: StepImportRequest): Promise<ShapeResult[]> {
+  return post<ShapeResult[]>('/import/step', request)
+}
+
+export interface ExportedFile {
+  blob: Blob
+  filename: string
+}
+
+/** /export returns a raw file body (STEP/IGES/BREP bytes), not JSON — so this can't go
+ * through post<T>() the way every other op does. */
+export async function exportShape(request: ExportRequest): Promise<ExportedFile> {
+  const response = await fetch(`${API_BASE_URL}/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  })
+  if (!response.ok) {
+    const errorData: CadApiErrorBody = await response.json().catch(() => ({
+      detail: `HTTP ${response.status}: ${response.statusText}`,
+    }))
+    throw new CadApiError(errorData.detail, response.status)
+  }
+  const disposition = response.headers.get('Content-Disposition') || ''
+  const filenameMatch = /filename="?([^"]+)"?/.exec(disposition)
+  const filename = filenameMatch?.[1] || `shape.${request.format || 'step'}`
+  const blob = await response.blob()
+  return { blob, filename }
+}
+
+export async function directEdit(request: DirectEditRequest): Promise<ShapeResult> {
+  return post<ShapeResult>('/direct-edit', request)
+}
+
+/** Real geometry-aware volumetric meshing (gmsh, driven off the actual B-rep) for the
+ * FEA workflow's Analysis phase — the replacement for the workflow's earlier bounding-
+ * box placeholder mesher (see buildMeshPayload/tupleBoundingBox in fea-solver). */
+export async function tetrahedralMesh(request: TetrahedralMeshRequest): Promise<TetMeshResult> {
+  return post<TetMeshResult>('/mesh/tetrahedral', request)
+}
+
 export const cadSolverClient = {
   makePrimitive,
   extrude,
@@ -123,6 +172,10 @@ export const cadSolverClient = {
   circularPattern,
   mirror,
   shell,
+  importStep,
+  exportShape,
+  directEdit,
+  tetrahedralMesh,
 }
 
 export default cadSolverClient

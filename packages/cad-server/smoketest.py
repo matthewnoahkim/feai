@@ -6,6 +6,7 @@ analytic expectations. Run from any Python 3 with network access to the server:
     python smoketest.py [base_url]
 """
 
+import base64
 import json
 import math
 import sys
@@ -25,6 +26,18 @@ def post(path, body):
     )
     with urllib.request.urlopen(req) as resp:
         return json.load(resp)
+
+
+def post_raw(path, body):
+    """Like post(), but for endpoints that return a raw file body (e.g. /export), not JSON."""
+    req = urllib.request.Request(
+        f"{BASE}{path}",
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req) as resp:
+        return resp.read()
 
 
 def check(label, ok, detail=""):
@@ -183,6 +196,100 @@ try:
 except urllib.error.HTTPError as e:
     check("shell with no faces removed -> 400 (unsupported)", e.code == 400, f"HTTP {e.code}")
 
+# --- file interchange: STEP/IGES export + reimport ---------------------------
+step_bytes = post_raw("/export", {"shapeId": box["shapeId"], "format": "step"})
+check("STEP export produces a real ISO-10303-21 file", step_bytes[:16] == b"ISO-10303-21;\nHE",
+      f"{step_bytes[:16]!r}")
+
+step_reimported = post("/import/step", {"fileContent": base64.b64encode(step_bytes).decode(), "format": "step"})
+check("STEP roundtrip returns exactly one solid for a single-body box", len(step_reimported) == 1)
+check("STEP roundtrip volume matches the original box",
+      close(step_reimported[0]["massProperties"]["volume"], 1000),
+      f"{step_reimported[0]['massProperties']['volume']}")
+check("STEP roundtrip regenerates faces/vertices (6/8, same as any other box)",
+      len(step_reimported[0]["faces"]) == 6 and len(step_reimported[0]["vertices"]) == 8)
+
+cut_on_reimported = post("/boolean", {
+    "op": "cut", "baseShapeId": step_reimported[0]["shapeId"], "toolShapeId": cyl["shapeId"],
+})
+check("boolean works on a re-imported STEP solid, same as any other shapeId",
+      close(cut_on_reimported["massProperties"]["volume"], expected_cut),
+      f"{cut_on_reimported['massProperties']['volume']} vs {expected_cut}")
+
+# IGES round-trips as a bag of unconnected Faces (shape.Solids == [], shape.Shells ==
+# []) rather than a proper Solid — confirmed against a real FreeCAD 1.1.3 build.
+# do_import_step heals this by sewing the faces into a Shell before making a Solid;
+# this is the case that exercises that path (STEP doesn't need it).
+iges_bytes = post_raw("/export", {"shapeId": cyl["shapeId"], "format": "iges"})
+iges_reimported = post("/import/step", {"fileContent": base64.b64encode(iges_bytes).decode(), "format": "iges"})
+check("IGES roundtrip volume matches the original cylinder (needs the face-sewing heal)",
+      close(iges_reimported[0]["massProperties"]["volume"], math.pi * 25 * 10),
+      f"{iges_reimported[0]['massProperties']['volume']}")
+
+try:
+    post("/import/step", {"fileContent": "not-valid-base64!!!", "format": "step"})
+    check("invalid base64 -> 400", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("invalid base64 -> 400", e.code == 400, f"HTTP {e.code}")
+
+try:
+    garbage = base64.b64encode(b"this is not a step file at all, just garbage text").decode()
+    post("/import/step", {"fileContent": garbage, "format": "step"})
+    check("garbage file content -> 400, not a crash", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("garbage file content -> 400, not a crash", e.code == 400, f"HTTP {e.code}")
+
+try:
+    post_raw("/export", {"shapeId": "does-not-exist", "format": "step"})
+    check("export of an unknown shapeId -> 404", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("export of an unknown shapeId -> 404", e.code == 404, f"HTTP {e.code}")
+
+# --- direct edit: push/pull a planar face (no real "move this face" primitive exists,
+# so this reuses face.extrude() + fuse/cut, confirmed exact against real FreeCAD) -----
+de_box = post("/primitives", {"type": "box", "params": {"width": 20, "height": 5, "depth": 10}})
+# Grow each of the 6 faces by 2mm; delta should be exactly 2x that face's own area
+# (20x10=200, 20x5=100, 10x5=50 — each appears on two opposite faces).
+for face_idx in range(6):
+    grown = post("/direct-edit", {"shapeId": de_box["shapeId"], "faceIndex": face_idx, "distance": 2})
+    delta = grown["massProperties"]["volume"] - de_box["massProperties"]["volume"]
+    face_area = delta / 2
+    check(f"direct edit grows face {face_idx} by exactly 2x its own area",
+          any(close(face_area, a) for a in (50, 100, 200)),
+          f"face area implied: {face_area}")
+
+de_shrunk = post("/direct-edit", {"shapeId": de_box["shapeId"], "faceIndex": 0, "distance": -1})
+check("direct edit shrinks a face (negative distance -> cut, not fuse)",
+      de_shrunk["massProperties"]["volume"] < de_box["massProperties"]["volume"],
+      f"{de_shrunk['massProperties']['volume']} vs {de_box['massProperties']['volume']}")
+
+# Confirmed against real FreeCAD: a curved face (a cylinder's side) is rejected
+# outright rather than silently extruded into something wrong; its flat end caps work
+# exactly like any other planar face, circular cross-section included.
+try:
+    post("/direct-edit", {"shapeId": cyl["shapeId"], "faceIndex": 0, "distance": 2})
+    check("direct edit rejects a curved face -> 400", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("direct edit rejects a curved face -> 400", e.code == 400, f"HTTP {e.code}")
+
+cyl_cap_grown = post("/direct-edit", {"shapeId": cyl["shapeId"], "faceIndex": 1, "distance": 2})
+expected_cyl_grown = cyl["massProperties"]["volume"] + math.pi * 25 * 2
+check("direct edit on a cylinder's flat circular cap grows by exactly area*distance",
+      close(cyl_cap_grown["massProperties"]["volume"], expected_cyl_grown),
+      f"{cyl_cap_grown['massProperties']['volume']} vs {expected_cyl_grown}")
+
+try:
+    post("/direct-edit", {"shapeId": de_box["shapeId"], "faceIndex": 99, "distance": 1})
+    check("direct edit out-of-range face index -> 400", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("direct edit out-of-range face index -> 400", e.code == 400, f"HTTP {e.code}")
+
+try:
+    post("/direct-edit", {"shapeId": de_box["shapeId"], "faceIndex": 0, "distance": 0})
+    check("direct edit zero distance -> 400", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("direct edit zero distance -> 400", e.code == 400, f"HTTP {e.code}")
+
 # --- mesh import roundtrip (parsed STL -> real solid) --------------------------
 imp = post("/import/mesh", {"positions": box["mesh"]["positions"], "indices": box["mesh"]["indices"]})
 check("import box tessellation -> solid volume 1000", close(imp["massProperties"]["volume"], 1000),
@@ -191,6 +298,45 @@ check("imported solid has a shapeId", bool(imp["shapeId"]), imp["shapeId"])
 cut2 = post("/boolean", {"op": "cut", "baseShapeId": imp["shapeId"], "toolShapeId": cyl["shapeId"]})
 check("boolean works on an imported solid", close(cut2["massProperties"]["volume"], expected_cut),
       f"{cut2['massProperties']['volume']} vs {expected_cut}")
+
+# --- tetrahedral meshing (real geometry-aware volumetric mesh via gmsh) -----
+tet_box = post("/mesh/tetrahedral", {"shapeId": box["shapeId"]})
+check("tet mesh of a box produces nodes", len(tet_box["nodes"]) > 0, str(len(tet_box["nodes"])))
+check("tet mesh of a box produces tetrahedra", len(tet_box["elements"]) > 0, str(len(tet_box["elements"])))
+check("every tet has exactly 4 node ids",
+      all(len(el["nodeIds"]) == 4 for el in tet_box["elements"]))
+node_ids = {n["id"] for n in tet_box["nodes"]}
+check("every tet references only known node ids",
+      all(nid in node_ids for el in tet_box["elements"] for nid in el["nodeIds"]))
+check("a box's tet mesh reports boundary triangles for all 6 faces",
+      len(tet_box["boundaryFaces"]) == 6, str(len(tet_box["boundaryFaces"])))
+check("every boundary triangle references only known node ids",
+      all(nid in node_ids for bf in tet_box["boundaryFaces"] for tri in bf["triangles"] for nid in tri))
+
+# A smaller explicit maxElementSize should produce a denser mesh (more nodes) than a
+# larger one, for the same shape — comparing two explicit sizes rather than the default
+# (which already picks a size from the shape's own bounding box, and can be finer or
+# coarser than an arbitrary explicit value depending on the shape).
+tet_box_coarse = post("/mesh/tetrahedral", {"shapeId": box["shapeId"], "maxElementSize": 8})
+tet_box_fine = post("/mesh/tetrahedral", {"shapeId": box["shapeId"], "maxElementSize": 1})
+check("a smaller maxElementSize produces more nodes than a larger one",
+      len(tet_box_fine["nodes"]) > len(tet_box_coarse["nodes"]),
+      f"{len(tet_box_fine['nodes'])} vs {len(tet_box_coarse['nodes'])}")
+
+# Boolean-cut shape (curved cylindrical face) — the harder case for face<->gmsh-surface
+# correspondence than a plain box's 6 flat faces.
+tet_cut = post("/mesh/tetrahedral", {"shapeId": cut["shapeId"], "maxElementSize": 3})
+check("tet mesh of a boolean-cut shape (with a curved face) succeeds",
+      len(tet_cut["elements"]) > 0, str(len(tet_cut["elements"])))
+check("boolean-cut shape's tet mesh reports one boundary group per real face",
+      len(tet_cut["boundaryFaces"]) == len(cut["faces"]),
+      f"{len(tet_cut['boundaryFaces'])} vs {len(cut['faces'])} real faces")
+
+try:
+    post("/mesh/tetrahedral", {"shapeId": "does-not-exist"})
+    check("tet mesh of unknown shapeId -> 404", False, "no error raised")
+except urllib.error.HTTPError as e:
+    check("tet mesh of unknown shapeId -> 404", e.code == 404, f"HTTP {e.code}")
 
 # --- error handling ----------------------------------------------------------
 try:

@@ -190,6 +190,61 @@ export interface ShellRequest {
   thickness: number
 }
 
+export interface DirectEditRequest {
+  shapeId: string
+  faceIndex: number // 0-based, into the shape's own Faces list
+  // Distance to move the face along its own outward normal (mm). Positive grows the
+  // body, negative shrinks it. Only planar faces are supported — a curved face is
+  // rejected by the server with a clear error rather than producing wrong geometry.
+  distance: number
+}
+
+export interface StepImportRequest {
+  fileContent: string // base64-encoded file bytes (not a data: URL — no mime prefix)
+  format?: 'step' | 'iges' // default 'step'
+}
+
+export type ExportFormat = 'step' | 'iges' | 'brep'
+
+export interface ExportRequest {
+  shapeId: string
+  format?: ExportFormat // default 'step'
+}
+
+export interface TetrahedralMeshRequest {
+  shapeId: string
+  // Target element size (mm); leaving both unset lets the server pick a size from the
+  // shape's own bounding box.
+  maxElementSize?: number
+  minElementSize?: number
+}
+
+export interface TetMeshNode {
+  id: number
+  x: number
+  y: number
+  z: number
+}
+
+export interface TetMeshElement {
+  id: number
+  nodeIds: number[] // exactly 4, a linear tetrahedron
+}
+
+export interface BoundaryFaceGroup {
+  // Keyed by the shape's own face index (same index space as ShapeResult.faces), not a
+  // gmsh tag — that correspondence is resolved server-side (see cad-server's
+  // _match_faces_to_gmsh_surfaces) and is an implementation detail.
+  faceIndex: number
+  triangles: number[][] // each a [n0, n1, n2] node id triplet
+}
+
+export interface TetMeshResult {
+  nodes: TetMeshNode[]
+  elements: TetMeshElement[]
+  boundaryFaces: BoundaryFaceGroup[]
+}
+
 export interface CadApiErrorBody {
   detail: string
 }

@@ -85,6 +85,18 @@ Notes:
   it open, which kills `dockerd` and every container with it (they exit 255 with no
   traceback). Keep a session alive (`wsl -d Ubuntu -- sleep infinity` in the background)
   or set `vmIdleTimeout=-1` in `%USERPROFILE%\.wslconfig`.
+- **`gmsh.initialize()` crashes with "signal only works in main thread of the main
+  interpreter"** unless called with `interruptible=False`. FastAPI's sync `def` routes
+  (all of them, including `/mesh/tetrahedral`) run in a worker thread, not the main
+  thread, and gmsh's default Ctrl+C handling registers a signal handler — which Python
+  only allows from the main thread. `do_tetrahedral_mesh` also serializes all gmsh calls
+  behind a module-level lock (`_gmsh_lock`), since gmsh keeps its "current model" as
+  global process state that two concurrent requests would otherwise corrupt.
+- **gmsh's surface tag order doesn't match FreeCAD's `shape.Faces` order.** Re-importing
+  a shape's own STEP export into gmsh gives it a fresh, unrelated set of surface tags.
+  `_match_faces_to_gmsh_surfaces` builds the correspondence by nearest centroid instead
+  of assuming an order — confirmed exact (distance 0) for both a plain box and a
+  boolean-cut shape with a curved face on a real gmsh 4.15/FreeCAD 1.1.3 build.
 
 ## API
 
@@ -100,6 +112,10 @@ One endpoint per operation, all returning `{ shapeId, mesh, edges, massPropertie
 - `POST /chamfer` — `{ shapeId, edgeIndices, distance }` (empty `edgeIndices` = all edges)
 - `POST /import/mesh` — `{ positions, indices, tolerance? }` — turn a triangle mesh (e.g. a
   parsed STL) into a real solid with a `shapeId`, so booleans/fillets work on imports
+- `POST /mesh/tetrahedral` — `{ shapeId, maxElementSize?, minElementSize? }` — real
+  volumetric meshing via gmsh; returns `{ nodes, elements, boundaryFaces }`, not the usual
+  `{ shapeId, mesh, edges, massProperties }` shape, since it produces a volume mesh for
+  the FEA workflow rather than a new stored shape
 - `DELETE /shapes/{shapeId}` — release a shape from the in-memory store
 - `GET /health`
 

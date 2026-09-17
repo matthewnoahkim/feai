@@ -1122,7 +1122,7 @@ export function SketchCanvas() {
     setActiveTool
   } = useUIStore()
   
-  const { addSketchEntity, addSketchConstraint, deleteSketchConstraint, deleteSketchEntity, updateEntityConstraintStatus, document, undo, redo } = useDocumentStore()
+  const { addSketchEntity, addSketchConstraint, deleteSketchConstraint, deleteSketchEntity, updateSketchEntity, updateEntityConstraintStatus, document, undo, redo } = useDocumentStore()
   
   // Get current sketch
   const sketch = sketchMode && document?.partStudios
@@ -1321,17 +1321,17 @@ export function SketchCanvas() {
             }
           }
           
-          addSketchEntity(sketchMode!.sketchId!, {
+          const newLineId = addSketchEntity(sketchMode!.sketchId!, {
             type: 'line',
             construction: false,
             data: { start: lastPoint, end: worldPoint }
           })
-          
+
           // Show dimension input
           const midX = (lastPoint.x + worldPoint.x) / 2
           const midY = (lastPoint.y + worldPoint.y) / 2
           const length = distance(lastPoint, worldPoint)
-          showDimensionInput('length', { x: midX, y: midY, z: 0 }, Math.round(length * 10) / 10)
+          showDimensionInput('length', { x: midX, y: midY, z: 0 }, Math.round(length * 10) / 10, newLineId)
         }
         
         addDrawingPoint(worldPoint)
@@ -1348,14 +1348,14 @@ export function SketchCanvas() {
         const center = drawing.points[0]
         const radius = distance(center, worldPoint)
         
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newCircleId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'circle',
           construction: false,
           data: { center, radius }
         })
-        
+
         // Show diameter dimension
-        showDimensionInput('diameter', { x: center.x + radius, y: center.y, z: 0 }, Math.round(radius * 2 * 10) / 10)
+        showDimensionInput('diameter', { x: center.x + radius, y: center.y, z: 0 }, Math.round(radius * 2 * 10) / 10, newCircleId)
         
         finishDrawing()
         addNotification('success', `Circle created (⌀${Math.round(radius * 2)})`)
@@ -1378,13 +1378,13 @@ export function SketchCanvas() {
         }
         const radius = distance(p1, p2) / 2
         
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newCircleId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'circle',
           construction: false,
           data: { center, radius }
         })
-        
-        showDimensionInput('diameter', { x: center.x, y: center.y + radius, z: 0 }, Math.round(radius * 2 * 10) / 10)
+
+        showDimensionInput('diameter', { x: center.x, y: center.y + radius, z: 0 }, Math.round(radius * 2 * 10) / 10, newCircleId)
         
         finishDrawing()
         addNotification('success', `Circle created (⌀${Math.round(radius * 2)})`)
@@ -1414,27 +1414,27 @@ export function SketchCanvas() {
         }
         
         // Store as 4 lines for proper constraint handling
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newRectId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'rectangle',
           construction: false,
-          data: { 
-            corner1, 
+          data: {
+            corner1,
             corner2,
             isSquare: drawing.altHeld || e.altKey,
             mode: 'corner'
           }
         })
-        
+
         finishDrawing()
         const width = Math.abs(corner2.x - corner1.x)
         const height = Math.abs(corner2.y - corner1.y)
-        
+
         // Show dimension inputs for width and height
-        showDimensionInput('width', { 
-          x: (corner1.x + corner2.x) / 2, 
-          y: Math.min(corner1.y, corner2.y) - 5, 
-          z: 0 
-        }, Math.round(width * 10) / 10)
+        showDimensionInput('width', {
+          x: (corner1.x + corner2.x) / 2,
+          y: Math.min(corner1.y, corner2.y) - 5,
+          z: 0
+        }, Math.round(width * 10) / 10, newRectId)
         
         if (drawing.altHeld || e.altKey) {
           addNotification('success', `Square created (${Math.round(width)}×${Math.round(height)})`)
@@ -1477,28 +1477,28 @@ export function SketchCanvas() {
           z: 0
         }
         
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newRectId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'rectangle',
           construction: false,
-          data: { 
-            corner1, 
+          data: {
+            corner1,
             corner2,
             center,
             isSquare: drawing.altHeld || e.altKey,
             mode: 'center'
           }
         })
-        
+
         finishDrawing()
         const width = halfWidth * 2
         const height = halfHeight * 2
-        
+
         // Show dimension input
-        showDimensionInput('width', { 
-          x: center.x, 
-          y: corner1.y - 5, 
-          z: 0 
-        }, Math.round(width * 10) / 10)
+        showDimensionInput('width', {
+          x: center.x,
+          y: corner1.y - 5,
+          z: 0
+        }, Math.round(width * 10) / 10, newRectId)
         
         if (drawing.altHeld || e.altKey) {
           addNotification('success', `Centered square created (${Math.round(width)}×${Math.round(height)})`)
@@ -1526,26 +1526,26 @@ export function SketchCanvas() {
         const arcData = calculateArcFrom3Points(p1, p2, p3)
         
         if (arcData) {
-          addSketchEntity(sketchMode!.sketchId!, {
+          const newArcId = addSketchEntity(sketchMode!.sketchId!, {
             type: 'arc',
             construction: false,
-            data: { 
-              center: arcData.center, 
-              radius: arcData.radius, 
-              startAngle: arcData.startAngle, 
+            data: {
+              center: arcData.center,
+              radius: arcData.radius,
+              startAngle: arcData.startAngle,
               endAngle: arcData.endAngle,
               clockwise: arcData.clockwise,
               startPoint: p1,
               endPoint: p2
             }
           })
-          
+
           // Show radius dimension
-          showDimensionInput('radius', { 
-            x: arcData.center.x + arcData.radius * 0.7, 
-            y: arcData.center.y, 
-            z: 0 
-          }, Math.round(arcData.radius * 10) / 10)
+          showDimensionInput('radius', {
+            x: arcData.center.x + arcData.radius * 0.7,
+            y: arcData.center.y,
+            z: 0
+          }, Math.round(arcData.radius * 10) / 10, newArcId)
           
           finishDrawing()
           addNotification('success', `Arc created (R${Math.round(arcData.radius)})`)
@@ -1581,26 +1581,26 @@ export function SketchCanvas() {
         if (sweep < 0) sweep += Math.PI * 2
         const sweepDegrees = sweep * 180 / Math.PI
         
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newArcId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'arc',
           construction: false,
-          data: { 
-            center, 
-            radius, 
-            startAngle, 
+          data: {
+            center,
+            radius,
+            startAngle,
             endAngle,
             clockwise: false,
             startPoint,
             endPoint
           }
         })
-        
+
         // Show radius dimension
-        showDimensionInput('radius', { 
-          x: center.x + radius, 
-          y: center.y, 
-          z: 0 
-        }, Math.round(radius * 10) / 10)
+        showDimensionInput('radius', {
+          x: center.x + radius,
+          y: center.y,
+          z: 0
+        }, Math.round(radius * 10) / 10, newArcId)
         
         finishDrawing()
         addNotification('success', `Arc created (R${Math.round(radius)}, ${Math.round(sweepDegrees)}°)`)
@@ -1630,31 +1630,31 @@ export function SketchCanvas() {
         const sides = drawing.polygonSides
         
         // Create polygon entity with vertices on circle
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newPolygonId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'polygon',
           construction: false,
-          data: { 
-            center, 
-            radius, 
+          data: {
+            center,
+            radius,
             sides,
             rotation: angle,
             inscribed: true
           }
         })
-        
+
         // Also add construction circle
         addSketchEntity(sketchMode!.sketchId!, {
           type: 'circle',
           construction: true,
           data: { center, radius }
         })
-        
+
         // Show radius dimension
-        showDimensionInput('radius', { 
-          x: center.x + radius, 
-          y: center.y, 
-          z: 0 
-        }, Math.round(radius * 10) / 10)
+        showDimensionInput('radius', {
+          x: center.x + radius,
+          y: center.y,
+          z: 0
+        }, Math.round(radius * 10) / 10, newPolygonId)
         
         finishDrawing()
         addNotification('success', `Inscribed ${sides}-gon created (R${Math.round(radius)})`)
@@ -1677,11 +1677,11 @@ export function SketchCanvas() {
         const circumradius = apothem / Math.cos(Math.PI / sides)
         
         // Create polygon entity with sides tangent to circle
-        addSketchEntity(sketchMode!.sketchId!, {
+        const newPolygonId = addSketchEntity(sketchMode!.sketchId!, {
           type: 'polygon',
           construction: false,
-          data: { 
-            center, 
+          data: {
+            center,
             radius: circumradius,
             apothem,
             sides,
@@ -1689,20 +1689,20 @@ export function SketchCanvas() {
             inscribed: false
           }
         })
-        
+
         // Also add construction circle (tangent to sides)
         addSketchEntity(sketchMode!.sketchId!, {
           type: 'circle',
           construction: true,
           data: { center, radius: apothem }
         })
-        
+
         // Show apothem dimension
-        showDimensionInput('radius', { 
-          x: center.x + apothem, 
-          y: center.y, 
-          z: 0 
-        }, Math.round(apothem * 10) / 10)
+        showDimensionInput('radius', {
+          x: center.x + apothem,
+          y: center.y,
+          z: 0
+        }, Math.round(apothem * 10) / 10, newPolygonId)
         
         finishDrawing()
         addNotification('success', `Circumscribed ${sides}-gon created (apothem ${Math.round(apothem)})`)
@@ -2002,34 +2002,46 @@ export function SketchCanvas() {
           } else {
             addNotification('info', `Select second entity for ${constraintType} constraint`)
           }
+        } else if (constraintType === 'symmetric' && drawing.selectedEntityIds.length < 2) {
+          // Symmetric needs two entities to mirror plus a third line as the mirror axis
+          // — SketchConstraint already has a dedicated `referenceId` field for exactly
+          // this ("For symmetric: the mirror line ID"), separate from entityIds. Every
+          // other 2-entity constraint below applies on the second click; this one
+          // accumulates a second selection first and applies on the third (the mirror line).
+          addSelectedEntityId(clickedEntityId)
+          addNotification('info', 'Select the line to mirror across')
         } else {
-          // We have one entity selected, apply the constraint
+          // We have one (or, for symmetric, two) entities selected — apply the constraint
           const firstEntityId = drawing.selectedEntityIds[0]
           const firstEntity = entities.find(e => e.id === firstEntityId)
-          const secondEntity = found.entity
-          
+          const secondEntityId = constraintType === 'symmetric' ? drawing.selectedEntityIds[1] : clickedEntityId
+          const secondEntity = constraintType === 'symmetric'
+            ? entities.find(e => e.id === secondEntityId)
+            : found.entity
+          const mirrorLine = constraintType === 'symmetric' ? found.entity : null
+
           // Validate constraint applicability
           let isValid = true
           let errorMsg = ''
-          
+
           if (constraintType === 'parallel' || constraintType === 'perpendicular') {
-            if (firstEntity?.type !== 'line' || secondEntity.type !== 'line') {
+            if (firstEntity?.type !== 'line' || secondEntity?.type !== 'line') {
               isValid = false
               errorMsg = `${constraintType} requires two lines`
             }
           } else if (constraintType === 'concentric') {
             const validTypes = ['circle', 'arc']
-            if (!validTypes.includes(firstEntity?.type || '') || !validTypes.includes(secondEntity.type)) {
+            if (!validTypes.includes(firstEntity?.type || '') || !validTypes.includes(secondEntity?.type || '')) {
               isValid = false
               errorMsg = 'Concentric requires two circles or arcs'
             }
           } else if (constraintType === 'equal') {
             // Equal works on lines or circles
             const firstIsLine = firstEntity?.type === 'line'
-            const secondIsLine = secondEntity.type === 'line'
+            const secondIsLine = secondEntity?.type === 'line'
             const firstIsCircular = firstEntity?.type === 'circle' || firstEntity?.type === 'arc'
-            const secondIsCircular = secondEntity.type === 'circle' || secondEntity.type === 'arc'
-            
+            const secondIsCircular = secondEntity?.type === 'circle' || secondEntity?.type === 'arc'
+
             if (!(firstIsLine && secondIsLine) && !(firstIsCircular && secondIsCircular)) {
               isValid = false
               errorMsg = 'Equal requires two lines or two circles/arcs'
@@ -2037,7 +2049,7 @@ export function SketchCanvas() {
           } else if (constraintType === 'tangent') {
             // Tangent works between line and circle, or two circles
             const hasCircular = (firstEntity?.type === 'circle' || firstEntity?.type === 'arc' ||
-                                secondEntity.type === 'circle' || secondEntity.type === 'arc')
+                                secondEntity?.type === 'circle' || secondEntity?.type === 'arc')
             if (!hasCircular) {
               isValid = false
               errorMsg = 'Tangent requires at least one circle or arc'
@@ -2047,18 +2059,25 @@ export function SketchCanvas() {
             // For now, allow any entities
           } else if (constraintType === 'midpoint') {
             // Midpoint needs a point and a line
-            const hasLine = firstEntity?.type === 'line' || secondEntity.type === 'line'
-            const hasPoint = firstEntity?.type === 'point' || secondEntity.type === 'point'
+            const hasLine = firstEntity?.type === 'line' || secondEntity?.type === 'line'
             if (!hasLine) {
               isValid = false
               errorMsg = 'Midpoint requires a line'
             }
+          } else if (constraintType === 'symmetric') {
+            if (mirrorLine?.type !== 'line') {
+              isValid = false
+              errorMsg = 'Symmetric requires a line as the mirror axis'
+            }
           }
-          
+
           if (isValid) {
             addSketchConstraint(sketchMode!.sketchId!, {
               type: constraintType,
-              entityIds: [firstEntityId, clickedEntityId],
+              entityIds: constraintType === 'symmetric'
+                ? [firstEntityId, secondEntityId]
+                : [firstEntityId, clickedEntityId],
+              ...(constraintType === 'symmetric' ? { referenceId: clickedEntityId } : {}),
               status: 'satisfied'
             })
             clearSelectedEntityIds()
@@ -2477,8 +2496,66 @@ export function SketchCanvas() {
     return () => window.removeEventListener('resize', resizeCanvas)
   }, [])
   
+  // Applies a confirmed dimension-input value to the entity it actually measures,
+  // dispatching by that entity's real type/shape rather than assuming one layout —
+  // showDimensionInput's `type` label ('length'|'diameter'|'width'|'radius') only says
+  // what was displayed, not which stored field(s) to change.
+  const applyDimensionValue = useCallback((value: number) => {
+    const pending = drawing.pendingDimension
+    if (!pending || !sketchMode || !pending.entityId) return
+    const entity = (sketch?.entities || []).find(e => e.id === pending.entityId)
+    if (!entity) return
+
+    if (entity.type === 'line' && pending.type === 'length') {
+      const { start, end } = entity.data
+      const dx = end.x - start.x
+      const dy = end.y - start.y
+      const currentLength = Math.hypot(dx, dy)
+      if (currentLength < 1e-9) return
+      const scale = value / currentLength
+      updateSketchEntity(sketchMode.sketchId!, entity.id, {
+        end: { x: start.x + dx * scale, y: start.y + dy * scale, z: start.z || 0 }
+      })
+    } else if (entity.type === 'circle' && pending.type === 'diameter') {
+      updateSketchEntity(sketchMode.sketchId!, entity.id, { radius: value / 2 })
+    } else if (entity.type === 'arc' && pending.type === 'radius') {
+      const { center, startAngle, endAngle } = entity.data
+      updateSketchEntity(sketchMode.sketchId!, entity.id, {
+        radius: value,
+        startPoint: { x: center.x + value * Math.cos(startAngle), y: center.y + value * Math.sin(startAngle), z: 0 },
+        endPoint: { x: center.x + value * Math.cos(endAngle), y: center.y + value * Math.sin(endAngle), z: 0 },
+      })
+    } else if (entity.type === 'polygon' && pending.type === 'radius') {
+      if (entity.data.inscribed) {
+        updateSketchEntity(sketchMode.sketchId!, entity.id, { radius: value })
+      } else {
+        // Circumscribed polygons are dimensioned by apothem (see polygon-circumscribed's
+        // showDimensionInput call) — circumradius = apothem / cos(pi/sides). The
+        // companion construction circle drawn alongside this polygon isn't tracked by
+        // pendingDimension's single entityId, so it stays at its original radius until
+        // the sketch is otherwise touched — a known, narrow gap, not a silent no-op.
+        const circumradius = value / Math.cos(Math.PI / entity.data.sides)
+        updateSketchEntity(sketchMode.sketchId!, entity.id, { apothem: value, radius: circumradius })
+      }
+    } else if (entity.type === 'rectangle' && pending.type === 'width') {
+      const { corner1, corner2, mode } = entity.data
+      const signX = Math.sign(corner2.x - corner1.x) || 1
+      if (mode === 'center' && entity.data.center) {
+        const halfWidth = value / 2
+        updateSketchEntity(sketchMode.sketchId!, entity.id, {
+          corner1: { ...corner1, x: entity.data.center.x - halfWidth },
+          corner2: { ...corner2, x: entity.data.center.x + halfWidth },
+        })
+      } else {
+        updateSketchEntity(sketchMode.sketchId!, entity.id, {
+          corner2: { ...corner2, x: corner1.x + signX * value },
+        })
+      }
+    }
+  }, [drawing.pendingDimension, sketchMode, sketch, updateSketchEntity])
+
   if (!sketchMode) return null
-  
+
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ cursor: cursorStyle }}>
       <canvas 
@@ -2496,9 +2573,9 @@ export function SketchCanvas() {
           zoom={zoom}
           pan={pan}
           onConfirm={(value) => {
-            // Apply dimension
+            applyDimensionValue(value)
             hideDimensionInput()
-            addNotification('info', `Dimension set to ${value}`)
+            addNotification('success', `Dimension set to ${value}`)
           }}
           onCancel={hideDimensionInput}
         />

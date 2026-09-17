@@ -9,6 +9,7 @@ import { Logo } from './Logo'
 import { useUIStore } from '../store/uiStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useProjectStore } from '../store/projectStore'
+import { cadSolverClient } from '../lib/cad-solver/client'
 import {
   Undo,
   Redo,
@@ -37,7 +38,10 @@ import {
   Lock,
   Unlock,
   AlertCircle,
-  Maximize
+  Maximize,
+  ArrowUpFromLine,
+  Boxes,
+  FileText
 } from 'lucide-react'
 
 // Helper to convert mesh to STL format (ASCII)
@@ -83,6 +87,21 @@ function meshToSTL(parts: any[]): string {
   
   stl += 'endsolid model\n'
   return stl
+}
+
+// Base64-encodes a File's raw bytes, for cad-server's /import/step (fileContent is
+// plain base64, not a data: URL — no "data:application/step;base64," prefix).
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const commaIndex = result.indexOf(',')
+      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
 }
 
 // Helper to parse STL file (ASCII or Binary) into mesh data
@@ -241,12 +260,12 @@ function ToolDivider() {
 export function Toolbar() {
   const router = useRouter()
   const params = useParams<{ projectId?: string }>()
-  const { 
-    activeMode, 
-    activeTool, 
-    setActiveTool, 
-    viewSettings, 
-    toggleViewSetting, 
+  const {
+    activeMode,
+    activeTool,
+    setActiveTool,
+    viewSettings,
+    toggleViewSetting,
     setDisplayMode,
     openDialog,
     addNotification,
@@ -255,10 +274,11 @@ export function Toolbar() {
     rollbackState,
     rollToEnd,
     sketchMode,
-    exitSketchMode
+    exitSketchMode,
+    selection
   } = useUIStore()
   
-  const { document, createNewDocument, importSTLPart, undo, redo, canUndo, canRedo, updateDocumentName, showAllBodies } = useDocumentStore()
+  const { document, createNewDocument, importSTLPart, importStepPart, undo, redo, canUndo, canRedo, updateDocumentName, showAllBodies } = useDocumentStore()
   const { currentProject, updateProject } = useProjectStore()
   const projectId = params?.projectId as string | undefined
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -284,6 +304,18 @@ export function Toolbar() {
   
   const handleShell = () => {
     openDialog('shell')
+  }
+
+  const handleDirectEdit = () => {
+    openDialog('direct-edit')
+  }
+
+  const handleAssembly = () => {
+    openDialog('assembly')
+  }
+
+  const handleDrawingSheet = () => {
+    openDialog('drawing-sheet')
   }
   
   const handleMirrorFeature = () => {
@@ -338,55 +370,124 @@ export function Toolbar() {
     URL.revokeObjectURL(url)
     addNotification('success', `Exported as ${filename}`)
   }
-  
+
+  // STEP/IGES export needs a real B-rep shapeId (unlike the STL export above, which
+  // just re-serializes the already-tessellated triangle mesh client-side) — export
+  // whichever part is selected, or the first part that actually has one otherwise.
+  const handleExportStep = async (format: 'step' | 'iges') => {
+    if (!document) {
+      addNotification('error', 'No document to export')
+      return
+    }
+
+    const activePartStudio = document.partStudios.find(ps => ps.id === document.activeElementId)
+    const parts = activePartStudio?.parts || []
+    if (parts.length === 0) {
+      addNotification('error', 'No geometry to export. Create some 3D features first.')
+      return
+    }
+
+    const selectedPartId = selection.type === 'body' ? selection.ids[0] : undefined
+    const targetPart = (selectedPartId && parts.find(p => p.id === selectedPartId)) || parts.find(p => p.shapeId)
+    if (!targetPart?.shapeId) {
+      addNotification('error', 'This part has no modeling-engine shape to export yet.')
+      return
+    }
+
+    try {
+      const { blob } = await cadSolverClient.exportShape({ shapeId: targetPart.shapeId, format })
+      const filename = `${document.name || targetPart.name || 'model'}.${format}`
+      const url = URL.createObjectURL(blob)
+      const a = window.document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+      addNotification('success', `Exported ${targetPart.name} as ${filename}`)
+    } catch (error) {
+      console.error('STEP/IGES export error:', error)
+      addNotification('error', `Failed to export ${format.toUpperCase()}: ` + (error instanceof Error ? error.message : 'Unknown error'))
+    }
+  }
+
   const handleImport = () => {
     fileInputRef.current?.click()
   }
-  
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
+    const isStep = /\.(step|stp)$/i.test(file.name)
+    const isIges = /\.(iges|igs)$/i.test(file.name)
+
     try {
-      // Read file as ArrayBuffer to support both ASCII and binary STL
-      const buffer = await file.arrayBuffer()
-      
-      // Parse STL file
-      const mesh = parseSTL(buffer)
-      
-      if (!mesh || mesh.vertices.length === 0) {
-        addNotification('error', 'Failed to parse STL file. Make sure it is a valid STL file.')
-        return
-      }
-      
-      const triangleCount = mesh.indices.length / 3
-      console.log('Parsed STL:', mesh.vertices.length / 3, 'vertices,', triangleCount, 'triangles')
-      
-      // Create a new document
-      const docName = file.name.replace(/\.stl$/i, '')
-      await createNewDocument(docName)
-      
-      // Wait for state to update
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      // Get the new document
-      const newDoc = useDocumentStore.getState().document
-      
-      if (newDoc && newDoc.partStudios.length > 0) {
-        const partStudioId = newDoc.partStudios[0].id
-        
-        // Use the store method to import the part
-        await importSTLPart(partStudioId, docName, mesh)
-        
-        addNotification('success', `Imported ${file.name} (${triangleCount} triangles)`)
+      if (isStep || isIges) {
+        const fileContentBase64 = await fileToBase64(file)
+        const docName = file.name.replace(/\.(step|stp|iges|igs)$/i, '')
+        await createNewDocument(docName)
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        const newDoc = useDocumentStore.getState().document
+        if (newDoc && newDoc.partStudios.length > 0) {
+          const partStudioId = newDoc.partStudios[0].id
+          await importStepPart(partStudioId, docName, fileContentBase64, isStep ? 'step' : 'iges')
+
+          // importStepPart doesn't throw on a bad file — it records a failed feature
+          // instead (matching every other op's error surfacing) — so check what
+          // actually landed rather than assuming success just because nothing threw.
+          const resultStudio = useDocumentStore.getState().document?.partStudios[0]
+          const partCount = resultStudio?.parts.length || 0
+          if (partCount > 0) {
+            addNotification('success', `Imported ${file.name} (${partCount} part${partCount > 1 ? 's' : ''})`)
+          } else {
+            const importError = resultStudio?.features[0]?.error
+            addNotification('error', `Failed to import ${file.name}` + (importError ? `: ${importError}` : ''))
+          }
+        } else {
+          addNotification('error', 'Failed to create document for import')
+        }
       } else {
-        addNotification('error', 'Failed to create document for import')
+        // Read file as ArrayBuffer to support both ASCII and binary STL
+        const buffer = await file.arrayBuffer()
+
+        // Parse STL file
+        const mesh = parseSTL(buffer)
+
+        if (!mesh || mesh.vertices.length === 0) {
+          addNotification('error', 'Failed to parse STL file. Make sure it is a valid STL file.')
+          return
+        }
+
+        const triangleCount = mesh.indices.length / 3
+        console.log('Parsed STL:', mesh.vertices.length / 3, 'vertices,', triangleCount, 'triangles')
+
+        // Create a new document
+        const docName = file.name.replace(/\.stl$/i, '')
+        await createNewDocument(docName)
+
+        // Wait for state to update
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        // Get the new document
+        const newDoc = useDocumentStore.getState().document
+
+        if (newDoc && newDoc.partStudios.length > 0) {
+          const partStudioId = newDoc.partStudios[0].id
+
+          // Use the store method to import the part
+          await importSTLPart(partStudioId, docName, mesh)
+
+          addNotification('success', `Imported ${file.name} (${triangleCount} triangles)`)
+        } else {
+          addNotification('error', 'Failed to create document for import')
+        }
       }
     } catch (error) {
       console.error('Import error:', error)
-      addNotification('error', 'Failed to import STL file: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      addNotification('error', 'Failed to import file: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
-    
+
     // Reset input
     e.target.value = ''
   }
@@ -522,6 +623,7 @@ export function Toolbar() {
     { icon: <Circle size={16} />, label: 'Fillet', action: handleFillet, title: 'Round sharp edges with smooth radius' },
     { icon: <Scissors size={16} />, label: 'Chamfer', action: handleChamfer, title: 'Bevel edges at an angle' },
     { icon: <Shell size={16} />, label: 'Shell', action: handleShell, title: 'Hollow out solid with uniform wall thickness' },
+    { icon: <ArrowUpFromLine size={16} />, label: 'Direct Edit', action: handleDirectEdit, title: 'Push or pull a flat face without touching its originating sketch' },
   ]
   
   const patternTools = [
@@ -536,7 +638,7 @@ export function Toolbar() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".stl"
+        accept=".stl,.step,.stp,.iges,.igs"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -601,8 +703,17 @@ export function Toolbar() {
 
       {/* File operations */}
       <div className="flex items-center flex-shrink-0">
-        <ToolButton icon={<Upload size={16} />} label="Import" onClick={handleImport} />
-        <ToolButton icon={<Download size={16} />} label="Export" onClick={handleExport} />
+        <ToolButton icon={<Upload size={16} />} label="Import" title="Import STL, STEP or IGES" onClick={handleImport} />
+        <ToolButton icon={<Download size={16} />} label="Export STL" onClick={handleExport} />
+        <ToolButton icon={<Download size={16} />} label="Export STEP" title="Export the selected body as a real B-rep STEP file" onClick={() => handleExportStep('step')} />
+      </div>
+
+      <ToolDivider />
+
+      {/* Assembly / Drawings */}
+      <div className="flex items-center flex-shrink-0">
+        <ToolButton icon={<Boxes size={16} />} label="Assembly" title="Combine parts into instances and mate them face-to-face" onClick={handleAssembly} />
+        <ToolButton icon={<FileText size={16} />} label="Drawing" title="Project the current body onto a 2D drawing sheet" onClick={handleDrawingSheet} />
       </div>
 
       <ToolDivider />

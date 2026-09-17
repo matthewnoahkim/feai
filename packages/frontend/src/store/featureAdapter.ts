@@ -94,7 +94,15 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
   {
     type: 'shell', status: 'live',
     summary: 'Hollow out the current body to a wall thickness, removing the given faces to open it up.',
-    params: { facesToRemove: "['<partId>-face-<N>', …] — empty = a fully enclosed hollow shell", thickness: 'mm' },
+    // Confirmed against a real FreeCAD 1.1.3 build: an empty facesToRemove is NOT a
+    // fully enclosed hollow shell — cad-server rejects it (OCC's BRepOffsetAPI_
+    // MakeThickSolid has no zero-opening mode). At least one face is always required.
+    params: { facesToRemove: "['<partId>-face-<N>', …] — at least one face is required", thickness: 'mm' },
+  },
+  {
+    type: 'directEdit', status: 'live',
+    summary: "Push or pull a single flat face of the current body by a distance, without touching the sketch that created it. Curved faces aren't supported yet.",
+    params: { faceId: "'<partId>-face-<N>'", distance: 'mm — positive grows the body, negative shrinks it' },
   },
 ]
 

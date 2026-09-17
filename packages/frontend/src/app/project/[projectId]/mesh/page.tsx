@@ -18,6 +18,35 @@ import { useProjectStore } from '@/store/projectStore';
 import { useDocumentStore } from '@/store/documentStore';
 import { useSchematicStore } from '@/store/schematicStore';
 import { apiClient } from '@/api/client';
+import { cadSolverClient } from '@/lib/cad-solver/client';
+import type { TetMeshResult } from '@/lib/cad-solver/types';
+import type { MeshData } from '@/store/workflowStore';
+
+const MAX_REAL_MESH_NODES = 50000;
+
+/** Converts cad-server's real B-rep tet mesh into the same MeshData shape the AABB
+ * placeholder mesher (/api/fea/mesh) already produces, so the rest of the workflow
+ * (setup/results pages, buildMeshPayload) doesn't need to know which one ran. */
+function tetMeshResultToMeshData(result: TetMeshResult, elementType: string): MeshData {
+  const nodes = result.nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, z: n.z }));
+  const elements = result.elements.map((e) => ({ id: e.id, type: elementType, nodeIds: e.nodeIds }));
+
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x); minY = Math.min(minY, n.y); minZ = Math.min(minZ, n.z);
+    maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y); maxZ = Math.max(maxZ, n.z);
+  }
+
+  return {
+    nodeCount: nodes.length,
+    elementCount: elements.length,
+    elementType,
+    nodes,
+    elements,
+    boundingBox: { min: { x: minX, y: minY, z: minZ }, max: { x: maxX, y: maxY, z: maxZ } },
+  };
+}
 
 // Dynamically import 3D viewport for mesh preview
 const Viewport3D = dynamic(() => import('@/components/Viewport3D').then(m => ({ default: m.Viewport3D })), { ssr: false });
@@ -65,12 +94,12 @@ export default function MeshPage() {
     });
   }, [projectId]);
 
-  const hasGeometry =
-    !!document &&
-    (() => {
-      const activePartStudio = document.partStudios.find((ps) => ps.id === document.activeElementId);
-      return !!(activePartStudio?.parts && activePartStudio.parts.length > 0);
-    })();
+  const activePartStudio = document?.partStudios.find((ps) => ps.id === document.activeElementId);
+  const hasGeometry = !!(activePartStudio?.parts && activePartStudio.parts.length > 0);
+  // Matches generateMesh's own branch: a single real modeling-engine body gets a real
+  // volumetric mesh of its actual solid; anything else (multiple bodies, or a raw
+  // imported mesh with no shapeId) falls back to a bounding-box approximation.
+  const usesRealGeometry = (activePartStudio?.parts || []).filter((p) => p.shapeId).length === 1;
 
   useEffect(() => {
     setGeometryReady(hasGeometry);
@@ -95,6 +124,33 @@ export default function MeshPage() {
       // Validate mesh settings
       if (meshSettings.globalSize < 2) {
         throw new Error('Element size too small! Minimum is 2mm.');
+      }
+
+      // A single real modeling-engine body meshes its actual solid geometry via
+      // cad-server/gmsh — the AABB placeholder below is only for multi-body studios and
+      // raw imported meshes that never got a shapeId (see importSTLPart's fallback).
+      const partsWithShape = activePartStudio.parts.filter((p) => p.shapeId);
+      if (partsWithShape.length === 1) {
+        const result = await cadSolverClient.tetrahedralMesh({
+          shapeId: partsWithShape[0].shapeId!,
+          maxElementSize: meshSettings.maxSize ?? meshSettings.globalSize,
+          minElementSize: meshSettings.minSize,
+        });
+
+        if (result.nodes.length > MAX_REAL_MESH_NODES) {
+          throw new Error(
+            `Mesh would be too large (${result.nodes.length.toLocaleString()} nodes). ` +
+            `Increase element size and try again.`
+          );
+        }
+
+        // gmsh only produces linear tetrahedra in this pass — same honesty tradeoff the
+        // old placeholder mesher already made (it always built C3D4 tets too, regardless
+        // of the Element Type dropdown above).
+        setMeshData(tetMeshResultToMeshData(result, 'C3D4'));
+        updateStepStatus('mesh', 'complete');
+        getNodesByType('mesh').forEach((n) => markNodeComplete(n.id));
+        return;
       }
 
       // Check geometry complexity
@@ -192,6 +248,13 @@ export default function MeshPage() {
                     </>
                   )}
                 </div>
+                {hasGeometry && (
+                  <p className="text-xs text-cad-text-dim font-sans mt-1 pl-7">
+                    {usesRealGeometry
+                      ? 'Meshing the real solid — element boundaries follow the part\'s actual faces.'
+                      : 'Meshing a bounding-box approximation (multiple bodies, or an imported mesh without solid geometry).'}
+                  </p>
+                )}
               </div>
 
               {/* Mesh Settings */}

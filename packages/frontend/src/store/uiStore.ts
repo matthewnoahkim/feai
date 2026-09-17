@@ -50,10 +50,11 @@ export type ConstraintType =
   | 'concentric' 
   | 'parallel' 
   | 'perpendicular' 
-  | 'tangent' 
+  | 'tangent'
   | 'equal'
   | 'fixed'
   | 'midpoint'
+  | 'symmetric'
 
 export interface Selection {
   type: SelectionType

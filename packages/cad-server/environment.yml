@@ -4,6 +4,8 @@ channels:
 dependencies:
   - python=3.11
   - freecad=1.1.*
+  - gmsh
+  - python-gmsh
   - pip
   - pip:
       - fastapi>=0.115,<1

@@ -16,6 +16,7 @@ from .schemas import (
     BooleanRequest,
     ChamferRequest,
     CircularPatternRequest,
+    DirectEditRequest,
     ExportRequest,
     ExtrudeRequest,
     FilletRequest,
@@ -30,6 +31,8 @@ from .schemas import (
     StepImportRequest,
     SweepRequest,
     TessellateRequest,
+    TetMeshResult,
+    TetrahedralMeshRequest,
 )
 
 _EXPORT_MEDIA_TYPE = {
@@ -170,6 +173,27 @@ def export_shape(req: ExportRequest) -> Response:
         media_type=_EXPORT_MEDIA_TYPE.get(req.format, "application/octet-stream"),
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.post("/direct-edit", response_model=ShapeResult)
+def direct_edit(req: DirectEditRequest) -> ShapeResult:
+    return _run(lambda: freecad_ops.do_direct_edit(req))
+
+
+@app.post("/mesh/tetrahedral", response_model=TetMeshResult)
+def mesh_tetrahedral(req: TetrahedralMeshRequest) -> TetMeshResult:
+    # Doesn't fit _run()'s ShapeResult contract (this returns a volume mesh, not a new
+    # stored shape) — same broadened exception net as /export and /import/step: gmsh is
+    # an external tool operating on a re-imported STEP file, so an unexpected failure
+    # there is closer to a bad/degenerate-geometry 400 than a server bug.
+    try:
+        return freecad_ops.do_tetrahedral_mesh(req)
+    except GeometryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Tetrahedral meshing failed: {exc}") from exc
 
 
 @app.post("/shapes/{shape_id}/tessellate", response_model=ShapeResult)

@@ -12,6 +12,7 @@ import base64
 import math
 import os
 import tempfile
+import threading
 from typing import Any
 
 import FreeCAD
@@ -22,8 +23,10 @@ from FreeCAD import Matrix, Placement, Vector
 from . import shape_store
 from .schemas import (
     BooleanRequest,
+    BoundaryFaceGroup,
     ChamferRequest,
     CircularPatternRequest,
+    DirectEditRequest,
     EdgePolyline,
     ExportRequest,
     ExtrudeRequest,
@@ -44,6 +47,10 @@ from .schemas import (
     ShellRequest,
     StepImportRequest,
     SweepRequest,
+    TetMeshElement,
+    TetMeshNode,
+    TetMeshResult,
+    TetrahedralMeshRequest,
     VertexInfo,
 )
 
@@ -496,13 +503,17 @@ def do_import_step(req: StepImportRequest) -> list[Part.Shape]:
     solids = list(shape.Solids)
     if not solids and shape.Faces:
         # Confirmed against a real FreeCAD 1.1.3 build: IGES specifically (unlike STEP)
-        # round-trips as a bag of faces with shape.Solids == [] even for a shape that was
-        # a genuine solid before export — IGES is historically a surface-exchange format
-        # and doesn't carry the same manifold-solid metadata STEP's AP203/214 does. Heal
-        # it the same way do_import_mesh already heals a raw triangle mesh: try to build
-        # a real Solid from the face soup rather than giving up immediately.
+        # round-trips as a bare Compound of disconnected Faces (shape.Solids == [],
+        # shape.Shells == []) even for a shape that was a genuine solid before export —
+        # IGES is historically a surface-exchange format and doesn't carry the same
+        # manifold-solid metadata STEP's AP203/214 does. Part.makeSolid() itself requires
+        # a Shell or CompSolid input (confirmed: it raises "No shells or compsolids found
+        # in shape" on a raw Compound of Faces), so the faces have to be sewn into a
+        # Shell first — same two-step heal do_import_mesh's mesh-to-solid path is
+        # conceptually doing, just starting from real B-rep faces instead of mesh facets.
         try:
-            healed = Part.makeSolid(shape)
+            shell = Part.makeShell(shape.Faces)
+            healed = Part.makeSolid(shell)
             if not healed.isNull() and healed.Volume > 0:
                 solids = [healed]
         except Exception:
@@ -545,6 +556,196 @@ def do_export(req: ExportRequest) -> tuple[bytes, str]:
             except OSError:
                 pass
     return data, f"shape{suffix}"
+
+
+def do_direct_edit(req: DirectEditRequest) -> Part.Shape:
+    """Push/pull a single planar face by a distance, without going back to the sketch
+    that (maybe) created it. There is no single "move this face and rebuild adjacent
+    faces" primitive in Part/OCC the way there's makeFillet/makeThickness for other
+    ops — real push/pull in commercial kernels needs real topological reconstruction.
+    The trick that sidesteps that for the common planar case: build a prism by
+    extruding the face itself along its own normal by the requested distance, then
+    fuse it onto the body (growing) or cut it out (shrinking) — reusing do_extrude's
+    and do_boolean's existing primitives instead of any new geometry kernel logic.
+    Only works for a planar face; a curved face is rejected with a clear error rather
+    than silently producing wrong geometry.
+    """
+    shape = shape_store.get(req.shapeId)
+    if req.distance == 0:
+        raise GeometryError("Distance must be non-zero")
+    if not (0 <= req.faceIndex < len(shape.Faces)):
+        raise GeometryError(f"Face index {req.faceIndex} is out of range (shape has {len(shape.Faces)} faces)")
+    face = shape.Faces[req.faceIndex]
+
+    try:
+        is_planar = isinstance(face.Surface, Part.Plane)
+    except Exception:
+        is_planar = False
+    if not is_planar:
+        raise GeometryError(
+            "Direct edit only supports a flat (planar) face right now — this face is curved. "
+            "Edit the feature that created it instead."
+        )
+
+    try:
+        u_min, u_max, v_min, v_max = face.ParameterRange
+        normal = face.normalAt((u_min + u_max) / 2, (v_min + v_max) / 2)
+    except Exception as exc:
+        raise GeometryError(f"Could not compute this face's normal: {exc}") from exc
+    if normal.Length < 1e-9:
+        raise GeometryError("This face has a degenerate (zero-length) normal")
+    normal.normalize()
+
+    try:
+        prism = face.extrude(normal * req.distance)
+        if req.distance > 0:
+            result = shape.fuse(prism)
+        else:
+            result = shape.cut(prism)
+    except Exception as exc:
+        raise GeometryError(f"Direct edit failed: {exc}") from exc
+
+    if result is None or result.isNull():
+        raise GeometryError("Direct edit produced an empty shape — the distance is likely too large")
+    return result
+
+
+# ============================================================================
+# Volumetric meshing (Analysis)
+# ============================================================================
+
+# gmsh keeps its "current model" as global process state (gmsh.initialize()/finalize()
+# and gmsh.model.add() aren't per-call-isolated) — but FastAPI's sync `def` routes in
+# main.py run in a thread pool, so two /mesh/tetrahedral requests could otherwise
+# interleave and corrupt each other's model. Serializing with a lock is the simplest
+# correct fix; meshing is already the slowest op in this service, so it isn't a
+# meaningful throughput cliff the way it would be for e.g. /primitives.
+_gmsh_lock = threading.Lock()
+
+
+def _match_faces_to_gmsh_surfaces(shape: Part.Shape) -> dict[int, int]:
+    """Maps this shape's own Faces, by index (the same index space as FaceInfo and
+    mesh.faceIndexByTriangle), to the gmsh surface tags gmsh assigned when it re-imported
+    this same shape's STEP export. gmsh's tag numbering isn't guaranteed to follow
+    FreeCAD's Faces order, so this matches by nearest centroid instead of assuming it —
+    confirmed exact (distance 0) against a real gmsh 4.15/FreeCAD 1.1.3 build for both a
+    plain box and a boolean-cut shape with a curved face. A shape with two geometrically
+    identical faces at the exact same centroid (a true mirror-symmetric duplicate) could
+    match them swapped; harmless today since nothing yet targets a face by this mapping,
+    only groups boundary triangles by it."""
+    import gmsh
+
+    remaining = [(tag, gmsh.model.occ.getCenterOfMass(2, tag)) for _, tag in gmsh.model.getEntities(2)]
+    mapping: dict[int, int] = {}
+    for face_index, face in enumerate(shape.Faces):
+        com = face.CenterOfMass
+        target = (com.x, com.y, com.z)
+        best_idx, best_dist = None, float("inf")
+        for i, (_tag, gcom) in enumerate(remaining):
+            dist = sum((a - b) ** 2 for a, b in zip(target, gcom))
+            if dist < best_dist:
+                best_dist = dist
+                best_idx = i
+        if best_idx is not None:
+            tag, _ = remaining.pop(best_idx)
+            mapping[face_index] = tag
+    return mapping
+
+
+def do_tetrahedral_mesh(req: TetrahedralMeshRequest) -> TetMeshResult:
+    """Real geometry-aware volumetric meshing via gmsh, for the FEA workflow's Analysis
+    phase. There's no volume mesher in Part/OCC itself, so this exports the stored shape
+    to STEP and re-imports it through gmsh's own OCC kernel (gmsh has no direct FreeCAD-
+    shape import), meshes it into linear tetrahedra, and reports which boundary triangles
+    belong to which of the shape's own Faces (see _match_faces_to_gmsh_surfaces) so a
+    caller can eventually target a boundary condition at a specific real face instead of
+    only a world-space point/box/sphere region. This replaces the frontend's earlier
+    axis-aligned-bounding-box placeholder mesher, which meshed a box around the part
+    rather than the part itself.
+    """
+    shape = shape_store.get(req.shapeId)
+    if not shape.Solids:
+        raise GeometryError("Tetrahedral meshing needs a solid body; this shape has no solids")
+
+    import gmsh  # imported lazily: gmsh.initialize() touches global state, so only pay for it here
+
+    tmp_path = None
+    with _gmsh_lock:
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".step", delete=False) as tmp:
+                tmp_path = tmp.name
+            shape.exportStep(tmp_path)
+
+            # interruptible=False: gmsh's default Ctrl+C handling registers a signal
+            # handler, which Python only allows from the main thread — but FastAPI's
+            # sync `def` routes run in a worker thread, so the default would always
+            # raise "signal only works in main thread of the main interpreter" here.
+            gmsh.initialize(interruptible=False)
+            try:
+                gmsh.model.add("mesh")
+                gmsh.model.occ.importShapes(tmp_path)
+                gmsh.model.occ.synchronize()
+
+                bbox = shape.BoundBox
+                diagonal = math.sqrt(bbox.XLength ** 2 + bbox.YLength ** 2 + bbox.ZLength ** 2)
+                default_size = max(diagonal / 20, 1e-3)
+                max_size = req.maxElementSize or default_size
+                min_size = req.minElementSize or (max_size / 5)
+                gmsh.option.setNumber("Mesh.MeshSizeMax", max_size)
+                gmsh.option.setNumber("Mesh.MeshSizeMin", min_size)
+
+                face_to_surface = _match_faces_to_gmsh_surfaces(shape)
+
+                gmsh.model.mesh.generate(3)
+
+                node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
+                nodes = [
+                    TetMeshNode(
+                        id=int(node_tags[i]),
+                        x=node_coords[3 * i], y=node_coords[3 * i + 1], z=node_coords[3 * i + 2],
+                    )
+                    for i in range(len(node_tags))
+                ]
+
+                elements: list[TetMeshElement] = []
+                el_types, el_tags, el_node_tags = gmsh.model.mesh.getElements(3)
+                el_id = 1
+                for el_type, tags_for_type, nodes_for_type in zip(el_types, el_tags, el_node_tags):
+                    if el_type != 4:  # 4 = linear (4-node) tetrahedron; skip anything else gmsh might add
+                        continue
+                    for i in range(len(tags_for_type)):
+                        node_ids = [int(x) for x in nodes_for_type[4 * i:4 * i + 4]]
+                        elements.append(TetMeshElement(id=el_id, nodeIds=node_ids))
+                        el_id += 1
+
+                if not elements:
+                    raise GeometryError("gmsh produced no tetrahedra for this shape")
+
+                boundary_faces: list[BoundaryFaceGroup] = []
+                for face_index, surface_tag in face_to_surface.items():
+                    triangles: list[list[int]] = []
+                    b_types, _b_tags, b_node_tags = gmsh.model.mesh.getElements(2, surface_tag)
+                    for b_type, nodes_for_type in zip(b_types, b_node_tags):
+                        if b_type != 2:  # 2 = linear (3-node) triangle
+                            continue
+                        for i in range(len(nodes_for_type) // 3):
+                            triangles.append([int(x) for x in nodes_for_type[3 * i:3 * i + 3]])
+                    if triangles:
+                        boundary_faces.append(BoundaryFaceGroup(faceIndex=face_index, triangles=triangles))
+            finally:
+                gmsh.finalize()
+        except GeometryError:
+            raise
+        except Exception as exc:
+            raise GeometryError(f"Tetrahedral meshing failed: {exc}") from exc
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+    return TetMeshResult(nodes=nodes, elements=elements, boundaryFaces=boundary_faces)
 
 
 # ============================================================================

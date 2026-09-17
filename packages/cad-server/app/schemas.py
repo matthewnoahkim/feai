@@ -215,3 +215,47 @@ class StepImportRequest(BaseModel):
 class ExportRequest(BaseModel):
     shapeId: str
     format: Literal["step", "iges", "brep"] = "step"
+
+
+class DirectEditRequest(BaseModel):
+    shapeId: str
+    faceIndex: int  # 0-based, into the shape's own Faces list
+    # Distance to move the face along its own outward normal (mm). Positive grows the
+    # body (extrude the face outward and fuse); negative shrinks it (extrude inward and
+    # cut). Only planar faces are supported in this first pass — see do_direct_edit.
+    distance: float
+
+
+class TetrahedralMeshRequest(BaseModel):
+    shapeId: str
+    # Target element size (mm); both bound gmsh's mesh size field. Leaving both unset lets
+    # gmsh pick a size from the shape's own bounding box (see do_tetrahedral_mesh).
+    maxElementSize: Optional[float] = None
+    minElementSize: Optional[float] = None
+
+
+class TetMeshNode(BaseModel):
+    id: int
+    x: float
+    y: float
+    z: float
+
+
+class TetMeshElement(BaseModel):
+    id: int
+    nodeIds: list[int]  # exactly 4, a linear tetrahedron
+
+
+class BoundaryFaceGroup(BaseModel):
+    """The boundary (2D) triangles of the volume mesh that lie on one real B-rep face,
+    keyed by that face's own index (same index space as ShapeResult.faces) — not a gmsh
+    tag, which is an implementation detail of how the correspondence was built."""
+
+    faceIndex: int
+    triangles: list[list[int]]  # each a [n0, n1, n2] node id triplet
+
+
+class TetMeshResult(BaseModel):
+    nodes: list[TetMeshNode]
+    elements: list[TetMeshElement]
+    boundaryFaces: list[BoundaryFaceGroup]

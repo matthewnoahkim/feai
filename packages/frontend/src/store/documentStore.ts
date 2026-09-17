@@ -12,6 +12,13 @@ import type {
   ProfileEntity as CadProfileEntity,
   ShapeResult as CadShapeResult,
 } from '../lib/cad-solver/types'
+import {
+  identityTransform,
+  solveFaceMateTransform,
+  transformPoint,
+  transformDirection,
+  type Vec3,
+} from '../lib/assembly/mateSolver'
 
 export type SketchConstraintType = 
   | 'coincident'     // Two points share location, or point on curve
@@ -121,7 +128,44 @@ export interface Assembly {
   id: string
   name: string
   instances: AssemblyInstance[]
-  mates: any[]
+  mates: Mate[]
+}
+
+/** A face-to-face or offset relationship between two assembly instances. There's no
+ * DOF/simultaneous solver here — see solveMateTransform — so 'mates' is a small, fixed
+ * set of closed-form relationships rather than the general constraint graph a real
+ * assembly mate solver would support. */
+export interface Mate {
+  id: string
+  type: 'coincident' | 'distance'
+  // The instance that gets moved (see addMate/solveMateTransform); the other instance's
+  // referenced face is treated as the fixed target.
+  movingInstanceId: string
+  movingFaceId: string // '<partId>-face-<N>' in the moving instance's own (untransformed) part
+  targetInstanceId: string
+  targetFaceId: string
+  // 'coincident': faces touch, normals opposed (flush) — offset is an optional gap.
+  // 'distance': like coincident, but offset is the required gap, not optional.
+  offset: number
+}
+
+/** One projection of a part studio's current body onto a 2D drawing sheet — see
+ * lib/drawing/projection.ts for the actual projection math. Not a regenerable feature:
+ * a drawing view is a derived snapshot of "however the model looks right now", the way
+ * a real CAD drawing sheet keeps its own placed views rather than replaying feature
+ * history. */
+export interface DrawingView {
+  id: string
+  direction: 'front' | 'top' | 'right' | 'iso'
+  origin: { x: number; y: number } // this view's placement on the sheet
+  scale: number
+}
+
+export interface DrawingSheet {
+  id: string
+  name: string
+  partStudioId: string
+  views: DrawingView[]
 }
 
 export interface Document {
@@ -131,9 +175,10 @@ export interface Document {
   units: 'mm' | 'inch' | 'm'
   partStudios: PartStudio[]
   assemblies: Assembly[]
+  drawings: DrawingSheet[]
   activeElementId: string | null
   activeElementType: 'partStudio' | 'assembly' | null
-  
+
   // Export settings
   exportSettings?: {
     excludeHiddenParts: boolean  // Whether to exclude hidden parts from exports
@@ -190,7 +235,7 @@ interface DocumentState {
   
   // Sketch operations
   createSketch: (partStudioId: string, planeId: string) => Promise<Sketch | null>
-  addSketchEntity: (sketchId: string, entity: Omit<SketchEntity, 'id'>) => void
+  addSketchEntity: (sketchId: string, entity: Omit<SketchEntity, 'id'>) => string
   updateSketchEntity: (sketchId: string, entityId: string, data: Record<string, any>) => void
   deleteSketchEntity: (sketchId: string, entityId: string) => void
   addSketchConstraint: (sketchId: string, constraint: Omit<SketchConstraint, 'id'>) => void
@@ -202,10 +247,34 @@ interface DocumentState {
   updatePartMaterial: (partId: string, material: string) => void
   updatePartColor: (partId: string, color: string) => void
   regenerateModel: (partStudioId: string) => Promise<void>
-  
+
+  // Assembly operations — a real transform/mate model, but no DOF solver (see
+  // lib/assembly/mateSolver.ts); cad-server has no assembly concept either.
+  createAssembly: (name: string) => string
+  deleteAssembly: (assemblyId: string) => void
+  addAssemblyInstance: (assemblyId: string, partStudioId: string, partId: string) => string | null
+  deleteAssemblyInstance: (assemblyId: string, instanceId: string) => void
+  updateInstanceTransform: (assemblyId: string, instanceId: string, transform: number[]) => void
+  /** Solves the mate immediately (closed-form — see solveFaceMateTransform) and writes
+   * the resulting transform onto the moving instance; there's nothing further to
+   * "regenerate" later the way a feature-tree op would. */
+  addMate: (assemblyId: string, mate: Omit<Mate, 'id'>) => void
+  deleteMate: (assemblyId: string, mateId: string) => void
+
+  // Drawing operations — 2D projections of a part studio's current body onto a sheet
+  // (see lib/drawing/projection.ts). Not a regenerable feature; a view is a snapshot.
+  createDrawingSheet: (partStudioId: string, name: string) => string
+  deleteDrawingSheet: (sheetId: string) => void
+  addDrawingView: (sheetId: string, direction: DrawingView['direction']) => void
+  updateDrawingView: (sheetId: string, viewId: string, updates: Partial<Pick<DrawingView, 'origin' | 'scale'>>) => void
+  deleteDrawingView: (sheetId: string, viewId: string) => void
+
   // Import operations
   importSTLPart: (partStudioId: string, name: string, mesh: { vertices: number[], normals: number[], indices: number[] }) => Promise<void>
-  
+  /** A STEP/IGES file can contain multiple independent solids; each becomes its own
+   * part (documentStore has no assembly concept to group them under yet). */
+  importStepPart: (partStudioId: string, name: string, fileContentBase64: string, format?: 'step' | 'iges') => Promise<void>
+
   // Document operations
   updateDocumentName: (name: string) => void
   updateDocumentUnits: (units: 'mm' | 'inch' | 'm') => void
@@ -249,6 +318,8 @@ export function deserializeDocument(data: any): Document {
         ? ps.sketches
         : new Map<string, Sketch>(Object.entries(ps.sketches || {})),
     })),
+    assemblies: data.assemblies || [],
+    drawings: data.drawings || [],
   }
 }
 
@@ -262,7 +333,8 @@ function cloneDocument(doc: Document): Document {
       sketches: new Map(ps.sketches),
       parts: ps.parts.map(p => ({ ...p }))
     })),
-    assemblies: doc.assemblies.map(a => ({ ...a }))
+    assemblies: doc.assemblies.map(a => ({ ...a, instances: a.instances.map(i => ({ ...i })), mates: a.mates.map(m => ({ ...m })) })),
+    drawings: doc.drawings.map(d => ({ ...d, views: d.views.map(v => ({ ...v })) })),
   }
 }
 // ============================================================================
@@ -495,23 +567,62 @@ function faceIndicesFromIds(faceIds: string[], partId: string): number[] {
   return subShapeIndicesFromIds(faceIds, partId, 'face')
 }
 
-/** Pattern dialogs (Linear/CircularPatternDialog) currently offer 'x-axis'|'y-axis'|
- * 'z-axis' plus a few mock part-scoped ids ('<partId>-edge-x/y/z', '<partId>-center-axis')
- * that don't yet reference real picked geometry — real edge/axis picking is a soft
- * dependency for this MVP (see the patterns/mirror/shell plan). This resolves whichever
- * of those a dialog sent into a world-space unit vector; anything unrecognized falls
- * back to `fallback`. */
+/** LinearPatternDialog's direction reference resolves to a world-space unit vector: a
+ * fixed world axis ('x-axis'|'y-axis'|'z-axis'), a real picked edge (`<partId>-edge-<N>`,
+ * direction = that edge polyline's own tangent, last point minus first), or a real picked
+ * planar face (`<partId>-face-<N>`, direction = that face's own normal — the standard CAD
+ * convention of using a flat face as a direction reference). Anything else falls back to
+ * `fallback`. */
 function resolvePatternDirectionVector(
   directionId: string | null | undefined,
   flip: boolean | undefined,
+  currentBody: Part | null,
   fallback: [number, number, number] = [1, 0, 0]
 ): [number, number, number] {
-  let vector: [number, number, number]
-  if (directionId === 'x-axis' || directionId?.endsWith('-edge-x')) vector = [1, 0, 0]
-  else if (directionId === 'y-axis' || directionId?.endsWith('-edge-y')) vector = [0, 1, 0]
-  else if (directionId === 'z-axis' || directionId?.endsWith('-edge-z') || directionId?.endsWith('-center-axis')) vector = [0, 0, 1]
-  else vector = fallback
+  let vector: [number, number, number] = fallback
+  if (directionId === 'x-axis') vector = [1, 0, 0]
+  else if (directionId === 'y-axis') vector = [0, 1, 0]
+  else if (directionId === 'z-axis') vector = [0, 0, 1]
+  else if (currentBody) {
+    const edgeIndex = subShapeIndicesFromIds([directionId || ''], currentBody.id, 'edge')[0]
+    const edge = edgeIndex !== undefined ? currentBody.edges?.[edgeIndex] : undefined
+    if (edge && edge.points.length >= 6) {
+      const n = edge.points.length
+      const dx = edge.points[n - 3] - edge.points[0]
+      const dy = edge.points[n - 2] - edge.points[1]
+      const dz = edge.points[n - 1] - edge.points[2]
+      const len = Math.hypot(dx, dy, dz)
+      if (len > 1e-9) vector = [dx / len, dy / len, dz / len]
+    } else {
+      const faceIndex = subShapeIndicesFromIds([directionId || ''], currentBody.id, 'face')[0]
+      const face = faceIndex !== undefined ? currentBody.faces?.[faceIndex] : undefined
+      if (face) vector = face.normal as [number, number, number]
+    }
+  }
   return flip ? [-vector[0], -vector[1], -vector[2]] : vector
+}
+
+/** CircularPatternDialog's axis reference resolves to a (point, direction) pair. A fixed
+ * world axis rotates around the body's own center of mass. A real picked planar face
+ * (`<partId>-face-<N>`) rotates around that face's own centroid using its normal as the
+ * rotation axis — the natural pick for something like a cylindrical boss's flat end cap. */
+function resolvePatternAxis(
+  axisId: string | null | undefined,
+  currentBody: Part | null
+): { point: [number, number, number]; direction: [number, number, number] } {
+  const centerOfMass = (currentBody?.massProperties?.centerOfMass as [number, number, number] | undefined) ?? [0, 0, 0]
+  if (currentBody) {
+    const faceIndex = subShapeIndicesFromIds([axisId || ''], currentBody.id, 'face')[0]
+    const face = faceIndex !== undefined ? currentBody.faces?.[faceIndex] : undefined
+    if (face) {
+      return { point: face.centroid as [number, number, number], direction: face.normal as [number, number, number] }
+    }
+  }
+  let direction: [number, number, number] = [0, 0, 1]
+  if (axisId === 'x-axis') direction = [1, 0, 0]
+  else if (axisId === 'y-axis') direction = [0, 1, 0]
+  else if (axisId === 'z-axis') direction = [0, 0, 1]
+  return { point: centerOfMass, direction }
 }
 
 /** MirrorFeatureDialog's plane ids are either a fixed world reference plane through the
@@ -540,6 +651,51 @@ function resolveMirrorPlane(
     default: // 'top-plane' and any unrecognized id
       return { origin: [0, 0, 0], normal: [0, 0, 1] }
   }
+}
+
+// ============================================================================
+// Sketch constraint solving helpers
+// ============================================================================
+
+interface Point2 { x: number; y: number; z?: number }
+
+function dist2(a: Point2, b: Point2): number {
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+/** Perpendicular foot of `point` onto the infinite line through `a`/`b`, and the
+ * distance to it — used by the 'tangent' (line-circle) and 'symmetric' constraints. */
+function projectPointOntoLine(point: Point2, a: Point2, b: Point2): { foot: Point2; distance: number } {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const lenSq = dx * dx + dy * dy
+  if (lenSq < 1e-12) return { foot: { x: a.x, y: a.y }, distance: dist2(point, a) }
+  const t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / lenSq
+  const foot = { x: a.x + t * dx, y: a.y + t * dy }
+  return { foot, distance: dist2(point, foot) }
+}
+
+/** Mirrors `point` across the infinite line through `a`/`b`. */
+function reflectPointAcrossLine(point: Point2, a: Point2, b: Point2): Point2 {
+  const { foot } = projectPointOntoLine(point, a, b)
+  return { x: 2 * foot.x - point.x, y: 2 * foot.y - point.y, z: point.z }
+}
+
+/** A 'fixed' constraint pins an entity in place. Every 2-entity constraint case in
+ * solveSketch used to always adjust "entity2" unconditionally; this picks whichever
+ * side isn't fixed instead (falling back to entity1 if entity2 is the fixed one), or
+ * null if both are fixed (or either entity is missing) and there's nothing safe to
+ * adjust — the constraint is simply left unsatisfied for this pass rather than
+ * fighting the fixed entity. */
+function pickAdjustable(
+  entity1: SketchEntity | undefined,
+  entity2: SketchEntity | undefined,
+  fixedIds: Set<string>
+): { reference: SketchEntity; adjustable: SketchEntity } | null {
+  if (!entity1 || !entity2) return null
+  if (!fixedIds.has(entity2.id)) return { reference: entity1, adjustable: entity2 }
+  if (!fixedIds.has(entity1.id)) return { reference: entity2, adjustable: entity1 }
+  return null
 }
 
 /** Replaces an existing entry in `parts` by id, or appends a new one — `combineIntoBody`
@@ -630,6 +786,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           parts: []
         }],
         assemblies: [],
+        drawings: [],
         activeElementId: psId,
         activeElementType: 'partStudio'
       }
@@ -1253,30 +1410,35 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   addSketchEntity: (sketchId, entity) => {
+    // Generated up front (not inside set()'s updater) so the caller can act on the same
+    // id right away — e.g. SketchCanvas wiring a just-drawn line's length dimension
+    // input to the entity it actually measures, rather than discarding that link.
+    const id = generateId()
     set(state => {
       if (!state.document) return state
-      
+
       const partStudios = state.document.partStudios.map(ps => {
         const sketch = ps.sketches.get(sketchId)
         if (!sketch) return ps
-        
-        const newEntity: SketchEntity = { ...entity, id: generateId() }
+
+        const newEntity: SketchEntity = { ...entity, id }
         const updatedSketch = {
           ...sketch,
           entities: [...sketch.entities, newEntity]
         }
-        
+
         const sketches = new Map(ps.sketches)
         sketches.set(sketchId, updatedSketch)
-        
+
         return { ...ps, sketches }
       })
-      
+
       return {
         document: { ...state.document, partStudios },
         isDirty: true
       }
     })
+    return id
   },
   
   updateSketchEntity: (sketchId, entityId, data) => {
@@ -1485,7 +1647,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         // Apply constraints to modify entity geometry
         const entities = [...sketch.entities]
         const constraints = sketch.constraints
-        
+
+        // A 'fixed' constraint pins that entity so every other case below adjusts the
+        // other side of a pair instead (see pickAdjustable).
+        const fixedIds = new Set(
+          constraints.filter(c => c.type === 'fixed').flatMap(c => c.entityIds)
+        )
+
+        // Each pass only propagates one constraint's effect into the entities it touches
+        // directly; a chain (e.g. A equal B, B parallel C) needs several passes before it
+        // settles. Repeating the full pass is a simple Gauss-Seidel-style relaxation —
+        // not a real simultaneous DOF solve, but it converges for the kind of small,
+        // non-conflicting constraint sets this sketcher's UI can actually build, and a
+        // genuinely over-constrained sketch just stops changing (still flagged
+        // 'over-constrained' by updateEntityConstraintStatus's DOF heuristic).
+        const MAX_ITERATIONS = 10
+        for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
         constraints.forEach(constraint => {
           try {
             switch (constraint.type) {
@@ -1493,6 +1670,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 // Make line horizontal
                 const entityId = constraint.entityIds[0]
                 const entity = entities.find(e => e.id === entityId)
+                if (fixedIds.has(entityId)) break
                 if (entity?.type === 'line' && entity.data.start && entity.data.end) {
                   // Keep start point, adjust end point Y to match
                   const avgY = (entity.data.start.y + entity.data.end.y) / 2
@@ -1501,11 +1679,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 }
                 break
               }
-              
+
               case 'vertical': {
                 // Make line vertical
                 const entityId = constraint.entityIds[0]
                 const entity = entities.find(e => e.id === entityId)
+                if (fixedIds.has(entityId)) break
                 if (entity?.type === 'line' && entity.data.start && entity.data.end) {
                   const avgX = (entity.data.start.x + entity.data.end.x) / 2
                   entity.data.start = { ...entity.data.start, x: avgX }
@@ -1513,145 +1692,232 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
                 }
                 break
               }
-              
+
               case 'equal': {
-                // Make two lines equal length
+                // Make two lines' lengths (or two circles'/arcs' radii) equal by
+                // snapping the adjustable side to the reference side's value exactly —
+                // matches concentric/coincident's "adjustable adopts reference" convention
+                // below, rather than averaging (averaging both sides drifts under any
+                // second constraint touching either entity and never settles).
                 if (constraint.entityIds.length >= 2) {
                   const entity1 = entities.find(e => e.id === constraint.entityIds[0])
                   const entity2 = entities.find(e => e.id === constraint.entityIds[1])
-                  
-                  if (entity1?.type === 'line' && entity2?.type === 'line') {
-                    const len1 = Math.hypot(
-                      entity1.data.end.x - entity1.data.start.x,
-                      entity1.data.end.y - entity1.data.start.y
-                    )
-                    const len2 = Math.hypot(
-                      entity2.data.end.x - entity2.data.start.x,
-                      entity2.data.end.y - entity2.data.start.y
-                    )
-                    
-                    // Scale entity2 to match entity1's length
-                    const avgLen = (len1 + len2) / 2
-                    const scale = avgLen / len2
-                    
-                    const dx = entity2.data.end.x - entity2.data.start.x
-                    const dy = entity2.data.end.y - entity2.data.start.y
-                    
-                    entity2.data.end = {
-                      x: entity2.data.start.x + dx * scale,
-                      y: entity2.data.start.y + dy * scale,
-                      z: entity2.data.start.z || 0
+                  const picked = pickAdjustable(entity1, entity2, fixedIds)
+                  if (!picked) break
+                  const { reference, adjustable } = picked
+
+                  if (reference.type === 'line' && adjustable.type === 'line') {
+                    const refLen = dist2(reference.data.start, reference.data.end)
+                    const dx = adjustable.data.end.x - adjustable.data.start.x
+                    const dy = adjustable.data.end.y - adjustable.data.start.y
+                    const curLen = Math.hypot(dx, dy)
+                    if (curLen > 1e-9) {
+                      const scale = refLen / curLen
+                      adjustable.data.end = {
+                        x: adjustable.data.start.x + dx * scale,
+                        y: adjustable.data.start.y + dy * scale,
+                        z: adjustable.data.start.z || 0
+                      }
                     }
-                  }
-                  
-                  // Equal radius for circles
-                  if (entity1?.type === 'circle' && entity2?.type === 'circle') {
-                    const avgRadius = (entity1.data.radius + entity2.data.radius) / 2
-                    entity2.data.radius = avgRadius
+                  } else if (
+                    (reference.type === 'circle' || reference.type === 'arc') &&
+                    (adjustable.type === 'circle' || adjustable.type === 'arc')
+                  ) {
+                    adjustable.data.radius = reference.data.radius
                   }
                 }
                 break
               }
-              
+
               case 'parallel': {
                 // Make two lines parallel
                 if (constraint.entityIds.length >= 2) {
                   const entity1 = entities.find(e => e.id === constraint.entityIds[0])
                   const entity2 = entities.find(e => e.id === constraint.entityIds[1])
-                  
-                  if (entity1?.type === 'line' && entity2?.type === 'line') {
-                    // Get direction of line1
-                    const dx1 = entity1.data.end.x - entity1.data.start.x
-                    const dy1 = entity1.data.end.y - entity1.data.start.y
+                  const picked = pickAdjustable(entity1, entity2, fixedIds)
+                  if (!picked) break
+                  const { reference, adjustable } = picked
+
+                  if (reference.type === 'line' && adjustable.type === 'line') {
+                    const dx1 = reference.data.end.x - reference.data.start.x
+                    const dy1 = reference.data.end.y - reference.data.start.y
                     const len1 = Math.hypot(dx1, dy1)
-                    
-                    // Get length of line2
-                    const dx2 = entity2.data.end.x - entity2.data.start.x
-                    const dy2 = entity2.data.end.y - entity2.data.start.y
+
+                    const dx2 = adjustable.data.end.x - adjustable.data.start.x
+                    const dy2 = adjustable.data.end.y - adjustable.data.start.y
                     const len2 = Math.hypot(dx2, dy2)
-                    
+
                     if (len1 > 0 && len2 > 0) {
-                      // Adjust line2 direction to match line1
                       const unitX = dx1 / len1
                       const unitY = dy1 / len1
-                      
-                      entity2.data.end = {
-                        x: entity2.data.start.x + unitX * len2,
-                        y: entity2.data.start.y + unitY * len2,
-                        z: entity2.data.start.z || 0
+
+                      adjustable.data.end = {
+                        x: adjustable.data.start.x + unitX * len2,
+                        y: adjustable.data.start.y + unitY * len2,
+                        z: adjustable.data.start.z || 0
                       }
                     }
                   }
                 }
                 break
               }
-              
+
               case 'perpendicular': {
                 // Make two lines perpendicular
                 if (constraint.entityIds.length >= 2) {
                   const entity1 = entities.find(e => e.id === constraint.entityIds[0])
                   const entity2 = entities.find(e => e.id === constraint.entityIds[1])
-                  
-                  if (entity1?.type === 'line' && entity2?.type === 'line') {
-                    const dx1 = entity1.data.end.x - entity1.data.start.x
-                    const dy1 = entity1.data.end.y - entity1.data.start.y
+                  const picked = pickAdjustable(entity1, entity2, fixedIds)
+                  if (!picked) break
+                  const { reference, adjustable } = picked
+
+                  if (reference.type === 'line' && adjustable.type === 'line') {
+                    const dx1 = reference.data.end.x - reference.data.start.x
+                    const dy1 = reference.data.end.y - reference.data.start.y
                     const len1 = Math.hypot(dx1, dy1)
-                    
-                    const dx2 = entity2.data.end.x - entity2.data.start.x
-                    const dy2 = entity2.data.end.y - entity2.data.start.y
+
+                    const dx2 = adjustable.data.end.x - adjustable.data.start.x
+                    const dy2 = adjustable.data.end.y - adjustable.data.start.y
                     const len2 = Math.hypot(dx2, dy2)
-                    
+
                     if (len1 > 0 && len2 > 0) {
-                      // Rotate line1's direction by 90°
+                      // Rotate the reference line's direction by 90°
                       const perpX = -dy1 / len1
                       const perpY = dx1 / len1
-                      
-                      entity2.data.end = {
-                        x: entity2.data.start.x + perpX * len2,
-                        y: entity2.data.start.y + perpY * len2,
-                        z: entity2.data.start.z || 0
+
+                      adjustable.data.end = {
+                        x: adjustable.data.start.x + perpX * len2,
+                        y: adjustable.data.start.y + perpY * len2,
+                        z: adjustable.data.start.z || 0
                       }
                     }
                   }
                 }
                 break
               }
-              
+
               case 'concentric': {
-                // Make two circles share the same center
+                // Make two circles/arcs share the same center
                 if (constraint.entityIds.length >= 2) {
                   const entity1 = entities.find(e => e.id === constraint.entityIds[0])
                   const entity2 = entities.find(e => e.id === constraint.entityIds[1])
-                  
-                  if ((entity1?.type === 'circle' || entity1?.type === 'arc') && 
-                      (entity2?.type === 'circle' || entity2?.type === 'arc')) {
-                    entity2.data.center = { ...entity1.data.center }
+                  const picked = pickAdjustable(entity1, entity2, fixedIds)
+                  if (!picked) break
+                  const { reference, adjustable } = picked
+
+                  if ((reference.type === 'circle' || reference.type === 'arc') &&
+                      (adjustable.type === 'circle' || adjustable.type === 'arc')) {
+                    adjustable.data.center = { ...reference.data.center }
                   }
                 }
                 break
               }
-              
+
               case 'coincident': {
                 // Make two points coincide
-                // This is a simplified implementation
                 if (constraint.entityIds.length >= 2) {
                   const entity1 = entities.find(e => e.id === constraint.entityIds[0])
                   const entity2 = entities.find(e => e.id === constraint.entityIds[1])
-                  
-                  // Various combinations of coincident
-                  if (entity1?.type === 'point' && entity2?.type === 'point') {
-                    entity2.data = { ...entity1.data }
+                  const picked = pickAdjustable(entity1, entity2, fixedIds)
+                  if (!picked) break
+                  const { reference, adjustable } = picked
+
+                  if (reference.type === 'point' && adjustable.type === 'point') {
+                    adjustable.data = { ...reference.data }
                   }
                 }
                 break
               }
-              
-              // Other constraints would be implemented similarly
+
+              case 'tangent': {
+                // Line tangent to a circle/arc (adjust the circle's radius to match its
+                // center's distance to the line), or two circles/arcs externally
+                // tangent (adjust one radius so distance(centers) == r1 + r2).
+                if (constraint.entityIds.length < 2) break
+                const e1 = entities.find(e => e.id === constraint.entityIds[0])
+                const e2 = entities.find(e => e.id === constraint.entityIds[1])
+                if (!e1 || !e2) break
+                const isCircular = (e: SketchEntity) => e.type === 'circle' || e.type === 'arc'
+                const line = e1.type === 'line' ? e1 : e2.type === 'line' ? e2 : undefined
+
+                if (line) {
+                  const circle = isCircular(e1) ? e1 : isCircular(e2) ? e2 : undefined
+                  if (!circle || fixedIds.has(circle.id)) break
+                  const { distance } = projectPointOntoLine(circle.data.center, line.data.start, line.data.end)
+                  circle.data.radius = distance
+                } else if (isCircular(e1) && isCircular(e2)) {
+                  const picked = pickAdjustable(e1, e2, fixedIds)
+                  if (!picked) break
+                  const { reference, adjustable } = picked
+                  const centerDistance = dist2(reference.data.center, adjustable.data.center)
+                  const newRadius = centerDistance - reference.data.radius
+                  if (newRadius > 1e-6) adjustable.data.radius = newRadius
+                }
+                break
+              }
+
+              case 'midpoint': {
+                // A point sits at the midpoint of a line — always solved by moving the
+                // point (never the line; "point at midpoint" is about placing the
+                // point, not deforming the line it's referencing).
+                if (constraint.entityIds.length < 2) break
+                const e1 = entities.find(e => e.id === constraint.entityIds[0])
+                const e2 = entities.find(e => e.id === constraint.entityIds[1])
+                const line = e1?.type === 'line' ? e1 : e2?.type === 'line' ? e2 : undefined
+                const point = e1?.type === 'point' ? e1 : e2?.type === 'point' ? e2 : undefined
+                if (!line || !point || fixedIds.has(point.id)) break
+                point.data = {
+                  x: (line.data.start.x + line.data.end.x) / 2,
+                  y: (line.data.start.y + line.data.end.y) / 2,
+                  z: line.data.start.z || 0,
+                }
+                break
+              }
+
+              case 'symmetric': {
+                // Two entities mirrored about a third line (constraint.referenceId) —
+                // reflects whichever side is adjustable to the other's mirror image.
+                if (constraint.entityIds.length < 2 || !constraint.referenceId) break
+                const mirrorLine = entities.find(e => e.id === constraint.referenceId)
+                if (mirrorLine?.type !== 'line') break
+                const e1 = entities.find(e => e.id === constraint.entityIds[0])
+                const e2 = entities.find(e => e.id === constraint.entityIds[1])
+                const picked = pickAdjustable(e1, e2, fixedIds)
+                if (!picked) break
+                const { reference, adjustable } = picked
+                const { start, end } = mirrorLine.data
+
+                if (reference.type === 'point' && adjustable.type === 'point') {
+                  adjustable.data = reflectPointAcrossLine(reference.data as Point2, start, end)
+                } else if (reference.type === 'line' && adjustable.type === 'line') {
+                  adjustable.data = {
+                    ...adjustable.data,
+                    start: reflectPointAcrossLine(reference.data.start, start, end),
+                    end: reflectPointAcrossLine(reference.data.end, start, end),
+                  }
+                } else if (
+                  (reference.type === 'circle' || reference.type === 'arc') &&
+                  adjustable.type === reference.type
+                ) {
+                  adjustable.data = {
+                    ...adjustable.data,
+                    center: reflectPointAcrossLine(reference.data.center, start, end),
+                    radius: reference.data.radius,
+                  }
+                }
+                break
+              }
+
+              case 'fixed':
+                // No geometry to apply — fixedIds (computed above) already keeps every
+                // other case in this switch from moving this entity.
+                break
             }
           } catch (e) {
             console.warn('Constraint solving error:', e)
           }
         })
+        }
         
         const updatedSketch = {
           ...sketch,
@@ -2022,15 +2288,16 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         // fillet/chamfer above), not on an individual feature or face within it —
         // cad-server has no feature-history graph to pattern a sub-feature against.
         // LinearPatternDialog/CircularPatternDialog/MirrorFeatureDialog's richer
-        // per-feature/per-face modes, skip-instances, and centered/reapply options
-        // aren't backed by a real operation yet and are ignored here.
+        // per-feature modes, skip-instances, and centered/reapply options aren't backed
+        // by a real operation yet and are ignored here; direction/axis/plane references
+        // ARE real (see resolvePatternDirectionVector/resolvePatternAxis/resolveMirrorPlane).
         case 'linearPattern': {
           if (!currentBody?.shapeId) {
             recordError('Linear pattern skipped: the current body has no modeling-engine shape')
             break
           }
           const p = feature.parameters
-          const direction1 = resolvePatternDirectionVector(p.direction1, p.flip1)
+          const direction1 = resolvePatternDirectionVector(p.direction1, p.flip1, currentBody)
           const count1 = Math.max(1, Math.round(p.count1 ?? 2))
           const spacing1 = p.spacing1 ?? 20
           const useDirection2 = !!p.useDirection2 && (p.count2 ?? 0) > 1
@@ -2040,7 +2307,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
               direction1,
               count1,
               spacing1,
-              direction2: useDirection2 ? resolvePatternDirectionVector(p.direction2, p.flip2, [0, 1, 0]) : undefined,
+              direction2: useDirection2 ? resolvePatternDirectionVector(p.direction2, p.flip2, currentBody, [0, 1, 0]) : undefined,
               count2: useDirection2 ? Math.max(1, Math.round(p.count2)) : undefined,
               spacing2: useDirection2 ? (p.spacing2 ?? 20) : undefined,
             })
@@ -2057,10 +2324,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             break
           }
           const p = feature.parameters
-          // Reference-axis patterns rotate around the body's own center by default
-          // (falls back to the world origin only if mass properties aren't available yet).
-          const axisPoint = (currentBody.massProperties?.centerOfMass as [number, number, number] | undefined) ?? [0, 0, 0]
-          const axisDirection = resolvePatternDirectionVector(p.axis, false, [0, 0, 1])
+          const { point: axisPoint, direction: axisDirection } = resolvePatternAxis(p.axis, currentBody)
           const count = Math.max(1, Math.round(p.instanceCount ?? 6))
           const angle = p.fullCircle === false ? (p.totalAngle ?? 360) : 360
           try {
@@ -2112,6 +2376,35 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           }
           break
         }
+
+        // Push/pull a single picked face. The stored faceId is a positional index into
+        // the *current* shape's Faces list — an earlier feature's edit can silently
+        // change what that index points to (the same topological-naming fragility
+        // fillet/chamfer's edgeIndices already has, just more visible here since this
+        // is the kind of edit users repeat interactively). If the index no longer
+        // exists, cad-server's own range check rejects it and that surfaces here as a
+        // normal feature.error, same as any other failed op — not something silently
+        // worked around.
+        case 'directEdit': {
+          if (!currentBody?.shapeId) {
+            recordError('Direct edit skipped: the current body has no modeling-engine shape')
+            break
+          }
+          const p = feature.parameters
+          const faceIndices = subShapeIndicesFromIds(p.faceId ? [p.faceId] : [], currentBody.id, 'face')
+          if (faceIndices.length === 0) {
+            recordError('Direct edit skipped: no face selected')
+            break
+          }
+          const distance = p.distance ?? 0
+          try {
+            const result = await cadSolverClient.directEdit({ shapeId: currentBody.shapeId, faceIndex: faceIndices[0], distance })
+            currentBody = applyBody(parts, currentBody, { ...currentBody, ...shapeResultToPartFields(result) })
+          } catch (error) {
+            recordError('Direct edit failed', error)
+          }
+          break
+        }
       }
     }
     
@@ -2140,7 +2433,201 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
     })
   },
-  
+
+  createAssembly: (name) => {
+    const id = generateId()
+    set(state => {
+      if (!state.document) return state
+      return {
+        document: { ...state.document, assemblies: [...state.document.assemblies, { id, name, instances: [], mates: [] }] },
+        isDirty: true,
+      }
+    })
+    return id
+  },
+
+  deleteAssembly: (assemblyId) => {
+    set(state => {
+      if (!state.document) return state
+      return {
+        document: { ...state.document, assemblies: state.document.assemblies.filter(a => a.id !== assemblyId) },
+        isDirty: true,
+      }
+    })
+  },
+
+  addAssemblyInstance: (assemblyId, partStudioId, partId) => {
+    const { document } = get()
+    const partStudio = document?.partStudios.find(ps => ps.id === partStudioId)
+    const part = partStudio?.parts.find(p => p.id === partId)
+    if (!part) return null
+
+    const id = generateId()
+    set(state => {
+      if (!state.document) return state
+      const assemblies = state.document.assemblies.map(a =>
+        a.id === assemblyId
+          ? { ...a, instances: [...a.instances, { id, name: part.name, partId, transform: identityTransform(), visible: true }] }
+          : a
+      )
+      return { document: { ...state.document, assemblies }, isDirty: true }
+    })
+    return id
+  },
+
+  deleteAssemblyInstance: (assemblyId, instanceId) => {
+    set(state => {
+      if (!state.document) return state
+      const assemblies = state.document.assemblies.map(a =>
+        a.id === assemblyId
+          ? {
+              ...a,
+              instances: a.instances.filter(i => i.id !== instanceId),
+              // A mate referencing a deleted instance can't be resolved any more.
+              mates: a.mates.filter(m => m.movingInstanceId !== instanceId && m.targetInstanceId !== instanceId),
+            }
+          : a
+      )
+      return { document: { ...state.document, assemblies }, isDirty: true }
+    })
+  },
+
+  updateInstanceTransform: (assemblyId, instanceId, transform) => {
+    set(state => {
+      if (!state.document) return state
+      const assemblies = state.document.assemblies.map(a =>
+        a.id === assemblyId
+          ? { ...a, instances: a.instances.map(i => (i.id === instanceId ? { ...i, transform } : i)) }
+          : a
+      )
+      return { document: { ...state.document, assemblies }, isDirty: true }
+    })
+  },
+
+  addMate: (assemblyId, mateInput) => {
+    const { document } = get()
+    const assembly = document?.assemblies.find(a => a.id === assemblyId)
+    const movingInstance = assembly?.instances.find(i => i.id === mateInput.movingInstanceId)
+    const targetInstance = assembly?.instances.find(i => i.id === mateInput.targetInstanceId)
+    if (!assembly || !movingInstance || !targetInstance) return
+
+    // Faces live on the Part each instance references, not the instance itself — find
+    // both parts across every part studio (an assembly can combine bodies from any of them).
+    const findPart = (partId: string) => {
+      for (const ps of document!.partStudios) {
+        const part = ps.parts.find(p => p.id === partId)
+        if (part) return part
+      }
+      return undefined
+    }
+    const movingPart = findPart(movingInstance.partId)
+    const targetPart = findPart(targetInstance.partId)
+    const movingFaceIndex = subShapeIndicesFromIds([mateInput.movingFaceId], movingInstance.partId, 'face')[0]
+    const targetFaceIndex = subShapeIndicesFromIds([mateInput.targetFaceId], targetInstance.partId, 'face')[0]
+    const movingFace = movingFaceIndex !== undefined ? movingPart?.faces?.[movingFaceIndex] : undefined
+    const targetFace = targetFaceIndex !== undefined ? targetPart?.faces?.[targetFaceIndex] : undefined
+    if (!movingFace || !targetFace) return
+
+    // The target face's world position/normal is its own local data carried through the
+    // TARGET instance's current transform (the target instance is the fixed reference
+    // for this mate — see addMate's own doc comment on movingInstanceId).
+    const targetWorldCentroid = transformPoint(targetInstance.transform, targetFace.centroid as Vec3)
+    const targetWorldNormal = transformDirection(targetInstance.transform, targetFace.normal as Vec3)
+    const requiredWorldNormal: Vec3 = [-targetWorldNormal[0], -targetWorldNormal[1], -targetWorldNormal[2]]
+    const requiredWorldCentroid: Vec3 = [
+      targetWorldCentroid[0] + targetWorldNormal[0] * mateInput.offset,
+      targetWorldCentroid[1] + targetWorldNormal[1] * mateInput.offset,
+      targetWorldCentroid[2] + targetWorldNormal[2] * mateInput.offset,
+    ]
+
+    const newTransform = solveFaceMateTransform(
+      movingFace.centroid as Vec3, movingFace.normal as Vec3,
+      requiredWorldCentroid, requiredWorldNormal
+    )
+
+    const id = generateId()
+    set(state => {
+      if (!state.document) return state
+      const assemblies = state.document.assemblies.map(a =>
+        a.id === assemblyId
+          ? {
+              ...a,
+              mates: [...a.mates, { ...mateInput, id }],
+              instances: a.instances.map(i => (i.id === mateInput.movingInstanceId ? { ...i, transform: newTransform } : i)),
+            }
+          : a
+      )
+      return { document: { ...state.document, assemblies }, isDirty: true }
+    })
+  },
+
+  deleteMate: (assemblyId, mateId) => {
+    set(state => {
+      if (!state.document) return state
+      const assemblies = state.document.assemblies.map(a =>
+        a.id === assemblyId ? { ...a, mates: a.mates.filter(m => m.id !== mateId) } : a
+      )
+      return { document: { ...state.document, assemblies }, isDirty: true }
+    })
+  },
+
+  createDrawingSheet: (partStudioId, name) => {
+    const id = generateId()
+    set(state => {
+      if (!state.document) return state
+      const sheet: DrawingSheet = {
+        id, name, partStudioId,
+        views: [{ id: generateId(), direction: 'iso', origin: { x: 0, y: 0 }, scale: 1 }],
+      }
+      return { document: { ...state.document, drawings: [...state.document.drawings, sheet] }, isDirty: true }
+    })
+    return id
+  },
+
+  deleteDrawingSheet: (sheetId) => {
+    set(state => {
+      if (!state.document) return state
+      return { document: { ...state.document, drawings: state.document.drawings.filter(d => d.id !== sheetId) }, isDirty: true }
+    })
+  },
+
+  addDrawingView: (sheetId, direction) => {
+    set(state => {
+      if (!state.document) return state
+      const drawings = state.document.drawings.map(sheet => {
+        if (sheet.id !== sheetId) return sheet
+        // Simple auto-layout: place each new view to the right of the last one so views
+        // never start out stacked on top of each other.
+        const lastOrigin = sheet.views[sheet.views.length - 1]?.origin ?? { x: -220, y: 0 }
+        const view: DrawingView = { id: generateId(), direction, origin: { x: lastOrigin.x + 220, y: lastOrigin.y }, scale: 1 }
+        return { ...sheet, views: [...sheet.views, view] }
+      })
+      return { document: { ...state.document, drawings }, isDirty: true }
+    })
+  },
+
+  updateDrawingView: (sheetId, viewId, updates) => {
+    set(state => {
+      if (!state.document) return state
+      const drawings = state.document.drawings.map(sheet =>
+        sheet.id === sheetId
+          ? { ...sheet, views: sheet.views.map(v => (v.id === viewId ? { ...v, ...updates } : v)) }
+          : sheet
+      )
+      return { document: { ...state.document, drawings }, isDirty: true }
+    })
+  },
+
+  deleteDrawingView: (sheetId, viewId) => {
+    set(state => {
+      if (!state.document) return state
+      const drawings = state.document.drawings.map(sheet =>
+        sheet.id === sheetId ? { ...sheet, views: sheet.views.filter(v => v.id !== viewId) } : sheet
+      )
+      return { document: { ...state.document, drawings }, isDirty: true }
+    })
+  },
+
   importSTLPart: async (partStudioId, name, mesh) => {
     const partId = generateId()
     const featureId = generateId()
@@ -2188,7 +2675,73 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
     })
   },
-  
+
+  importStepPart: async (partStudioId, name, fileContentBase64, format) => {
+    let results: CadShapeResult[] = []
+    let error: string | undefined
+    try {
+      results = await cadSolverClient.importStep({ fileContent: fileContentBase64, format })
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err)
+      console.error('STEP/IGES import failed:', err)
+    }
+
+    set(state => {
+      if (!state.document) return state
+
+      const partStudios = state.document.partStudios.map(ps => {
+        if (ps.id !== partStudioId) return ps
+
+        // Unlike importSTLPart, there's no raw-mesh fallback to keep on failure — a
+        // STEP/IGES import either yields real B-rep solids or nothing usable at all.
+        // Still record the attempt as a visible failed feature, matching how every
+        // other op surfaces failure (feature.error), rather than failing silently.
+        if (error || results.length === 0) {
+          return {
+            ...ps,
+            features: [...ps.features, {
+              id: generateId(),
+              type: 'import',
+              name: `Imported: ${name}`,
+              suppressed: false,
+              parameters: { filename: name },
+              error: error || 'File contained no usable geometry',
+            }],
+          }
+        }
+
+        const newFeatures: Feature[] = []
+        const newParts: Part[] = []
+        results.forEach((result, i) => {
+          const partId = generateId()
+          // A multi-solid file becomes N independent parts (no assembly concept yet
+          // to group them under) — number them so they're distinguishable in the tree.
+          const partName = results.length > 1 ? `${name} (${i + 1})` : name
+          newFeatures.push({
+            id: generateId(),
+            type: 'import',
+            name: `Imported: ${partName}`,
+            suppressed: false,
+            parameters: { filename: name, partId },
+          })
+          newParts.push({
+            id: partId,
+            name: partName,
+            color: '#6b7280',
+            ...shapeResultToPartFields(result),
+          })
+        })
+
+        return { ...ps, features: [...ps.features, ...newFeatures], parts: [...ps.parts, ...newParts] }
+      })
+
+      return {
+        document: { ...state.document, partStudios },
+        isDirty: true
+      }
+    })
+  },
+
   updateDocumentName: (name: string) => {
     set(state => {
       if (!state.document) return state
