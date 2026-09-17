@@ -7,7 +7,7 @@ attribution and packages/cad-server/README.md for how to run this.
 
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import freecad_ops, shape_store
@@ -16,6 +16,7 @@ from .schemas import (
     BooleanRequest,
     ChamferRequest,
     CircularPatternRequest,
+    ExportRequest,
     ExtrudeRequest,
     FilletRequest,
     LinearPatternRequest,
@@ -26,9 +27,16 @@ from .schemas import (
     RevolveRequest,
     ShapeResult,
     ShellRequest,
+    StepImportRequest,
     SweepRequest,
     TessellateRequest,
 )
+
+_EXPORT_MEDIA_TYPE = {
+    "step": "application/step",
+    "iges": "model/iges",
+    "brep": "application/octet-stream",
+}
 
 app = FastAPI(title="FEAI Modeling Engine")
 
@@ -126,6 +134,42 @@ def import_mesh(req: MeshImportRequest) -> ShapeResult:
     # A mesh-derived solid has one straight edge per triangle edge, so 2 points each
     # keeps the edge payload from exploding on large STLs.
     return _run(lambda: freecad_ops.do_import_mesh(req), edge_points=2)
+
+
+@app.post("/import/step", response_model=list[ShapeResult])
+def import_step(req: StepImportRequest) -> list[ShapeResult]:
+    # A real deviation from _run()'s one-shape-in-one-shape-out contract: a STEP/IGES
+    # file can contain multiple independent solids, so this returns one ShapeResult per
+    # top-level solid instead of routing through _run().
+    try:
+        solids = freecad_ops.do_import_step(req)
+    except GeometryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        # The first endpoint parsing an arbitrary externally-authored file — anything
+        # unexpected from FreeCAD/OCC's parser is a bad file, not a server bug, so it's
+        # reported as 400 here rather than escaping as a bare 500 the way _run() still
+        # would for other ops (see do_import_step's docstring for why this endpoint
+        # specifically gets the broader net).
+        raise HTTPException(status_code=400, detail=f"Could not import file: {exc}") from exc
+    return [freecad_ops.shape_to_result(s) for s in solids]
+
+
+@app.post("/export")
+def export_shape(req: ExportRequest) -> Response:
+    try:
+        data, filename = freecad_ops.do_export(req)
+    except GeometryError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Export failed: {exc}") from exc
+    return Response(
+        content=data,
+        media_type=_EXPORT_MEDIA_TYPE.get(req.format, "application/octet-stream"),
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/shapes/{shape_id}/tessellate", response_model=ShapeResult)

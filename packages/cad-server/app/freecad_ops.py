@@ -8,7 +8,10 @@ tessellating the result and registering it in shape_store so later requests (a b
 against this body, a fillet on its edges) can reference it by shapeId.
 """
 
+import base64
 import math
+import os
+import tempfile
 from typing import Any
 
 import FreeCAD
@@ -22,6 +25,7 @@ from .schemas import (
     ChamferRequest,
     CircularPatternRequest,
     EdgePolyline,
+    ExportRequest,
     ExtrudeRequest,
     FaceInfo,
     FilletRequest,
@@ -38,6 +42,7 @@ from .schemas import (
     RevolveRequest,
     ShapeResult,
     ShellRequest,
+    StepImportRequest,
     SweepRequest,
     VertexInfo,
 )
@@ -442,6 +447,104 @@ def do_import_mesh(req: MeshImportRequest) -> Part.Shape:
     if solid.Volume <= 0:
         raise GeometryError("Mesh is not a closed volume; cannot make a solid")
     return solid
+
+
+_STEP_IMPORT_SUFFIX = {"step": ".step", "iges": ".iges"}
+_EXPORT_SUFFIX = {"step": ".step", "iges": ".iges", "brep": ".brep"}
+
+
+def do_import_step(req: StepImportRequest) -> list[Part.Shape]:
+    """Reads a STEP/IGES file into one or more solids. A file can contain multiple
+    independent solids (an "assembly" in the loose sense); since cad-server has no
+    assembly concept yet, each top-level solid is returned as its own shape rather than
+    kept as a single multi-solid compound — the caller (documentStore.ts) maps this list
+    onto N independent parts, same as it would N separately-created bodies.
+
+    This is the first place cad-server parses an arbitrary externally-authored file, so
+    failures here are treated as expected/likely, not exceptional — malformed input is
+    reported with a clear GeometryError (→ 400) rather than left to escape as a bare 500.
+    """
+    try:
+        raw = base64.b64decode(req.fileContent, validate=True)
+    except Exception as exc:
+        raise GeometryError(f"fileContent is not valid base64: {exc}") from exc
+
+    suffix = _STEP_IMPORT_SUFFIX.get(req.format, ".step")
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(raw)
+            tmp_path = tmp.name
+        shape = Part.Shape()
+        # Part.Shape.read() takes a filesystem path, not raw bytes — hence the temp file
+        # round-trip (matches the existing do_export below, and do_import_mesh's
+        # in-memory equivalent for a plain triangle mesh, which needs no such file).
+        shape.read(tmp_path)
+    except GeometryError:
+        raise
+    except Exception as exc:
+        raise GeometryError(f"Could not read {req.format.upper()} file: {exc}") from exc
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    if shape is None or shape.isNull():
+        raise GeometryError(f"{req.format.upper()} file contained no usable geometry")
+    solids = list(shape.Solids)
+    if not solids and shape.Faces:
+        # Confirmed against a real FreeCAD 1.1.3 build: IGES specifically (unlike STEP)
+        # round-trips as a bag of faces with shape.Solids == [] even for a shape that was
+        # a genuine solid before export — IGES is historically a surface-exchange format
+        # and doesn't carry the same manifold-solid metadata STEP's AP203/214 does. Heal
+        # it the same way do_import_mesh already heals a raw triangle mesh: try to build
+        # a real Solid from the face soup rather than giving up immediately.
+        try:
+            healed = Part.makeSolid(shape)
+            if not healed.isNull() and healed.Volume > 0:
+                solids = [healed]
+        except Exception:
+            pass
+    if not solids:
+        raise GeometryError(
+            f"{req.format.upper()} file has no solids — surfaces/wires-only files aren't supported yet"
+        )
+    return solids
+
+
+def do_export(req: ExportRequest) -> tuple[bytes, str]:
+    """Exports a stored shape to STEP/IGES/BREP bytes, for the caller to hand back to the
+    browser as a file download. Same temp-file round-trip as do_import_step, for the same
+    reason (FreeCAD's export methods take a path, not returning bytes directly)."""
+    shape = shape_store.get(req.shapeId)
+    suffix = _EXPORT_SUFFIX.get(req.format, ".step")
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp_path = tmp.name
+        if req.format == "step":
+            shape.exportStep(tmp_path)
+        elif req.format == "iges":
+            shape.exportIges(tmp_path)
+        elif req.format == "brep":
+            shape.exportBrep(tmp_path)
+        else:
+            raise GeometryError(f"Unsupported export format: {req.format}")
+        with open(tmp_path, "rb") as f:
+            data = f.read()
+    except GeometryError:
+        raise
+    except Exception as exc:
+        raise GeometryError(f"Export to {req.format.upper()} failed: {exc}") from exc
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+    return data, f"shape{suffix}"
 
 
 # ============================================================================

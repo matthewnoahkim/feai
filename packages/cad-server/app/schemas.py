@@ -205,3 +205,13 @@ class ShellRequest(BaseModel):
     # edgeIndices, this is NOT shorthand for "all faces" either — see _selected_faces.
     faceIndices: list[int]
     thickness: float
+
+
+class StepImportRequest(BaseModel):
+    fileContent: str  # base64-encoded file bytes (not a data: URL — no mime prefix)
+    format: Literal["step", "iges"] = "step"
+
+
+class ExportRequest(BaseModel):
+    shapeId: str
+    format: Literal["step", "iges", "brep"] = "step"
