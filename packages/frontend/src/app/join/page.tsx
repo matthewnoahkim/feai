@@ -8,19 +8,19 @@ const ROLES = [
   {
     index: '01',
     title: 'Software & Systems Engineering',
-    body: 'The modeling kernel wrapper, the feature-tree editor, the real-time viewport, and the plumbing that turns a chat message into a B-rep operation. TypeScript/React on the front end, Python around FreeCAD on the back end.',
+    body: 'Build the systems behind FEAI: the geometry kernel integration, feature tree, 3D viewport, APIs, and everything that turns a user request into an actual modeling operation. The frontend is built with TypeScript, React, and Three.js. The backend uses Python, FastAPI, and FreeCAD.',
     tags: ['TYPESCRIPT', 'PYTHON', 'THREE.JS', 'FASTAPI'],
   },
   {
     index: '02',
     title: 'Mechanical & Simulation Engineering',
-    body: "Meshing, boundary conditions, materials, solvers — and the judgment to know when a result is right. You'll shape what \"analysis\" means in a tool built on a real B-rep kernel, not a mesh approximation.",
+    body: "Work on the engineering side of FEAI: meshing, boundary conditions, materials, solvers, and validation. We want analyses that are not only easy to set up, but also physically correct. You’ll help us improve the solver workflow, test results against known problems, and make FEAI something engineers can trust.",
     tags: ['FEA', 'MESHING', 'MATERIALS', 'VALIDATION'],
   },
   {
     index: '03',
     title: 'Research — ML & Numerical Methods',
-    body: 'Grounding a language model in tools it can\'t hallucinate past: constrained action spaces, geometry-aware assistants, surrogate models that estimate a result before a full solve runs.',
+    body: 'Explore better ways to use machine learning in engineering software. That could mean building assistants that understand geometry and simulation tools, limiting AI actions to physically meaningful operations, or developing fast models that can estimate results before running a full simulation.',
     tags: ['LLM GROUNDING', 'SURROGATE MODELS', 'CONSTRAINT SOLVING'],
   },
 ];
@@ -38,13 +38,12 @@ export default function JoinPage() {
           <Reveal>
             <p className="l-eyebrow mb-4">Join us</p>
             <h1 className="mb-6 max-w-3xl text-4xl font-light leading-[1.08] tracking-tight sm:text-5xl">
-              Real kernel. Real solver. <span className="font-semibold" style={{ color: 'var(--l-accent)' }}>Real work.</span>
+              Help us build <span className="font-semibold" style={{ color: 'var(--l-accent)' }}>FEAI.</span>
             </h1>
             <p className="mb-16 max-w-2xl text-base leading-relaxed sm:text-lg" style={{ color: 'var(--l-muted)' }}>
-              FEAI is built on a true B-rep modeling kernel and deterministic finite element
-              solvers — the assistant grounds language in that, it doesn't replace it. If you'd
-              rather work on real geometry and real physics than another chatbot wrapper, we want
-              to hear from you.
+              We're a small team building a new kind of engineering tool. If you want to work on the
+              intersection of CAD, simulation, and AI, we want to hear from you. We're looking for
+              engineers and researchers who can help us build a tool that is both powerful and easy to use.  
             </p>
           </Reveal>
 
@@ -67,12 +66,10 @@ export default function JoinPage() {
             <TiltCard className="tech-frame p-8 text-center" maxTilt={3}>
               <p className="l-eyebrow mb-4">How to apply</p>
               <h2 className="mx-auto mb-5 max-w-xl text-2xl font-light tracking-tight sm:text-3xl">
-                No portal, no ATS. Just tell us what you'd want to build.
+                Tell us what you’d like to work on.
               </h2>
               <p className="mx-auto mb-8 max-w-lg text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>
-                Send a note with your background and a link to work you're proud of — code,
-                papers, a CAD model, anything real. We're a small team early on, so this is a
-                direct line, not a form disappearing into a queue.
+                Send us a short note about yourself and a link to something you’ve built or worked on—code, research, a CAD model, or anything else you’re proud of. We’re a small team, so there’s no application portal or long hiring process. Just send us an email and tell us what interests you.
               </p>
               <a href={MAILTO} className="l-btn l-btn-primary">Email matthew@feai.app <span aria-hidden>→</span></a>
             </TiltCard>
