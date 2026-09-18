@@ -342,6 +342,10 @@ async function executePrimitive(
   let featureParams: any = {}
   let featureName = ''
   
+  // Endpoint-specific checks come before the loose body-shape fallbacks: `body.radius`
+  // is set for spheres and cones too, so with the fallbacks checked first a sphere/cone
+  // request always matched the cylinder branch above them and those two branches were
+  // never actually reachable.
   if (endpoint.includes('/box') || body.width !== undefined) {
     // Box primitive - uses extrude with width/height/depth fallback
     const width = body.width || 50
@@ -355,6 +359,33 @@ async function executePrimitive(
       depth1: depth,
       operation: 'new'
     }
+  } else if (endpoint.includes('/sphere')) {
+    // Sphere primitive. `primitiveType` tells regenerateModel's revolve case (which this
+    // still round-trips through, so it stays a real/editable feature-tree entry) to ask
+    // cad-server for its native sphere rather than the generic cylinder it falls back to
+    // when there's no sketch profile - which a primitive request never has.
+    const radius = body.radius || (body.diameter ? body.diameter / 2 : 25)
+    featureName = `Sphere R${radius}`
+    featureType = 'revolve'
+    featureParams = {
+      radius,
+      primitiveType: 'sphere',
+      operation: 'new'
+    }
+  } else if (endpoint.includes('/cone')) {
+    // Cone primitive - same reasoning as sphere above.
+    const baseRadius = body.baseRadius || 25
+    const topRadius = body.topRadius || 0
+    const height = body.height || 50
+    featureName = `Cone R${baseRadius} H${height}`
+    featureType = 'revolve'
+    featureParams = {
+      radius: baseRadius,
+      radius2: topRadius,
+      height,
+      primitiveType: 'cone',
+      operation: 'new'
+    }
   } else if (endpoint.includes('/cylinder') || body.radius !== undefined) {
     // Cylinder primitive - uses revolve with radius/height fallback
     const radius = body.radius || (body.diameter ? body.diameter / 2 : 25)
@@ -363,28 +394,6 @@ async function executePrimitive(
     featureType = 'revolve'
     featureParams = {
       radius,
-      height,
-      operation: 'new'
-    }
-  } else if (endpoint.includes('/sphere')) {
-    // Sphere primitive
-    const radius = body.radius || 25
-    featureName = `Sphere R${radius}`
-    featureType = 'revolve'
-    featureParams = {
-      radius,
-      height: radius * 2,
-      operation: 'new'
-    }
-  } else if (endpoint.includes('/cone')) {
-    // Cone primitive
-    const baseRadius = body.baseRadius || 25
-    const topRadius = body.topRadius || 0
-    const height = body.height || 50
-    featureName = `Cone R${baseRadius} H${height}`
-    featureType = 'revolve'
-    featureParams = {
-      radius: baseRadius,
       height,
       operation: 'new'
     }

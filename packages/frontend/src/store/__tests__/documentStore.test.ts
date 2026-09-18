@@ -93,6 +93,53 @@ test('extrude with no sketch falls back to a box and stores shapeId, edges and m
   expect(studio().features[0].error).toBeUndefined();
 });
 
+test('revolving a semicircle 360° falls back to a native sphere, not the generic cylinder', async () => {
+  client.makePrimitive.mockResolvedValue(shapeResult('sphere', 65450));
+  seed([]);
+
+  const sketch = await useDocumentStore.getState().createSketch('ps', 'front');
+  const entityId = useDocumentStore.getState().addSketchEntity(sketch!.id, {
+    type: 'arc',
+    construction: false,
+    data: { center: { x: 0, y: 0 }, radius: 25, startAngle: -Math.PI / 2, endAngle: Math.PI / 2 },
+  });
+  await useDocumentStore.getState().addFeature('ps', {
+    type: 'revolve', name: 'Revolve 360°', suppressed: false,
+    parameters: { sketchId: sketch!.id, profileId: entityId, angle: 360, axisId: 'y-axis' },
+  });
+
+  // toCadProfile has no case for 'arc', so the real /revolve endpoint is never a valid
+  // call here - this must go through the sphere fallback, not silently through revolve.
+  expect(client.revolve).not.toHaveBeenCalled();
+  expect(client.makePrimitive).toHaveBeenCalledWith({ type: 'sphere', params: { radius: 25 } });
+  expect(studio().parts[0].shapeId).toBe('sphere');
+});
+
+test('an explicit primitiveType shortcut (no sketch at all) picks the matching primitive', async () => {
+  seed([]);
+  client.makePrimitive.mockResolvedValue(shapeResult('cone', 500));
+  await useDocumentStore.getState().addFeature('ps', {
+    type: 'revolve', name: 'Cone', suppressed: false,
+    parameters: { primitiveType: 'cone', radius: 20, radius2: 5, height: 40 },
+  });
+  expect(client.makePrimitive).toHaveBeenCalledWith({ type: 'cone', params: { radius1: 20, radius2: 5, height: 40 } });
+});
+
+test('a non-semicircular arc (no primitiveType, no valid profile) still falls back to a cylinder', async () => {
+  seed([]);
+  const sketch = await useDocumentStore.getState().createSketch('ps', 'front');
+  const entityId = useDocumentStore.getState().addSketchEntity(sketch!.id, {
+    type: 'arc',
+    construction: false,
+    data: { center: { x: 0, y: 0 }, radius: 25, startAngle: 0, endAngle: Math.PI / 4 }, // 45°, not a semicircle
+  });
+  await useDocumentStore.getState().addFeature('ps', {
+    type: 'revolve', name: 'Revolve', suppressed: false,
+    parameters: { sketchId: sketch!.id, profileId: entityId, angle: 360 },
+  });
+  expect(client.makePrimitive).toHaveBeenCalledWith({ type: 'cylinder', params: { radius: 15, height: 30 } });
+});
+
 test('body ids derive from the creating feature so picked edge ids survive a regenerate', async () => {
   seed([feature('f1', 'extrude', {})]);
   await regenerate();

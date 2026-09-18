@@ -493,6 +493,34 @@ function toCadProfile(entity: SketchEntity): CadProfileEntity | null {
   return null
 }
 
+/** Revolving a semicircular arc 360° around its own diameter is the standard way to build
+ * a sphere by hand in a real CAD tool, and it's what the chat assistant does too since it's
+ * not told about a "sphere" action - but toCadProfile can't turn a bare arc into a
+ * ProfileEntity (that type only covers rectangle/circle/polygon; see cad-server's
+ * schemas.py), so the revolve below always fell through to its generic cylinder fallback
+ * regardless of the arc's own radius. Recognizing this specific, extremely common
+ * construction and asking the kernel for its native sphere primitive instead is far more
+ * useful than a fixed-size cylinder no matter what was actually sketched. A non-360 revolve
+ * of a semicircle (a dome/bowl) or a non-semicircular arc still isn't a real profile the
+ * kernel understands - true arbitrary arc-profile revolution needs actual geometry support
+ * added to cad-server, not just this heuristic. */
+function sphereRadiusFromSemicircleRevolve(
+  entity: SketchEntity | undefined,
+  revolveAngleDegrees: number
+): number | null {
+  if (!entity || entity.type !== 'arc') return null
+  if (Math.abs(revolveAngleDegrees - 360) > 1) return null
+
+  const { startAngle, endAngle, radius } = entity.data
+  if (typeof radius !== 'number' || typeof startAngle !== 'number' || typeof endAngle !== 'number') return null
+
+  let span = Math.abs(endAngle - startAngle) % (Math.PI * 2)
+  if (span > Math.PI) span = Math.PI * 2 - span
+  const isSemicircle = Math.abs(span - Math.PI) < (Math.PI / 180) * 3 // within 3 degrees
+
+  return isSemicircle ? radius : null
+}
+
 function toCadPath(entity: SketchEntity): { type: 'line' | 'arc'; data: Record<string, any> } | null {
   if (entity.type === 'line' || entity.type === 'arc') {
     return { type: entity.type, data: entity.data }
@@ -2103,7 +2131,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           const entity = sketch
             ? (profileId
                 ? sketch.entities.find(e => e.id === profileId)
-                : sketch.entities.find(e => e.type === 'rectangle' || e.type === 'circle' || e.type === 'polygon'))
+                // 'arc' is included here (not just in the explicit-profileId lookup above)
+                // so a semicircle sketched without an accompanying profileId can still be
+                // picked up by sphereRadiusFromSemicircleRevolve below instead of silently
+                // falling back to a generic cylinder.
+                : sketch.entities.find(e => e.type === 'rectangle' || e.type === 'circle' || e.type === 'polygon' || e.type === 'arc'))
             : undefined
           const profile = entity ? toCadProfile(entity) : null
           const axis = resolveRevolveAxis(revolveParams.axisId, sketch, partStudio)
@@ -2124,12 +2156,34 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           }
 
           if (!result) {
-            // Fallback: no sketch profile found - revolve a default cylinder
+            // No sketch profile the kernel understands (see toCadProfile) - fall back to
+            // a native primitive. Prefer an explicit primitiveType (set by cadExecutor's
+            // sphere/cone shortcuts, which never have a sketch at all) over guessing, then
+            // check for the semicircle-revolve-360 = sphere pattern, and only default to a
+            // generic cylinder if neither applies.
+            const sphereRadius = sphereRadiusFromSemicircleRevolve(entity, revolveParams.angle)
             try {
-              result = await cadSolverClient.makePrimitive({
-                type: 'cylinder',
-                params: { radius: featureParams.radius || 15, height: featureParams.height || 30 }
-              })
+              if (featureParams.primitiveType === 'sphere') {
+                result = await cadSolverClient.makePrimitive({
+                  type: 'sphere',
+                  params: { radius: featureParams.radius || 15 }
+                })
+              } else if (featureParams.primitiveType === 'cone') {
+                result = await cadSolverClient.makePrimitive({
+                  type: 'cone',
+                  params: { radius1: featureParams.radius || 15, radius2: featureParams.radius2 || 0, height: featureParams.height || 30 }
+                })
+              } else if (sphereRadius != null) {
+                result = await cadSolverClient.makePrimitive({
+                  type: 'sphere',
+                  params: { radius: sphereRadius }
+                })
+              } else {
+                result = await cadSolverClient.makePrimitive({
+                  type: 'cylinder',
+                  params: { radius: featureParams.radius || 15, height: featureParams.height || 30 }
+                })
+              }
             } catch (error) {
               recordError('Revolve failed', error)
               break

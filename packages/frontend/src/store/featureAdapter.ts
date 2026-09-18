@@ -51,10 +51,13 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
     },
   },
   {
-    type: 'revolve', status: 'live', summary: 'Revolve a closed profile about an axis (also used for cylinder/sphere/cone primitives: omit sketchId and pass radius/height).',
+    type: 'revolve', status: 'live', summary: "Revolve a closed profile about an axis. Also used for cylinder/sphere/cone primitives - omit sketchId/profileId entirely and set primitiveType instead; a sphere just needs radius, a cylinder needs radius+height, a cone needs radius (base) + radius2 (top, 0 for a point) + height. Prefer this over sketching a profile by hand for a plain cylinder/sphere/cone.",
     params: {
       sketchId: '', profileId: 'entity id', axisId: "'x-axis' | 'y-axis' | 'z-axis' | id of a sketch line",
       angle: 'degrees (360 = full)', operation: "'new' | 'add' | 'remove' | 'intersect'",
+      primitiveType: "'cylinder' | 'sphere' | 'cone', only when sketchId is omitted",
+      radius: 'mm - required for the sphere/cylinder/cone shortcut', radius2: 'mm - cone top radius, 0 for a point',
+      height: 'mm - required for the cylinder/cone shortcut',
     },
   },
   {
