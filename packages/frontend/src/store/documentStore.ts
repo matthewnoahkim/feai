@@ -246,6 +246,7 @@ interface DocumentState {
   // Part operations
   updatePartMaterial: (partId: string, material: string) => void
   updatePartColor: (partId: string, color: string) => void
+  renamePart: (partId: string, name: string) => void
   regenerateModel: (partStudioId: string) => Promise<void>
 
   // Assembly operations — a real transform/mate model, but no DOF solver (see
@@ -1989,14 +1990,32 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   updatePartColor: (partId, color) => {
     set(state => {
       if (!state.document) return state
-      
+
       const partStudios = state.document.partStudios.map(ps => ({
         ...ps,
         parts: ps.parts.map(p =>
           p.id === partId ? { ...p, color } : p
         )
       }))
-      
+
+      return {
+        document: { ...state.document, partStudios },
+        isDirty: true
+      }
+    })
+  },
+
+  renamePart: (partId, name) => {
+    set(state => {
+      if (!state.document) return state
+
+      const partStudios = state.document.partStudios.map(ps => ({
+        ...ps,
+        parts: ps.parts.map(p =>
+          p.id === partId ? { ...p, name } : p
+        )
+      }))
+
       return {
         document: { ...state.document, partStudios },
         isDirty: true

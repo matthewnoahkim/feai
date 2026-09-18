@@ -14,7 +14,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useUIStore } from '../store/uiStore'
-import { useDocumentStore, Feature, Sketch } from '../store/documentStore'
+import { useDocumentStore, Feature, Sketch, Part } from '../store/documentStore'
 import {
   ChevronDown,
   ChevronRight,
@@ -33,6 +33,7 @@ import {
   Trash2,
   Edit3,
   Copy,
+  Move,
   ArrowUp,
   ArrowDown,
   AlertCircle,
@@ -49,6 +50,11 @@ import {
   Circle,
   CornerUpRight
 } from 'lucide-react'
+
+// Quick-assign palette for a part's viewport color (PartContextMenu) - default gray plus
+// a handful of distinguishable accents, deliberately small so it fits inline in the menu
+// rather than needing a full color picker.
+const PART_COLORS = ['#6b7280', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899']
 
 // Feature state types
 type FeatureState = 'normal' | 'error' | 'warning' | 'editing' | 'suppressed'
@@ -467,6 +473,137 @@ function FeatureContextMenu({
   )
 }
 
+// Part context menu - the "..." button (and right-click) on a Parts-section row. Mirrors
+// FeatureContextMenu's structure/styling; separate component because parts and features
+// support a different set of actions (a part has no "edit"/"suppress", but does have its
+// own rename and color, neither of which a feature has).
+function PartContextMenu({
+  part,
+  position,
+  onClose,
+  onRenameStart,
+}: {
+  part: Part
+  position: { x: number; y: number }
+  onClose: () => void
+  onRenameStart: () => void
+}) {
+  const { toggleBodyVisibility, updatePartColor } = useDocumentStore()
+  const { setSelection, enterTransformMode, openDialog, addNotification } = useUIStore()
+
+  const isHidden = part.visible === false
+
+  const selectThis = () => setSelection({ type: 'body', ids: [part.id] })
+
+  const handleToggleVisibility = () => {
+    toggleBodyVisibility(part.id)
+    addNotification('info', isHidden ? `Shown ${part.name}` : `Hidden ${part.name}`)
+    onClose()
+  }
+
+  const handleMove = () => {
+    selectThis()
+    enterTransformMode(part.id, 'move')
+    onClose()
+  }
+
+  const handleCopy = () => {
+    selectThis()
+    enterTransformMode(part.id, 'copy')
+    onClose()
+  }
+
+  const handleMirror = () => {
+    selectThis()
+    openDialog('mirror-feature')
+    onClose()
+  }
+
+  const handleLinearPattern = () => {
+    selectThis()
+    openDialog('linear-pattern')
+    onClose()
+  }
+
+  const handleCircularPattern = () => {
+    selectThis()
+    openDialog('circular-pattern')
+    onClose()
+  }
+
+  const menuItems = [
+    { id: 'rename', label: 'Rename', icon: <Pencil size={14} />, action: () => { onRenameStart(); onClose() }, shortcut: 'F2' },
+    {
+      id: 'visibility',
+      label: isHidden ? 'Show' : 'Hide',
+      icon: isHidden ? <Eye size={14} /> : <EyeOff size={14} />,
+      action: handleToggleVisibility,
+      shortcut: 'H',
+    },
+    { divider: true },
+    { id: 'move', label: 'Move', icon: <Move size={14} />, action: handleMove, shortcut: 'M' },
+    { id: 'copy', label: 'Copy', icon: <Copy size={14} />, action: handleCopy },
+    { id: 'mirror', label: 'Mirror', icon: <FlipHorizontal size={14} />, action: handleMirror },
+    { id: 'linearPattern', label: 'Linear Pattern', icon: <Grid3X3 size={14} />, action: handleLinearPattern },
+    { id: 'circularPattern', label: 'Circular Pattern', icon: <RotateCcw size={14} />, action: handleCircularPattern },
+  ]
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div
+        className="fixed bg-cad-panel border border-cad-border shadow-lg py-1 z-50 min-w-[180px] font-sans"
+        style={{ left: position.x, top: position.y }}
+      >
+        {/* Header showing part info */}
+        <div className="px-3 py-2 border-b border-cad-border">
+          <div className="flex items-center gap-2">
+            <Box size={16} className="text-cad-text-dim" />
+            <span className="text-sm font-medium truncate">{part.name}</span>
+          </div>
+        </div>
+
+        {/* Menu items */}
+        {menuItems.map((item, index) =>
+          item.divider ? (
+            <div key={index} className="h-px bg-cad-border my-1" />
+          ) : (
+            <button
+              key={item.id}
+              className="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-cad-text"
+              onClick={item.action}
+            >
+              <span className="w-4">{item.icon}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.shortcut && (
+                <span className="text-[10px] text-cad-text-dim">{item.shortcut}</span>
+              )}
+            </button>
+          )
+        )}
+
+        <div className="h-px bg-cad-border my-1" />
+
+        {/* Color swatches */}
+        <div className="px-3 py-2">
+          <div className="text-[10px] text-cad-text-dim uppercase tracking-wide mb-1.5">Color</div>
+          <div className="flex items-center gap-1.5">
+            {PART_COLORS.map(color => (
+              <button
+                key={color}
+                className={`w-5 h-5 rounded-full ${part.color === color ? 'ring-2 ring-cad-accent ring-offset-1' : 'border border-cad-border'}`}
+                style={{ backgroundColor: color }}
+                onClick={() => { updatePartColor(part.id, color); onClose() }}
+                title={color}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // Rollback bar component
 function RollbackBar({ 
   position, 
@@ -502,11 +639,12 @@ function RollbackBar({
 
 export function FeatureTree() {
   const { document } = useDocumentStore()
-  const { renameFeature, toggleFeatureSuppression, deleteFeature, reorderFeature, toggleBodyVisibility } = useDocumentStore()
+  const { renameFeature, renamePart, toggleFeatureSuppression, deleteFeature, reorderFeature, toggleBodyVisibility } = useDocumentStore()
   const { selection, setSelection, enterSketchMode, openDialog, openFeatureForEdit, addNotification, activeDialog, rollbackState, rollToFeature, rollToEnd } = useUIStore()
-  
+
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['root', 'origin']))
   const [contextMenu, setContextMenu] = useState<{ feature: Feature; partStudioId: string; position: { x: number; y: number } } | null>(null)
+  const [partContextMenu, setPartContextMenu] = useState<{ part: Part; position: { x: number; y: number } } | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [draggedFeature, setDraggedFeature] = useState<Feature | null>(null)
   const [rollbackPosition, setRollbackPosition] = useState<number | null>(null)
@@ -561,7 +699,15 @@ export function FeatureTree() {
     }
     setRenamingId(null)
   }
-  
+
+  const handleRenamePart = (partId: string, newName: string) => {
+    if (newName.trim()) {
+      renamePart(partId, newName.trim())
+      addNotification('info', `Renamed to "${newName.trim()}"`)
+    }
+    setRenamingId(null)
+  }
+
   const handleDragStart = (e: React.DragEvent, feature: Feature) => {
     setDraggedFeature(feature)
     e.dataTransfer.effectAllowed = 'move'
@@ -860,11 +1006,20 @@ export function FeatureTree() {
                           addNotification('info', `${part.name} is hidden. Click the eye icon to show it.`)
                         }
                       }}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        setSelection({ type: 'body', ids: [part.id] })
+                        setPartContextMenu({ part, position: { x: e.clientX, y: e.clientY } })
+                      }}
                       state={isHidden ? 'suppressed' : 'normal'}
+                      isRenaming={renamingId === part.id}
+                      onRenameStart={() => setRenamingId(part.id)}
+                      onRenameEnd={() => setRenamingId(null)}
+                      onRename={(newName) => handleRenamePart(part.id, newName)}
                       actions={
                         <div className="flex items-center gap-1">
                           {/* Visibility toggle with better feedback */}
-                          <button 
+                          <button
                             className="p-1 hover:bg-gray-50 rounded transition-colors"
                             onClick={(e) => {
                               e.stopPropagation()
@@ -878,14 +1033,14 @@ export function FeatureTree() {
                               <Eye size={14} className="text-cad-text" />
                             )}
                           </button>
-                          
+
                           {/* Part context menu */}
-                          <button 
+                          <button
                             className="p-1 hover:bg-gray-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={(e) => {
                               e.stopPropagation()
-                              // Future: Open part-specific context menu
-                              addNotification('info', 'Part options coming soon')
+                              setSelection({ type: 'body', ids: [part.id] })
+                              setPartContextMenu({ part, position: { x: e.clientX, y: e.clientY } })
                             }}
                             title="Part options"
                           >
@@ -949,6 +1104,16 @@ export function FeatureTree() {
           partStudioId={contextMenu.partStudioId}
           position={contextMenu.position}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Part context menu */}
+      {partContextMenu && (
+        <PartContextMenu
+          part={partContextMenu.part}
+          position={partContextMenu.position}
+          onClose={() => setPartContextMenu(null)}
+          onRenameStart={() => setRenamingId(partContextMenu.part.id)}
         />
       )}
     </div>

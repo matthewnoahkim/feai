@@ -154,10 +154,7 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
   
   // Check if we should dim the model in sketch mode
   const shouldDim = sketchMode !== null && viewSettings.dimModelInSketch
-  
-  // Don't render if hidden and not selected
-  if (isHidden && !isSelected) return null
-  
+
   // Create geometry from mesh data
   const geometry = useMemo(() => {
     if (!part.mesh) return null
@@ -217,8 +214,12 @@ function PartMesh({ part, isSelected }: { part: any; isSelected: boolean }) {
   const handlePointerOut = useCallback(() => {
     setHovered(null)
   }, [setHovered])
-  
-  if (!geometry) return null
+
+  // Don't render if hidden and not selected. Checked after every hook above (not before,
+  // like it used to be) - toggling visibility must not change how many hooks this
+  // component instance calls between renders, or React throws "Rendered fewer hooks than
+  // expected" (minified error #300) the moment a part is hidden/shown.
+  if ((isHidden && !isSelected) || !geometry) return null
   
   // Determine color and opacity for ghost preview and sketch dimming
   let color = part.color || '#6b7280'
