@@ -3,6 +3,7 @@
  */
 
 import { create } from 'zustand'
+import { DEFAULT_MODEL, type OpenAIModel } from '../services/chatService'
 
 export interface ChatSession {
   id: string
@@ -57,8 +58,7 @@ interface ChatState {
   context: ChatContext
   
   // Settings
-  apiKey: string | null
-  model: 'gpt-4' | 'gpt-4-turbo' | 'gpt-3.5-turbo'
+  model: OpenAIModel
   
   // Undo stack
   lastActionIds: string[]
@@ -86,8 +86,7 @@ interface ChatState {
   setIsExecuting: (isExecuting: boolean) => void
   
   updateContext: (context: Partial<ChatContext>) => void
-  setApiKey: (key: string) => void
-  setModel: (model: 'gpt-4' | 'gpt-4-turbo' | 'gpt-3.5-turbo') => void
+  setModel: (model: OpenAIModel) => void
   
   addToUndoStack: (actionId: string) => void
   popUndoStack: () => string | undefined
@@ -95,10 +94,6 @@ interface ChatState {
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
-
-// OpenAI API Key - loaded from environment variable
-// Use NEXT_PUBLIC_ prefix for client-side access in Next.js
-const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || ''
 
 const DEFAULT_CONTEXT: ChatContext = {
   documentId: null,
@@ -177,8 +172,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     isTyping: false,
     isExecuting: false,
     context: DEFAULT_CONTEXT,
-    apiKey: OPENAI_API_KEY,
-    model: 'gpt-4',
+    model: DEFAULT_MODEL,
     lastActionIds: [],
     
     // Load chats for a specific project
@@ -342,8 +336,6 @@ export const useChatStore = create<ChatState>((set, get) => {
         context: { ...state.context, ...context }
       }))
     },
-    
-    setApiKey: (apiKey) => set({ apiKey }),
     
     setModel: (model) => set({ model }),
     

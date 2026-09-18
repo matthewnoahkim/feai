@@ -5,6 +5,7 @@ export * from './fea';
 export * from './projects';
 export * from './folders';
 export * from './materials';
+export * from './assistant';
 export * from './auth';
 export * from './env';
 

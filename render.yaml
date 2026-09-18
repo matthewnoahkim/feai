@@ -26,3 +26,9 @@ services:
       # Set the real value in the Render dashboard; it is deliberately not committed.
       - key: CAD_ALLOWED_ORIGINS
         sync: false
+      # Shared secret with the Next.js frontend's /api/cad proxy (see
+      # packages/frontend/src/app/api/cad/[...path]/route.ts). Must match the
+      # CAD_SERVER_SECRET set in Vercel's project env vars for the frontend - generate one
+      # with `openssl rand -hex 32` and set the same value in both places.
+      - key: CAD_SERVER_SECRET
+        sync: false

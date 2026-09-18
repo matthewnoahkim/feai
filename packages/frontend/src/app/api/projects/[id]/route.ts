@@ -56,6 +56,16 @@ export async function PATCH(
     if (project.userId !== user.id) {
       return ApiErrors.forbidden();
     }
+
+    if (folderId != null) {
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
+      });
+      if (!folder || folder.userId !== user.id) {
+        return ApiErrors.badRequest('Folder not found or access denied.');
+      }
+    }
+
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: {

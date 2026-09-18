@@ -6,7 +6,7 @@ import { useCallback } from 'react'
 import { useChatStore, CadAction } from '../store/chatStore'
 import { useDocumentStore } from '../store/documentStore'
 import { useUIStore } from '../store/uiStore'
-import { callChatGPT, checkRateLimit } from '../services/chatService'
+import { requestAssistant, checkRateLimit } from '../services/chatService'
 import { executeActions, undoActions } from '../services/cadExecutor'
 
 export function useChatAssistant() {
@@ -15,7 +15,6 @@ export function useChatAssistant() {
     isOpen,
     isTyping,
     isExecuting,
-    apiKey,
     model,
     lastActionIds,
     addMessage,
@@ -26,7 +25,6 @@ export function useChatAssistant() {
     setIsTyping,
     setIsExecuting,
     updateContext,
-    setApiKey,
     addToUndoStack,
     popUndoStack
   } = useChatStore()
@@ -87,12 +85,11 @@ export function useChatAssistant() {
     setIsTyping(true)
     
     try {
-      // Call ChatGPT API
-      const response = await callChatGPT(
+      // Call the CAD Assistant (proxied server-side - see services/chatService.ts)
+      const response = await requestAssistant(
         text,
         messages,
         useChatStore.getState().context,
-        apiKey!,
         model
       )
       
@@ -144,7 +141,7 @@ export function useChatAssistant() {
       
       addNotification('error', `Chat error: ${errorMessage}`)
     }
-  }, [messages, apiKey, model, syncContext, addMessage, setIsTyping, addNotification])
+  }, [messages, model, syncContext, addMessage, setIsTyping, addNotification])
   
   /**
    * Execute actions from an assistant message
@@ -260,15 +257,13 @@ export function useChatAssistant() {
     isOpen,
     isTyping,
     isExecuting,
-    hasApiKey: !!apiKey,
     canUndo: lastActionIds.length > 0,
-    
+
     // Actions
     sendMessage,
     clearMessages,
     setIsOpen,
     toggleOpen,
-    setApiKey,
     undoLastAction,
     syncContext
   }

@@ -56,7 +56,6 @@ export function ChatPanel() {
     isOpen,
     isTyping,
     isExecuting,
-    hasApiKey,
     canUndo,
     sendMessage,
     clearMessages,
@@ -346,16 +345,16 @@ export function ChatPanel() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={hasApiKey ? "Describe what you want to create..." : "Add NEXT_PUBLIC_OPENAI_API_KEY to .env file"}
-          disabled={!hasApiKey || isTyping || isExecuting}
+          placeholder="Describe what you want to create..."
+          disabled={isTyping || isExecuting}
           rows={1}
           className="chat-input"
         />
         <button
           type="submit"
-          disabled={!input.trim() || !hasApiKey || isTyping || isExecuting}
+          disabled={!input.trim() || isTyping || isExecuting}
           className="chat-send-btn"
-          title={!hasApiKey ? "API key required" : "Send message"}
+          title="Send message"
         >
           {isTyping ? (
             <Loader2 size={18} className="animate-spin" />

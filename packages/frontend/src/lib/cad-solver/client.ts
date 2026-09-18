@@ -30,7 +30,11 @@ import type {
   TetrahedralMeshRequest,
 } from './types'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_CAD_API_URL || 'http://localhost:8000'
+// Proxied through our own Next.js server (app/api/cad/[...path]/route.ts) rather than
+// calling packages/cad-server directly - that route attaches the shared secret cad-server
+// requires and enforces login + rate limiting, none of which a direct browser call could
+// do without shipping the secret to the browser.
+const API_BASE_URL = '/api/cad'
 
 export class CadApiError extends Error {
   constructor(

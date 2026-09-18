@@ -7,8 +7,9 @@ attribution and packages/cad-server/README.md for how to run this.
 
 import os
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from . import freecad_ops, shape_store
 from .freecad_ops import GeometryError
@@ -53,6 +54,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Shared secret between this service and the Next.js frontend's /api/cad proxy (the only
+# intended caller - see packages/frontend/src/app/api/cad/[...path]/route.ts). CORS alone
+# only stops browser JS on other origins; it does nothing against a direct HTTP call, which
+# is how anyone with this service's URL could otherwise run (billed, single-instance)
+# FreeCAD operations for free. Enforced only when the env var is set, matching
+# CAD_ALLOWED_ORIGINS' "no setup needed for local dev" default above - set CAD_SERVER_SECRET
+# in the Render dashboard (and the matching value in Vercel) to actually turn this on.
+_CAD_SERVER_SECRET = os.environ.get("CAD_SERVER_SECRET", "")
+
+
+@app.middleware("http")
+async def _require_shared_secret(request: Request, call_next):
+    if _CAD_SERVER_SECRET and request.url.path != "/health":
+        if request.headers.get("x-cad-server-secret") != _CAD_SERVER_SECRET:
+            return JSONResponse(status_code=401, content={"detail": "Invalid or missing CAD server credentials"})
+    return await call_next(request)
 
 
 def _run(build_shape, edge_points: int = 16, tolerance: float = 0.5) -> ShapeResult:
