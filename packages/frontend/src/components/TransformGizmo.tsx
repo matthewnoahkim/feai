@@ -165,21 +165,17 @@ function RotationArc({ axis, color, onRotate }: RotationArcProps) {
 export function TransformGizmo() {
   const { transformState, setTransformTranslation, updatePreviewTransform } = useUIStore()
   const { document } = useDocumentStore()
-  
-  if (!transformState.isActive || !transformState.bodyId) return null
-  
+
   // Find the body to transform
   const body = React.useMemo(() => {
-    if (!document) return null
+    if (!document || !transformState.bodyId) return null
     for (const ps of document.partStudios) {
       const part = ps.parts.find(p => p.id === transformState.bodyId)
       if (part) return part
     }
     return null
   }, [document, transformState.bodyId])
-  
-  if (!body) return null
-  
+
   // Calculate gizmo position (center of body or use transform preview)
   const gizmoPosition: [number, number, number] = transformState.previewTransform?.position || [0, 0, 0]
   
@@ -200,7 +196,13 @@ export function TransformGizmo() {
   const handleRotate = useCallback((axis: 'x' | 'y' | 'z', angle: number) => {
     // Rotation handling would go here
   }, [])
-  
+
+  // Checked after every hook above (not before, like it used to be) - entering/exiting
+  // transform mode must not change how many hooks this component instance calls between
+  // renders, or React throws "Rendered fewer hooks than expected" (minified error #300)
+  // the moment Move/Copy is activated.
+  if (!transformState.isActive || !transformState.bodyId || !body) return null
+
   return (
     <group position={gizmoPosition}>
       {transformState.gizmoMode === 'translate' && (

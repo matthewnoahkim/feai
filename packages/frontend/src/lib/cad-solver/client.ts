@@ -181,5 +181,3 @@ export const cadSolverClient = {
   directEdit,
   tetrahedralMesh,
 }
-
-export default cadSolverClient

@@ -112,11 +112,6 @@ export const FEATURE_CATALOG: FeatureCatalogEntry[] = [
 /** Types the store handles that the assistant does not create directly. */
 const INTERNAL_TYPES = new Set(['import'])
 
-export function isKnownFeatureType(type: string): boolean {
-  const t = canonicalType(type)
-  return INTERNAL_TYPES.has(t) || FEATURE_CATALOG.some(f => f.type === t)
-}
-
 export function isLiveFeatureType(type: string): boolean {
   const t = canonicalType(type)
   return INTERNAL_TYPES.has(t) || FEATURE_CATALOG.some(f => f.type === t && f.status === 'live')

@@ -64,18 +64,6 @@ export const SELECTION_COLORS = {
   boxBorderCrossing: '#22c55e',
 }
 
-// Selection priority (lower = higher priority)
-export const SELECTION_PRIORITY: Record<SelectionType, number> = {
-  'vertex': 1,
-  'edge': 2,
-  'face': 3,
-  'sketch-entity': 4,
-  'body': 5,
-  'feature': 6,
-  'document': 7,
-  'none': 99,
-}
-
 interface SelectionManagerProps {
   children: React.ReactNode
   onSelectionChange?: (selection: { type: SelectionType; ids: string[] }) => void
@@ -453,84 +441,4 @@ export function SelectionManager({ children, onSelectionChange }: SelectionManag
   )
 }
 
-// Selection highlight component for 3D entities
-interface SelectionHighlightProps {
-  entityId: string
-  type: 'preselection' | 'selected'
-  children: React.ReactNode
-}
-
-export function SelectionHighlight({ entityId, type, children }: SelectionHighlightProps) {
-  const { selection, preselection } = useUIStore()
-  
-  const isPreselected = preselection === entityId
-  const isSelected = selection.ids.includes(entityId)
-  
-  // Determine highlight state
-  const highlightType = isSelected ? 'selected' : isPreselected ? 'preselection' : null
-  
-  if (!highlightType) return <>{children}</>
-  
-  return (
-    <div
-      className={`
-        ${highlightType === 'selected' ? 'ring-2 ring-cad-accent' : ''}
-        ${highlightType === 'preselection' ? 'ring-2 ring-amber-500' : ''}
-      `}
-      data-selectable
-      data-entity-id={entityId}
-    >
-      {children}
-    </div>
-  )
-}
-
-// Hook for using selection in other components
-export function useSelection() {
-  const {
-    selection,
-    hovered,
-    preselection,
-    setSelection,
-    clearSelection,
-    addToSelection,
-    removeFromSelection,
-    setHovered,
-    setPreselection,
-  } = useUIStore()
-  
-  const isSelected = useCallback((id: string) => selection.ids.includes(id), [selection.ids])
-  const isPreselected = useCallback((id: string) => preselection === id, [preselection])
-  const isHovered = useCallback((id: string) => hovered === id, [hovered])
-  
-  const toggleSelection = useCallback((type: SelectionType, id: string, multi = false) => {
-    if (multi) {
-      if (selection.ids.includes(id)) {
-        removeFromSelection(id)
-      } else {
-        addToSelection(type, id)
-      }
-    } else {
-      setSelection({ type, ids: [id] })
-    }
-  }, [selection.ids, setSelection, addToSelection, removeFromSelection])
-  
-  return {
-    selection,
-    hovered,
-    preselection,
-    isSelected,
-    isPreselected,
-    isHovered,
-    setSelection,
-    clearSelection,
-    addToSelection,
-    removeFromSelection,
-    toggleSelection,
-    setHovered,
-    setPreselection,
-  }
-}
-
-export default SelectionManager
 

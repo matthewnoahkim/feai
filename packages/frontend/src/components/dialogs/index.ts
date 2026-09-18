@@ -17,6 +17,3 @@ export { LinearPatternDialog } from './LinearPatternDialog';
 export { CircularPatternDialog } from './CircularPatternDialog';
 export { SketchDialog } from './SketchDialog';
 export { MoveCopyBodyDialog } from './MoveCopyBodyDialog';
-export { FeatureDialog } from './FeatureDialog';
-export { DeleteFeatureDialog } from './DeleteFeatureDialog';
-export { DeleteSketchEntityDialog } from './DeleteSketchEntityDialog';

@@ -134,7 +134,6 @@ export type FENode = FEANode;
 export type FEElement = FEAElement;
 export type NodeSet = FEANodeSet;
 export type ElementSet = FEAElementSet;
-export type Surface = FEASurface;
 export type FEMesh = FEAMesh;
 export type RefinementRegion = MeshRefinementRegion;
 

@@ -24,51 +24,6 @@ export function calculatePointToPointDistance(
 }
 
 /**
- * Calculate shortest distance between two line segments
- */
-export function calculateEdgeToEdgeDistance(
-  edge1Start: THREE.Vector3,
-  edge1End: THREE.Vector3,
-  edge2Start: THREE.Vector3,
-  edge2End: THREE.Vector3
-): number {
-  // Parametric representation: P1(s) = edge1Start + s * (edge1End - edge1Start)
-  // Parametric representation: P2(t) = edge2Start + t * (edge2End - edge2Start)
-  
-  const d1 = new THREE.Vector3().subVectors(edge1End, edge1Start)
-  const d2 = new THREE.Vector3().subVectors(edge2End, edge2Start)
-  const r = new THREE.Vector3().subVectors(edge1Start, edge2Start)
-  
-  const a = d1.dot(d1)
-  const b = d1.dot(d2)
-  const c = d2.dot(d2)
-  const d = d1.dot(r)
-  const e = d2.dot(r)
-  
-  const denom = a * c - b * b
-  
-  let s = 0, t = 0
-  
-  if (Math.abs(denom) < 1e-10) {
-    // Lines are parallel
-    s = 0
-    t = (b > c ? d / b : e / c)
-  } else {
-    s = (b * e - c * d) / denom
-    t = (a * e - b * d) / denom
-  }
-  
-  // Clamp to segment bounds
-  s = Math.max(0, Math.min(1, s))
-  t = Math.max(0, Math.min(1, t))
-  
-  const p1 = new THREE.Vector3().addVectors(edge1Start, d1.multiplyScalar(s))
-  const p2 = new THREE.Vector3().addVectors(edge2Start, d2.multiplyScalar(t))
-  
-  return p1.distanceTo(p2)
-}
-
-/**
  * Calculate angle between two direction vectors in degrees
  */
 export function calculateAngleBetweenVectors(

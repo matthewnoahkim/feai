@@ -6,9 +6,6 @@
  * env vars until the compute API documents them.
  */
 
-/** ~50 MB JSON body limit on analyze (gateway bodyParser). */
-export const FEA_GATEWAY_MAX_ANALYZE_BODY_BYTES = 50 * 1024 * 1024;
-
 /**
  * `mesh.data` for type "file": gateway only checks that a string is present.
  * - default / unset: base64 (ASCII-safe in JSON)

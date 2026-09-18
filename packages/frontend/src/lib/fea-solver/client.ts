@@ -192,5 +192,3 @@ export const feaSolverClient = {
   getHealth,
   pollJobUntilComplete,
 };
-
-export default feaSolverClient;

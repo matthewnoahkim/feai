@@ -4,9 +4,4 @@
  */
 
 export { authOptions } from './config';
-export {
-  getAuthenticatedUser,
-  requireAuth,
-  ApiErrors,
-  type AuthenticatedUser,
-} from './helpers';
+export { requireAuth, ApiErrors } from './helpers';

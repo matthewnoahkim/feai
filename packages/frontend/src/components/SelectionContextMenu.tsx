@@ -542,5 +542,3 @@ export function useContextMenu() {
   }
 }
 
-export default SelectionContextMenu
-

@@ -887,20 +887,16 @@ function ExtrudePreview() {
 function RevolvePreview() {
   const { activeDialog, dialogData } = useUIStore()
   const { document } = useDocumentStore()
-  
-  if (activeDialog !== 'revolve' || !dialogData) return null
-  
+
+  const isActive = activeDialog === 'revolve' && !!dialogData
   const activePartStudio = document?.partStudios.find(ps => ps.id === document?.activeElementId)
-  if (!activePartStudio) return null
-  
-  const profileId = dialogData.profileId
-  if (!profileId) return null
-  
-  const angle = dialogData.angle || 360
-  const axisId = dialogData.axisId || 'y-axis'
-  const directionType = dialogData.directionType || 'full'
-  const angle2 = dialogData.angle2 || 0
-  const operation = dialogData.operation || 'new'
+  const profileId = dialogData?.profileId
+
+  const angle = dialogData?.angle || 360
+  const axisId = dialogData?.axisId || 'y-axis'
+  const directionType = dialogData?.directionType || 'full'
+  const angle2 = dialogData?.angle2 || 0
+  const operation = dialogData?.operation || 'new'
   
   // Calculate actual angle
   let startAngle = 0
@@ -927,17 +923,22 @@ function RevolvePreview() {
   
   // Find the entity
   let entity: any = null
-  activePartStudio.sketches.forEach((sketch) => {
-    const found = sketch.entities.find(e => e.id === profileId)
-    if (found) entity = found
-  })
-  
-  if (!entity) return null
-  
-  // Create preview geometry
+  if (isActive && activePartStudio && profileId) {
+    activePartStudio.sketches.forEach((sketch) => {
+      const found = sketch.entities.find(e => e.id === profileId)
+      if (found) entity = found
+    })
+  }
+
+  // Create preview geometry. Guarded inside the callback (not by an early return above
+  // it) so this hook always runs regardless of dialog state - an early return before a
+  // hook changes how many hooks this instance calls between "closed" and "open with a
+  // valid profile" renders, which is React's "Rendered fewer hooks than expected"
+  // (minified error #300).
   const geometry = useMemo(() => {
+    if (!entity) return null
     const geo = new THREE.BufferGeometry()
-    
+
     // Get axis direction
     const getAxisDir = () => {
       switch (axisId) {
@@ -1082,12 +1083,12 @@ function RevolvePreview() {
     
     return geo
   }, [entity, startAngle, endAngle, axisId])
-  
-  if (!geometry || geometry.attributes.position?.count === 0) return null
-  
+
+  if (!isActive || !activePartStudio || !profileId || !entity || !geometry || geometry.attributes.position?.count === 0) return null
+
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial 
+      <meshStandardMaterial
         color={getPreviewColor()}
         transparent
         opacity={0.6}
@@ -1103,19 +1104,15 @@ function RevolvePreview() {
 function SweepPreview() {
   const { activeDialog, dialogData } = useUIStore()
   const { document } = useDocumentStore()
-  
-  if (activeDialog !== 'sweep' || !dialogData) return null
-  
+
+  const isActive = activeDialog === 'sweep' && !!dialogData
   const activePartStudio = document?.partStudios.find(ps => ps.id === document?.activeElementId)
-  if (!activePartStudio) return null
-  
-  const profileId = dialogData.profileId
-  const pathId = dialogData.pathId
-  if (!profileId || !pathId) return null
-  
-  const twistAngle = dialogData.twistAngle || 0
-  const endScale = dialogData.endScale || 1.0
-  const operation = dialogData.operation || 'new'
+  const profileId = dialogData?.profileId
+  const pathId = dialogData?.pathId
+
+  const twistAngle = dialogData?.twistAngle || 0
+  const endScale = dialogData?.endScale || 1.0
+  const operation = dialogData?.operation || 'new'
   
   // Get preview color based on operation
   const getPreviewColor = () => {
@@ -1130,27 +1127,29 @@ function SweepPreview() {
   // Find the profile and path entities
   let profileEntity: any = null
   let pathEntity: any = null
-  
-  activePartStudio.sketches.forEach((sketch) => {
-    const foundProfile = sketch.entities.find(e => e.id === profileId)
-    if (foundProfile) profileEntity = foundProfile
-    
-    // Handle chain paths
-    if (pathId.endsWith('-chain')) {
-      const foundPath = sketch.entities.find(e => e.type === 'line')
-      if (foundPath) pathEntity = foundPath
-    } else {
-      const foundPath = sketch.entities.find(e => e.id === pathId)
-      if (foundPath) pathEntity = foundPath
-    }
-  })
-  
-  if (!profileEntity || !pathEntity) return null
-  
-  // Create preview geometry
+
+  if (isActive && activePartStudio && profileId && pathId) {
+    activePartStudio.sketches.forEach((sketch) => {
+      const foundProfile = sketch.entities.find(e => e.id === profileId)
+      if (foundProfile) profileEntity = foundProfile
+
+      // Handle chain paths
+      if (pathId.endsWith('-chain')) {
+        const foundPath = sketch.entities.find(e => e.type === 'line')
+        if (foundPath) pathEntity = foundPath
+      } else {
+        const foundPath = sketch.entities.find(e => e.id === pathId)
+        if (foundPath) pathEntity = foundPath
+      }
+    })
+  }
+
+  // Create preview geometry. Guarded inside the callback so this hook always runs - see
+  // RevolvePreview above for why an early return before it would be unsafe.
   const geometry = useMemo(() => {
+    if (!profileEntity || !pathEntity) return null
     const geo = new THREE.BufferGeometry()
-    
+
     // Get path points
     let pathPoints: [number, number, number][] = []
     const pathData = pathEntity.data
@@ -1344,12 +1343,12 @@ function SweepPreview() {
     
     return geo
   }, [profileEntity, pathEntity, twistAngle, endScale])
-  
-  if (!geometry || geometry.attributes.position?.count === 0) return null
-  
+
+  if (!isActive || !activePartStudio || !profileId || !pathId || !profileEntity || !pathEntity || !geometry || geometry.attributes.position?.count === 0) return null
+
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial 
+      <meshStandardMaterial
         color={getPreviewColor()}
         transparent
         opacity={0.6}
@@ -1365,17 +1364,13 @@ function SweepPreview() {
 function LoftPreview() {
   const { activeDialog, dialogData } = useUIStore()
   const { document } = useDocumentStore()
-  
-  if (activeDialog !== 'loft' || !dialogData) return null
-  
+
+  const isActive = activeDialog === 'loft' && !!dialogData
   const activePartStudio = document?.partStudios.find(ps => ps.id === document?.activeElementId)
-  if (!activePartStudio) return null
-  
-  const profileOrder = dialogData.profileOrder || []
-  if (profileOrder.length < 2) return null
-  
-  const operation = dialogData.operation || 'new'
-  const closedLoft = dialogData.closedLoft || false
+  const profileOrder = dialogData?.profileOrder || []
+
+  const operation = dialogData?.operation || 'new'
+  const closedLoft = dialogData?.closedLoft || false
   
   // Get preview color based on operation
   const getPreviewColor = () => {
@@ -1389,27 +1384,29 @@ function LoftPreview() {
   
   // Gather profile entities
   const profileEntities: { entity: any, zOffset: number }[] = []
-  
-  for (let i = 0; i < profileOrder.length; i++) {
-    const config = profileOrder[i]
-    let foundEntity = null
-    
-    activePartStudio.sketches.forEach((sketch) => {
-      const entity = sketch.entities.find(e => e.id === config.entityId)
-      if (entity) foundEntity = entity
-    })
-    
-    if (foundEntity) {
-      profileEntities.push({ entity: foundEntity, zOffset: i * 30 })
+
+  if (isActive && activePartStudio && profileOrder.length >= 2) {
+    for (let i = 0; i < profileOrder.length; i++) {
+      const config = profileOrder[i]
+      let foundEntity = null
+
+      activePartStudio.sketches.forEach((sketch) => {
+        const entity = sketch.entities.find(e => e.id === config.entityId)
+        if (entity) foundEntity = entity
+      })
+
+      if (foundEntity) {
+        profileEntities.push({ entity: foundEntity, zOffset: i * 30 })
+      }
     }
   }
-  
-  if (profileEntities.length < 2) return null
-  
-  // Create preview geometry
+
+  // Create preview geometry. Guarded inside the callback so this hook always runs - see
+  // RevolvePreview above for why an early return before it would be unsafe.
   const geometry = useMemo(() => {
+    if (profileEntities.length < 2) return null
     const geo = new THREE.BufferGeometry()
-    
+
     // Get profile points for each entity
     const profiles: { points: [number, number, number][], center: [number, number, number] }[] = []
     
@@ -1616,12 +1613,12 @@ function LoftPreview() {
     
     return geo
   }, [profileEntities, closedLoft])
-  
-  if (!geometry || geometry.attributes.position?.count === 0) return null
-  
+
+  if (!isActive || !activePartStudio || profileEntities.length < 2 || !geometry || geometry.attributes.position?.count === 0) return null
+
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial 
+      <meshStandardMaterial
         color={getPreviewColor()}
         transparent
         opacity={0.6}
