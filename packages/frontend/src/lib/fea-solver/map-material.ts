@@ -1,6 +1,6 @@
 /**
  * Maps workflow material IDs to FEA Solver API preset keys
- * (see https://fea-solver.vercel.app — GET /api/materials).
+ * (the solver's own preset list: GET /api/solver/materials, lib/fea-engine MATERIAL_PRESETS).
  */
 
 export const FEA_SOLVER_DEFAULT_MATERIAL_PRESET = 'steel_structural';

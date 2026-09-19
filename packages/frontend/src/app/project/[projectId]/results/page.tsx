@@ -199,6 +199,7 @@ export default function ResultsPage() {
       setRunProgress(100);
 
     } catch (error: any) {
+      if (error?.status === 499) return; // user cancelled; cancelAnalysis already reset state
       console.error('[Results] Analysis failed:', error);
       setRunError(error.message || 'Analysis failed');
     } finally {
@@ -207,12 +208,12 @@ export default function ResultsPage() {
   }, [meshData, boundaryConditions, loads, materials, defaultMaterialId]);
 
   const cancelAnalysis = useCallback(async () => {
-    if (jobId) {
-      try {
-        await feaSolverClient.cancelJob(jobId);
-      } catch (error) {
-        console.error('Failed to cancel job:', error);
-      }
+    // The solve is a single request, so there's usually no job id yet while it's running -
+    // cancelJob aborts the in-flight request either way.
+    try {
+      await feaSolverClient.cancelJob(jobId ?? '');
+    } catch (error) {
+      console.error('Failed to cancel job:', error);
     }
     setRunning(false);
     setJobId(null);

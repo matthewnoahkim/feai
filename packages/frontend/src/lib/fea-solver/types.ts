@@ -1,6 +1,6 @@
 /**
- * API Types for External FEA Solver
- * https://fea-solver.vercel.app
+ * API types for the FEA solver
+ * Request/response contract for the in-app solver (app/api/solver, lib/fea-engine).
  */
 
 // ============================================================================
@@ -166,6 +166,10 @@ export type Load =
 
 export interface MaterialAssignment {
   default?: string;
+  /** Explicit properties for the whole mesh (SI: Pa, kg/m^3, 1/K). Takes precedence over
+   * `default`, so a user-defined material's real numbers reach the solver instead of
+   * being collapsed onto the nearest preset. */
+  custom?: MaterialProperties;
   regions?: Array<{
     material_id: number;
     material: string;
@@ -308,6 +312,8 @@ export interface AnalysisResults {
     num_nodes: number;
   };
   computation_time?: number;
+  solver?: { iterations: number; relative_residual: number };
+  warnings?: string[];
   output_files?: {
     vtk?: string;
     csv?: string;

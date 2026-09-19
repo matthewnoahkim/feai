@@ -1,10 +1,12 @@
 /**
- * FEA Solver API Client — public URL defaults to https://fea-solver.vercel.app
+ * FEA Solver API Client - talks to the in-app solver (app/api/solver/*, implemented in
+ * lib/fea-engine) on the same origin. It replaces the external fea-solver.vercel.app
+ * gateway, which had no compute backend behind it.
  *
- * The deployed app is primarily a CORS-open proxy to COMPUTE_SERVER_URL: it forwards JSON
- * and HTTP status codes. Expect ~50 MB max analyze body, ~55 s upstream timeout on POST
- * /api/analyze, ~10 s on GET /api/jobs/{id}, ~30 s on GET .../results (gateway limits).
- * Any 2xx response is success for that hop (e.g. 202 on submit is OK).
+ * The solve is synchronous: POST /analyze returns the finished result. To keep the
+ * submit -> status -> results -> download surface the workflow pages already use, this
+ * client holds each completed job's result in memory (per browser tab) and serves the
+ * later calls from that.
  */
 
 import type {
@@ -12,15 +14,13 @@ import type {
   AnalysisResults,
   JobSubmitResponse,
   JobStatusResponse,
-  MeshQualityResponse,
   MaterialProperties,
   HealthResponse,
   ApiError,
-  Mesh
 } from './types';
 import { normalizeAnalysisResults } from './normalize-results';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_FEA_API_URL || 'https://fea-solver.vercel.app';
+const API_BASE_URL = '/api/solver';
 
 export class FEAApiError extends Error {
   constructor(
@@ -34,15 +34,18 @@ export class FEAApiError extends Error {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  // Gateway forwards compute status; treat all 2xx as success (including 202 Accepted).
   if (!response.ok) {
-    const errorData: ApiError = await response.json().catch(() => ({
+    const errorData: ApiError | { error?: { message?: string } } = await response.json().catch(() => ({
       error: `HTTP ${response.status}: ${response.statusText}`
     }));
+    // Solver routes answer { error: string }; the shared auth/rate-limit helpers answer
+    // { success: false, error: { code, message } }.
+    const raw = (errorData as { error?: unknown }).error;
+    const message = typeof raw === 'string' ? raw : (raw as { message?: string } | undefined)?.message;
     throw new FEAApiError(
-      errorData.error,
+      message || `HTTP ${response.status}: ${response.statusText}`,
       response.status,
-      errorData.details
+      (errorData as ApiError).details
     );
   }
   return response.json();
@@ -52,56 +55,85 @@ async function handleResponse<T>(response: Response): Promise<T> {
 // Analysis Endpoints
 // ============================================================================
 
+interface CompletedJob {
+  results: AnalysisResults;
+  vtu: string | null;
+}
+
+const completedJobs = new Map<string, CompletedJob>();
+let inFlight: AbortController | null = null;
+
+/** A tetrahedral MSH is several MB as text, past Vercel's 4.5 MB request cap, so the JSON
+ * is gzipped when the browser can (see app/api/solver/analyze/route.ts). */
+async function encodeBody(payload: unknown): Promise<{ body: BodyInit; headers: Record<string, string> }> {
+  const json = JSON.stringify(payload);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (typeof CompressionStream !== 'undefined') {
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+    headers['X-Body-Encoding'] = 'gzip';
+    return { body: await new Response(stream).blob(), headers };
+  }
+  return { body: json, headers };
+}
+
 export async function submitAnalysis(request: AnalysisRequest): Promise<JobSubmitResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/analyze`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(request),
-  });
-  return handleResponse<JobSubmitResponse>(response);
+  const controller = new AbortController();
+  inFlight = controller;
+  try {
+    const { body, headers } = await encodeBody(request);
+    const response = await fetch(`${API_BASE_URL}/analyze`, {
+      method: 'POST',
+      headers,
+      body,
+      signal: controller.signal,
+    });
+    const data = await handleResponse<{
+      job_id: string;
+      status: 'completed';
+      results: AnalysisResults;
+      vtu?: string;
+    }>(response);
+    completedJobs.set(data.job_id, { results: data.results, vtu: data.vtu ?? null });
+    return { job_id: data.job_id, status: 'completed' };
+  } catch (error) {
+    if ((error as { name?: string }).name === 'AbortError') {
+      throw new FEAApiError('Analysis cancelled', 499);
+    }
+    throw error;
+  } finally {
+    if (inFlight === controller) inFlight = null;
+  }
+}
+
+function requireJob(jobId: string): CompletedJob {
+  const job = completedJobs.get(jobId);
+  if (!job) throw new FEAApiError('Unknown job - results are only kept in the tab that ran the analysis', 404);
+  return job;
 }
 
 export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`);
-  return handleResponse<JobStatusResponse>(response);
+  requireJob(jobId);
+  return { job_id: jobId, status: 'completed', progress: 100 };
 }
 
 export async function getJobResults(jobId: string): Promise<AnalysisResults> {
-  const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/results`);
-  const raw = await handleResponse<AnalysisResults>(response);
-  return normalizeAnalysisResults(raw);
+  return normalizeAnalysisResults(requireJob(jobId).results);
 }
 
+/** Aborts the in-flight request. The server-side solve can't be interrupted once
+ * started, but the client stops waiting on it and discards the result. */
 export async function cancelJob(jobId: string): Promise<{ status: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
-    method: 'DELETE',
-  });
-  return handleResponse<{ status: string }>(response);
+  inFlight?.abort();
+  completedJobs.delete(jobId);
+  return { status: 'cancelled' };
 }
 
 export async function downloadFile(jobId: string, filename: string): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/files/${filename}`);
-  if (!response.ok) {
-    throw new FEAApiError('Failed to download file', response.status);
+  const job = completedJobs.get(jobId);
+  if (!job || !job.vtu || !filename.endsWith('.vtu')) {
+    throw new FEAApiError('Failed to download file', 404);
   }
-  return response.blob();
-}
-
-// ============================================================================
-// Mesh Quality Endpoint
-// ============================================================================
-
-export async function checkMeshQuality(mesh: Mesh): Promise<MeshQualityResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/mesh/quality`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ mesh }),
-  });
-  return handleResponse<MeshQualityResponse>(response);
+  return new Blob([job.vtu], { type: 'application/xml' });
 }
 
 // ============================================================================
@@ -109,7 +141,7 @@ export async function checkMeshQuality(mesh: Mesh): Promise<MeshQualityResponse>
 // ============================================================================
 
 export async function getMaterials(): Promise<{ materials: MaterialProperties[] }> {
-  const response = await fetch(`${API_BASE_URL}/api/materials`);
+  const response = await fetch(`${API_BASE_URL}/materials`);
   return handleResponse<{ materials: MaterialProperties[] }>(response);
 }
 
@@ -118,7 +150,7 @@ export async function getMaterials(): Promise<{ materials: MaterialProperties[] 
 // ============================================================================
 
 export async function getHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/health`);
+  const response = await fetch(`${API_BASE_URL}/health`);
   return handleResponse<HealthResponse>(response);
 }
 
@@ -187,7 +219,6 @@ export const feaSolverClient = {
   getJobResults,
   cancelJob,
   downloadFile,
-  checkMeshQuality,
   getMaterials,
   getHealth,
   pollJobUntilComplete,

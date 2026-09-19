@@ -1,10 +1,9 @@
 /**
- * Build POST /api/analyze bodies from workflow store data.
+ * Build POST /api/solver/analyze bodies from workflow store data.
  *
- * The public Vercel app is a thin proxy: it validates box meshes (min/max) and that file
- * meshes include data | path | url, then forwards JSON to COMPUTE_SERVER_URL. It does not
- * parse MSH, assign boundary_id, or define materials/results shape—that is all compute-side.
- * mesh.data encoding: see encodeFileMeshData() in integration-config.ts (base64 vs plain).
+ * The in-app solver (lib/fea-engine) parses the MSH itself and takes explicit material
+ * properties. mesh.data encoding: see encodeFileMeshData() in integration-config.ts
+ * (base64 vs plain; the solver accepts either).
  */
 
 import type {
@@ -14,6 +13,7 @@ import type {
   AnalysisRequest,
   Mesh,
   BoxMesh,
+  MaterialProperties,
 } from './types';
 import type {
   BoundaryConditionDef,
@@ -231,6 +231,19 @@ export function workflowLoadToApi(load: LoadDef): Load | null {
   }
 }
 
+function materialToApiProperties(m: Material): MaterialProperties {
+  return {
+    id: m.id,
+    name: m.name,
+    youngs_modulus: m.youngsModulus,
+    poissons_ratio: m.poissonsRatio,
+    density: m.density,
+    ...(m.yieldStrength != null ? { yield_strength: m.yieldStrength } : {}),
+    ...(m.ultimateStrength != null ? { ultimate_strength: m.ultimateStrength } : {}),
+    ...(m.thermalExpansion != null ? { thermal_expansion: m.thermalExpansion } : {}),
+  };
+}
+
 export function buildAnalysisRequestFromWorkflow(input: {
   meshData: MeshData;
   boundaryConditions: BoundaryConditionDef[];
@@ -273,7 +286,13 @@ export function buildAnalysisRequestFromWorkflow(input: {
     ok: true,
     request: {
       mesh: buildMeshPayload(input.meshData),
-      materials: { default: apiPreset },
+      materials: {
+        default: apiPreset,
+        // The solver takes explicit properties, so the selected material's real numbers
+        // are what get solved - not the nearest preset, which is all a bare preset id
+        // (the external gateway's only option) could express.
+        ...(material ? { custom: materialToApiProperties(material) } : {}),
+      },
       boundary_conditions,
       loads: apiLoads,
       solver_options: {
