@@ -9,29 +9,96 @@ import { ScrollProgress } from './ScrollProgress'
 import { CursorGlow } from './CursorGlow'
 import { ScrollScale } from './ScrollScale'
 import { ScrollMarquee } from './ScrollMarquee'
-import { StickyScroll } from './StickyScroll'
+import { StickyScroll, type StickyStep } from './StickyScroll'
+import { PartVisual } from './PartVisual'
 
 const WORKFLOW = [
   {
     index: '01',
     title: 'Design',
     visual: 'kernel' as const,
-    body: 'Sketch profiles, then extrude, revolve, sweep and loft them into real solids. Booleans, fillets and chamfers run on a true B-rep kernel, not a mesh approximation.',
+    body: 'Sketch a shape, then extrude, revolve, sweep, or loft it into a solid. Cuts, fillets, and chamfers work on the real geometry, not a rough approximation.',
     tags: ['B-REP', 'PARAMETRIC', 'EDGE PICKING'],
   },
   {
     index: '02',
     title: 'Mesh',
     visual: 'mesh' as const,
-    body: 'Generate tetrahedral or hexahedral finite element meshes from the same geometry, with element-quality checks before anything is solved.',
+    body: "Turn that solid into a mesh — tet or hex elements — and check the mesh quality before you run anything.",
     tags: ['C3D4 / C3D10', 'C3D8 / C3D20', 'QUALITY'],
   },
   {
     index: '03',
     title: 'Simulate',
     visual: 'results' as const,
-    body: 'Apply supports, loads, pressure and thermal conditions, run the analysis, and read stress, strain and displacement fields in the same viewport.',
+    body: 'Add supports and loads, run the analysis, and see stress, strain, and displacement right there in the viewport.',
     tags: ['STATIC', 'THERMAL', 'CSV / VTU'],
+  },
+]
+
+const PIPELINE: StickyStep[] = [
+  {
+    index: '01',
+    title: 'language',
+    visual: 'prompt',
+    body: "You just describe what you want. FEAI also knows what's going on in your viewport — selected faces, edges, materials, loads, whatever's relevant.",
+  },
+  {
+    index: '02',
+    title: 'feature actions',
+    visual: 'action',
+    body: "The assistant turns that into real actions FEAI already knows how to run — sketch, extrude, fillet, assign a material, apply a force. It's not writing code or touching the scene directly, just picking from a fixed list of moves and filling in the details.",
+  },
+  {
+    index: '03',
+    title: 'B-rep kernel',
+    visual: 'kernel',
+    body: "Those actions run through a real CAD kernel, not a triangle mesh. Faces, edges, and solids stay real geometry, so booleans, fillets, and measurements all work properly, and you can still edit everything afterward in the feature tree.",
+  },
+  {
+    index: '04',
+    title: 'mesh',
+    visual: 'mesh',
+    body: "Before solving, that solid gets broken into a mesh — tet or hex elements — with a quality check first. The mesh keeps track of how it connects back to the original geometry, so loads and constraints carry over correctly.",
+  },
+  {
+    index: '05',
+    title: 'solver',
+    visual: 'solver',
+    body: "This is where the actual math happens. For a simple static analysis, FEAI solves Ku = f — stiffness times displacement equals load — and works out strain and stress from there. The AI has nothing to do with this step; it's standard finite element math.",
+  },
+  {
+    index: '06',
+    title: 'results',
+    visual: 'results',
+    body: "The results get mapped back onto your model so you can look at displacement, stress, or strain. You can also export the raw numbers if you want to check them yourself.",
+  },
+]
+
+const TECH_SECTIONS = [
+  {
+    index: '01',
+    title: 'The challenge',
+    visual: 'prompt' as const,
+    body: 'An AI model can understand "fix this face and apply 1 kN here" — but understanding the request isn\'t the same as solving it. Real FEA needs real geometry, real materials, a real mesh, and real math, done the same way every time. FEAI\'s assistant translates what you mean into those steps; the kernel and solver handle the actual computation.',
+  },
+  {
+    index: '02',
+    title: 'The assistant',
+    visual: 'action' as const,
+    body: 'Think of the assistant as a translator, not a replacement for the engineering. Say "use steel, fix these mounting holes, and put 2 kN on this face," and it turns that into real parameters — steel as the material, those faces fixed, 2000 N applied in the right direction. Those run through the same systems you\'d use by hand, so you can inspect, edit, or delete them like anything else.',
+  },
+  {
+    index: '03',
+    title: 'Grounding',
+    visual: 'kernel' as const,
+    body: "The model can't just make things up. Every action has a strict definition — what it needs, what units, what's valid. A load needs a real face, a real magnitude, a real direction. If a request doesn't fit any known action, FEAI asks for clarification instead of guessing.",
+  },
+  {
+    index: '04',
+    title: 'Validation',
+    visual: 'results' as const,
+    body: 'A simulation is only useful if you can trust it. FEAI shows you everything that went in — geometry, mesh, materials, loads, solver settings — and lets you export the mesh and results as VTU or CSV so you can check them anywhere. The goal isn\'t a pretty picture. It\'s a number you can trust.',
   },
 ]
 
@@ -155,13 +222,13 @@ export default function LandingPage() {
             <span className="font-semibold" style={{ color: 'var(--l-accent)' }}>made intelligent.</span>
           </h1>
           <p className="mb-8 max-w-xl text-base leading-relaxed sm:text-lg" style={{ color: 'var(--l-muted)' }}>
-            FEAI starts with a real parametric CAD kernel — sketch, extrude, revolve, sweep, loft,
-            boolean, fillet — because good analysis begins with good geometry. Mesh and simulate in
-            the same workspace, and let the assistant build parts from a description.
+            FEAI starts with real CAD — sketch, extrude, revolve, the same tools you already
+            know — because a good simulation starts with a good model. Design and simulate in
+            one place, and just describe what you want instead of hunting through menus.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link href="/dashboard" className="l-btn l-btn-primary">Open the editor <span aria-hidden>→</span></Link>
-            <Link href="/technical-approach" className="l-btn l-btn-ghost">Technical approach</Link>
+            <Link href="#technical-approach" className="l-btn l-btn-ghost">Technical approach</Link>
           </div>
           <p className="l-eyebrow mt-10">Parametric CAD today · intelligent FEA is where it's going</p>
         </div>
@@ -199,9 +266,9 @@ export default function LandingPage() {
           <p className="l-eyebrow mb-3">Chat to CAD</p>
           <h2 className="mb-5 text-2xl font-light tracking-tight sm:text-3xl">Every prompt becomes a feature you can inspect.</h2>
           <p className="text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>
-            The assistant doesn't paint pixels. It emits ordinary feature actions — the same
-            extrudes, revolves and fillets you'd create by hand — so everything it builds shows up
-            in the feature tree, can be edited, and can be undone.
+            The assistant isn't drawing pixels — it's using the same tools you would. Every
+            extrude, revolve, or fillet it creates shows up in your feature tree, just like you
+            built it yourself. You can edit it, undo it, whatever you'd normally do.
           </p>
         </Reveal>
         <Reveal delay={120}>
@@ -213,6 +280,68 @@ export default function LandingPage() {
             <pre className="l-code m-0 border-0">{CHAT_ACTION}</pre>
           </div>
         </Reveal>
+      </section>
+
+      {/* Technical approach */}
+      <section id="technical-approach" className="mx-auto max-w-6xl scroll-mt-10 px-6 py-20">
+        <Reveal>
+          <p className="l-eyebrow mb-4">Technical approach</p>
+          <h2 className="mb-6 max-w-2xl text-3xl font-light leading-[1.1] tracking-tight sm:text-4xl">
+            How a typed request turns into an actual analysis.
+          </h2>
+          <p className="mb-10 max-w-2xl text-base leading-relaxed sm:text-lg" style={{ color: 'var(--l-muted)' }}>
+            FEAI uses AI to help you set things up, but it never does the actual math. A real
+            CAD kernel builds the geometry, a mesher builds the mesh, and a finite element
+            solver does the calculation.
+          </p>
+        </Reveal>
+
+        <Reveal className="mb-16">
+          <div className="border-y py-4" style={{ borderColor: 'var(--l-border)' }}>
+            <ScrollMarquee items={PIPELINE.map(s => s.title.toUpperCase())} />
+          </div>
+        </Reveal>
+
+        <Reveal>
+          <article className="l-card mb-16 grid gap-6 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div>
+              <div className="l-index mb-4">{TECH_SECTIONS[0].index}/</div>
+              <h3 className="mb-3 text-xl font-medium">{TECH_SECTIONS[0].title}</h3>
+              <p className="text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>{TECH_SECTIONS[0].body}</p>
+            </div>
+            <div className="w-full sm:w-56">
+              <PartVisual mode="prompt" />
+            </div>
+          </article>
+        </Reveal>
+
+        <div className="mb-20">
+          <p className="l-eyebrow mb-3">The pipeline</p>
+          <h3 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Every request goes through the same six steps.</h3>
+          <p className="mb-16 max-w-2xl text-base" style={{ color: 'var(--l-muted)' }}>
+            The assistant turns your request into real actions. From there, the geometry kernel,
+            mesher, and solver take over. Scroll through to see exactly where the AI's job ends
+            and the engineering begins.
+          </p>
+          <StickyScroll steps={PIPELINE} />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {TECH_SECTIONS.slice(1).map((s, i) => (
+            <Reveal key={s.index} delay={i * 100}>
+              <TiltCard className="l-card flex h-full flex-col gap-5 p-6">
+                <div className="w-20">
+                  <PartVisual mode={s.visual} />
+                </div>
+                <div>
+                  <div className="l-index mb-3">{s.index}/</div>
+                  <h3 className="mb-3 text-lg font-medium">{s.title}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{s.body}</p>
+                </div>
+              </TiltCard>
+            </Reveal>
+          ))}
+        </div>
       </section>
 
       {/* Capabilities */}
@@ -246,8 +375,8 @@ export default function LandingPage() {
         <p className="l-eyebrow mb-3">Verified geometry</p>
         <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Numbers, not approximations.</h2>
         <p className="mb-10 max-w-2xl text-base" style={{ color: 'var(--l-muted)' }}>
-          Each of these is a case the engine is tested against, and the volumes below are its
-          actual results — matching the closed-form answer to floating-point precision.
+          These are real test cases. The volumes below are what the engine actually
+          calculated — matching the exact math to floating-point precision.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {GALLERY.map((item, i) => {
@@ -273,16 +402,16 @@ export default function LandingPage() {
           <p className="l-eyebrow mb-3">Where this is going</p>
           <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">The CAD is the foundation. The analysis is the point.</h2>
           <p className="mb-10 max-w-2xl text-base" style={{ color: 'var(--l-muted)' }}>
-            Next on the roadmap: analysis setup proposed from the geometry itself, surrogate models
-            that estimate results before a full solve, and result interpretation you can interrogate
-            in chat.
+            Up next: the assistant suggesting a setup based on your geometry, quick estimates
+            before a full simulation runs, and being able to ask questions about your results
+            right in chat.
           </p>
         </Reveal>
         <div className="tech-frame grid gap-px md:grid-cols-3" style={{ background: 'var(--l-border)' }}>
           {[
-            ['Mesh', 'Tet and hex elements, linear or quadratic, sized to the feature. Quality metrics before you solve.'],
-            ['Boundary conditions', 'Fixed and displacement supports, symmetry, gravity, pressure, point and surface forces, thermal loads.'],
-            ['Results', 'Stress, strain and displacement fields in the viewport; export CSV and VTU for downstream tools.'],
+            ['Mesh', "Tet or hex elements, sized to fit the geometry, with a quality check before anything runs."],
+            ['Boundary conditions', 'Supports, gravity, pressure, forces, thermal loads — the usual boundary conditions, applied right on the model.'],
+            ['Results', 'See stress, strain, and displacement in the viewport, or export the numbers as CSV or VTU.'],
           ].map(([title, body], i) => (
             <Reveal key={title} delay={i * 100} className="h-full">
               <div className="h-full p-6" style={{ background: 'var(--l-surface)' }}>
@@ -300,10 +429,10 @@ export default function LandingPage() {
           <TiltCard className="l-card flex flex-col items-start justify-between gap-6 p-8 md:flex-row md:items-center" maxTilt={3}>
             <div>
               <p className="l-eyebrow mb-3">We're hiring</p>
-              <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Building the kernel, the solver, and the model in between.</h2>
+              <h2 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Building the geometry engine, the solver, and the AI that connects them.</h2>
               <p className="max-w-xl text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>
-                Skilled developers, engineers and researchers who want to work on real solid modeling
-                and real physics — not another chatbot wrapper.
+                We're looking for engineers and researchers who want to work on real solid
+                modeling and real physics — not another chatbot wrapper.
               </p>
             </div>
             <Link href="/join" className="l-btn l-btn-primary flex-shrink-0">See open roles <span aria-hidden>→</span></Link>
@@ -319,8 +448,8 @@ export default function LandingPage() {
             Your projects are signed, encrypted archives you can take anywhere.
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-base" style={{ color: 'var(--l-muted)' }}>
-            Export a project as a single <span className="l-mono">.feai</span> file, re-import it on
-            any account. Nothing about your geometry is locked in.
+            Export a project as a single <span className="l-mono">.feai</span> file and open it
+            on any account. Nothing about your geometry is locked in.
           </p>
           <Link href="/dashboard" className="l-btn l-btn-primary">Start building <span aria-hidden>→</span></Link>
         </Reveal>

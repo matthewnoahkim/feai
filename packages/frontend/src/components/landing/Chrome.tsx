@@ -1,9 +1,11 @@
 import Link from 'next/link'
 import { Logo } from '@/components/Logo'
 
-// Shared nav + footer for the public marketing pages (home, technical approach).
+// Shared nav + footer for the public marketing pages. "Technical approach" is a section
+// on the home page, not its own route — the href is a hash link so it scrolls there
+// directly from home, or navigates to home and then scrolls on any other page.
 
-export function LandingNav({ current }: { current?: 'technical' | 'join' }) {
+export function LandingNav({ current }: { current?: 'join' }) {
   return (
     <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
       <Link href="/" className="logo-link flex items-center gap-3">
@@ -11,11 +13,7 @@ export function LandingNav({ current }: { current?: 'technical' | 'join' }) {
         <span className="text-sm font-semibold tracking-[0.2em]">FEAI</span>
       </Link>
       <nav className="flex items-center gap-6 text-sm" style={{ color: 'var(--l-muted)' }}>
-        <Link
-          href="/technical-approach"
-          className="hidden sm:inline hover:underline"
-          style={current === 'technical' ? { color: 'var(--l-text)', textDecoration: 'underline' } : undefined}
-        >
+        <Link href="/#technical-approach" className="hidden sm:inline hover:underline">
           Technical approach
         </Link>
         <Link

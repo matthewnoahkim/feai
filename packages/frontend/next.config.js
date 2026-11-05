@@ -6,6 +6,16 @@ const nextConfig = {
   },
   transpilePackages: ['@feai/shared'],
   experimental: {},
+  async redirects() {
+    return [
+      {
+        // The technical-approach page is now a section on the home page.
+        source: '/technical-approach',
+        destination: '/#technical-approach',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

@@ -110,8 +110,8 @@ export default function JoinPage() {
           </Reveal>
 
           <p className="mt-10 text-center text-sm">
-            <Link href="/technical-approach" className="hover:underline" style={{ color: 'var(--l-muted)' }}>
-              Read more about the technical approach first →
+            <Link href="/#technical-approach" className="hover:underline" style={{ color: 'var(--l-muted)' }}>
+              Curious how it actually works? Read the technical approach →
             </Link>
           </p>
         </main>

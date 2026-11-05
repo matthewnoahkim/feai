@@ -415,6 +415,13 @@
 .l-marquee-track { display: flex; width: max-content; will-change: transform; }
 .l-marquee-item { display: flex; align-items: center; gap: 0.5rem; padding: 0 1.5rem; white-space: nowrap; }
 
+/* Smooth-scrolls same-page anchor jumps (the nav's #technical-approach link) instead of
+   snapping instantly - gated the opposite way from the block below, since this one only
+   kicks in when the visitor hasn't asked for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .l-reveal { animation: none; }
   .l-scanline::after { animation: none; display: none; }
