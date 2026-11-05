@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ProjectWorkflowSnapshot } from '../lib/fixtures/boomilever';
 
 export type WorkflowStep = 'engineering-data' | 'geometry' | 'mesh' | 'setup' | 'results';
 
@@ -193,6 +194,11 @@ interface WorkflowState {
   setRunProgress: (progress: number) => void;
   setRunError: (error: string | null) => void;
   
+  /** Loads a stored workflow (project.data.workflow, e.g. the boomilever fixture) for
+   * `projectId`, but only into an empty workflow, so it never overwrites work done in
+   * this browser. Returns whether it applied. */
+  hydrateFromSnapshot: (projectId: string, snapshot: ProjectWorkflowSnapshot) => boolean;
+
   // Reset
   resetWorkflow: () => void;
 }
@@ -332,6 +338,26 @@ export const useWorkflowStore = create<WorkflowState>()(
       setRunning: (isRunning) => set({ isRunning }),
       setRunProgress: (progress) => set({ runProgress: progress }),
       setRunError: (error) => set({ runError: error }),
+
+      hydrateFromSnapshot: (projectId, snapshot) => {
+        const state = get();
+        const isEmpty = !state.meshData && !state.analysisResults
+          && state.boundaryConditions.length === 0 && state.loads.length === 0;
+        if (state.projectId !== projectId || !isEmpty || snapshot?.version !== 1) return false;
+        set({
+          stepStatus: { ...INITIAL_STEP_STATUS, ...snapshot.stepStatus },
+          defaultMaterialId: snapshot.defaultMaterialId,
+          meshSettings: { ...DEFAULT_MESH_SETTINGS, ...snapshot.meshSettings },
+          meshData: snapshot.meshData,
+          geometryReady: true,
+          boundaryConditions: snapshot.boundaryConditions,
+          loads: snapshot.loads,
+          analysisResults: snapshot.analysisResults,
+          meshError: null,
+          runError: null,
+        });
+        return true;
+      },
 
       // Reset
       resetWorkflow: () => set({

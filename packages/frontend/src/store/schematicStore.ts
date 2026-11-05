@@ -96,6 +96,8 @@ interface SchematicState {
   
   // Reset
   resetSchematic: () => void;
+  /** Fills an empty schematic for the current project from stored nodes/connections. */
+  hydrateSchematic: (projectId: string, data: { nodes: SchematicNode[]; connections: Connection[] }) => void;
   
   // Auto-save timestamp
   lastSaved: number | null;
@@ -146,6 +148,15 @@ export const useSchematicStore = create<SchematicState>()(
       },
 
       setProjectName: (name) => set({ projectName: name }),
+
+      hydrateSchematic: (projectId, data) => {
+        const { projectId: currentId, nodes } = get();
+        if (currentId !== projectId || nodes.length > 0) return;
+        set({
+          nodes: data.nodes.map((n) => ({ ...n })),
+          connections: data.connections.map((c) => ({ ...c })),
+        });
+      },
 
       addNode: (type, x, y, name) => {
         const id = generateId();

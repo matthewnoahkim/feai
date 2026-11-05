@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useWorkflowStore } from '@/store/workflowStore';
 import { useMaterialLibraryStore } from '@/store/materialLibraryStore';
+import { useProjectStore } from '@/store/projectStore';
+import { useSchematicStore } from '@/store/schematicStore';
 
 export default function ProjectLayout({
   children,
@@ -25,6 +27,23 @@ export default function ProjectLayout({
       setProject(projectId);
     }
   }, [projectId, setProject]);
+
+  // A project can ship a stored workflow (mesh, setup, solved results) in
+  // project.data.workflow, as the seeded boomilever test simulation does. Every step page
+  // fetches the project, so load the workflow from that once it arrives. Both stores only
+  // fill an empty state, so local work is never overwritten.
+  const currentProject = useProjectStore((s) => s.currentProject);
+  useEffect(() => {
+    if (!projectId || currentProject?.id !== projectId) return;
+    const snapshot = currentProject.data?.workflow;
+    if (!snapshot) return;
+    useWorkflowStore.getState().hydrateFromSnapshot(projectId, snapshot);
+    if (snapshot.schematic) {
+      const schematic = useSchematicStore.getState();
+      if (schematic.projectId !== projectId) schematic.setProject(projectId, currentProject.name);
+      schematic.hydrateSchematic(projectId, snapshot.schematic);
+    }
+  }, [projectId, currentProject]);
 
   useEffect(() => {
     if (status === 'authenticated') {
