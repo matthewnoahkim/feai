@@ -17,21 +17,24 @@ const WORKFLOW = [
     index: '01',
     title: 'Design',
     visual: 'kernel' as const,
-    body: 'Sketch a shape, then extrude, revolve, sweep, or loft it into a solid. Cuts, fillets, and chamfers work on the real geometry, not a rough approximation.',
+    signature: 'extrude(profile, depth, draft?) → Solid',
+    body: 'Sketches are parametric, constrained 2D profiles promoted to 3D by extrude, revolve, sweep, or loft — each taking the profile plus a small set of typed parameters (depth, angle, path) and returning a solid. fillet and chamfer resolve against explicit edge references, not nearby-point heuristics, so a cut made on one face does not silently move an unrelated edge. Every operation is a node in the feature tree and can be reordered, edited, or deleted independently.',
     tags: ['B-REP', 'PARAMETRIC', 'EDGE PICKING'],
   },
   {
     index: '02',
     title: 'Mesh',
     visual: 'mesh' as const,
-    body: "Turn that solid into a mesh — tet or hex elements — and check the mesh quality before you run anything.",
+    signature: 'mesh(solid, order, maxSize) → Mesh',
+    body: 'The solid is discretized into first- or second-order tetrahedral or hexahedral elements (C3D4/C3D10, C3D8/C3D20). Before anything solves, each element is checked against aspect-ratio, Jacobian, and skew thresholds; elements that fail the check get locally refined rather than passed through. The mesh keeps a reference back to the source topology, so a boundary condition applied to a face finds the right nodes after discretization.',
     tags: ['C3D4 / C3D10', 'C3D8 / C3D20', 'QUALITY'],
   },
   {
     index: '03',
     title: 'Simulate',
     visual: 'results' as const,
-    body: 'Add supports and loads, run the analysis, and see stress, strain, and displacement right there in the viewport.',
+    signature: 'solve(mesh, bcs, loads) → Fields',
+    body: 'Fixed supports, pressures, point or distributed forces, and thermal loads attach to faces, edges, or vertices and become entries in the load vector f. Solving assembles and factors Ku = f once; displacement, strain, and stress fields come out of that single solve and render directly on the mesh, with raw values exportable as CSV or VTU.',
     tags: ['STATIC', 'THERMAL', 'CSV / VTU'],
   },
 ]
@@ -41,64 +44,67 @@ const PIPELINE: StickyStep[] = [
     index: '01',
     title: 'language',
     visual: 'prompt',
-    body: "You just describe what you want. FEAI also knows what's going on in your viewport — selected faces, edges, materials, loads, whatever's relevant.",
+    signature: 'parse(request, viewportContext) → ActionIntent',
+    body: "Requests are parsed against a fixed action schema, not interpreted freely. Viewport state — the active selection, its faces and edges, assigned materials, applied loads — is passed alongside the text as structured context, so \"make this 3mm thicker\" resolves against whatever face is actually selected rather than a guess.",
   },
   {
     index: '02',
     title: 'feature actions',
     visual: 'action',
-    body: "The assistant turns that into real actions FEAI already knows how to run — sketch, extrude, fillet, assign a material, apply a force. It's not writing code or touching the scene directly, just picking from a fixed list of moves and filling in the details.",
+    signature: 'resolve(intent) → FeatureAction[]',
+    body: 'An intent resolves to one or more of a closed set of feature operations — sketch, extrude, fillet, assign material, apply load — each with a typed, bounded parameter list. The model fills in those parameters; it never emits geometry or code directly, and an intent that maps to no known action is returned as a clarifying question instead of a best guess.',
   },
   {
     index: '03',
     title: 'B-rep kernel',
     visual: 'kernel',
-    body: "Those actions run through a real CAD kernel, not a triangle mesh. Faces, edges, and solids stay real geometry, so booleans, fillets, and measurements all work properly, and you can still edit everything afterward in the feature tree.",
+    signature: 'apply(action, topology) → Topology',
+    body: 'Each action executes against a boundary-representation model — faces, edges, and vertices with explicit, named topology, not a tessellated approximation. Booleans, fillets, and measurements operate on this exact geometry, references to a face or edge survive later edits upstream in the tree, and every action remains an undoable, inspectable node in the feature tree.',
   },
   {
     index: '04',
     title: 'mesh',
     visual: 'mesh',
-    body: "Before solving, that solid gets broken into a mesh — tet or hex elements — with a quality check first. The mesh keeps track of how it connects back to the original geometry, so loads and constraints carry over correctly.",
+    signature: 'discretize(topology, order, maxSize) → Mesh',
+    body: 'Before solving, the solid is discretized into linear or quadratic tetrahedral or hexahedral elements (C3D4/C3D10, C3D8/C3D20), with every element checked against aspect-ratio and Jacobian thresholds before the mesh is accepted. The mesh retains a map back to the originating topology, so a load or support defined on a face finds the right nodes and element faces after discretization.',
   },
   {
     index: '05',
     title: 'solver',
     visual: 'solver',
-    body: "This is where the actual math happens. For a simple static analysis, FEAI solves Ku = f — stiffness times displacement equals load — and works out strain and stress from there. The AI has nothing to do with this step; it's standard finite element math.",
+    signature: 'assemble(mesh, bcs) → (K, f); solve(K, f) → u',
+    body: 'The analysis reduces to a sparse linear system, Ku = f. K is the global stiffness matrix, assembled from per-element contributions; u is the unknown nodal displacement vector; f is the applied load. The system is factored directly or solved iteratively depending on its size, and strain (ε = Bu) and stress (σ = Dε) are recovered from u afterward. None of this step involves the language model — it is the same linear algebra a solver runs for a hand-built model.',
   },
   {
     index: '06',
     title: 'results',
     visual: 'results',
-    body: "The results get mapped back onto your model so you can look at displacement, stress, or strain. You can also export the raw numbers if you want to check them yourself.",
+    signature: 'recover(u) → { ε, σ, fields }',
+    body: 'Displacement, strain, and stress fields map back onto the mesh, with both nodal and element-averaged values available in the viewport for inspection face by face. Raw fields export as VTU for ParaView or a similar post-processor, or CSV for independent checking in a spreadsheet or script.',
   },
 ]
 
 const TECH_SECTIONS = [
   {
     index: '01',
-    title: 'The challenge',
-    visual: 'prompt' as const,
-    body: 'An AI model can understand "fix this face and apply 1 kN here" — but understanding the request isn\'t the same as solving it. Real FEA needs real geometry, real materials, a real mesh, and real math, done the same way every time. FEAI\'s assistant translates what you mean into those steps; the kernel and solver handle the actual computation.',
+    title: 'Grounding',
+    visual: 'action' as const,
+    signature: 'schema: { field: Type, unit, range }',
+    body: "Every action has a strict schema — required fields, units, valid ranges. A load action needs a resolvable face reference, a magnitude in newtons, and a direction vector, not a free-text description; a sketch needs a plane and a closed profile. A request that doesn't resolve to a valid instance of some schema is rejected back to the user for clarification, never guessed at and silently applied.",
   },
   {
     index: '02',
-    title: 'The assistant',
-    visual: 'action' as const,
-    body: 'Think of the assistant as a translator, not a replacement for the engineering. Say "use steel, fix these mounting holes, and put 2 kN on this face," and it turns that into real parameters — steel as the material, those faces fixed, 2000 N applied in the right direction. Those run through the same systems you\'d use by hand, so you can inspect, edit, or delete them like anything else.',
+    title: 'Numerics',
+    visual: 'solver' as const,
+    signature: 'Kₑ = ∫Ω Bᵀ D B dΩ (Gauss–Legendre)',
+    body: 'Element stiffness matrices are integrated with Gauss–Legendre quadrature and assembled into a global sparse matrix stored in compressed row format. Systems under roughly 200k degrees of freedom factor directly with a sparse LU; larger ones fall back to a preconditioned conjugate-gradient solve, trading exactness for memory as the problem grows the way any FE solver does.',
   },
   {
     index: '03',
-    title: 'Grounding',
-    visual: 'kernel' as const,
-    body: "The model can't just make things up. Every action has a strict definition — what it needs, what units, what's valid. A load needs a real face, a real magnitude, a real direction. If a request doesn't fit any known action, FEAI asks for clarification instead of guessing.",
-  },
-  {
-    index: '04',
-    title: 'Validation',
+    title: 'Interoperability',
     visual: 'results' as const,
-    body: 'A simulation is only useful if you can trust it. FEAI shows you everything that went in — geometry, mesh, materials, loads, solver settings — and lets you export the mesh and results as VTU or CSV so you can check them anywhere. The goal isn\'t a pretty picture. It\'s a number you can trust.',
+    signature: 'io: {STEP, IGES, STL} ↔ {VTU, CSV}',
+    body: 'Geometry imports and exports as STEP, IGES, or STL, so a model built elsewhere is never a dead end. Analysis output is standard VTU and CSV, readable in ParaView, Python, or a spreadsheet — there is no proprietary result format standing between you and your own numbers.',
   },
 ]
 
@@ -257,7 +263,24 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-6 py-20">
         <p className="l-eyebrow mb-3">Workflow</p>
         <h2 className="mb-10 text-2xl font-light tracking-tight sm:text-3xl">From sketch to stress field, in order.</h2>
-        <StickyScroll steps={WORKFLOW} />
+        <div className="grid gap-4 md:grid-cols-3">
+          {WORKFLOW.map((step, i) => (
+            <Reveal key={step.index} delay={i * 100}>
+              <TiltCard className="l-card flex h-full flex-col gap-4 p-6" maxTilt={4}>
+                <div className="w-16"><PartVisual mode={step.visual} /></div>
+                <div>
+                  <div className="l-index mb-3">{step.index}/</div>
+                  <h3 className="mb-1 text-lg font-medium">{step.title}</h3>
+                  <p className="l-mono mb-3 text-[0.7rem]" style={{ color: 'var(--l-dim)' }}>{step.signature}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{step.body}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {step.tags.map(t => <span key={t} className="l-badge">{t}</span>)}
+                  </div>
+                </div>
+              </TiltCard>
+            </Reveal>
+          ))}
+        </div>
       </section>
 
       {/* Chat to CAD */}
@@ -290,9 +313,10 @@ export default function LandingPage() {
             How a typed request turns into an actual analysis.
           </h2>
           <p className="mb-10 max-w-2xl text-base leading-relaxed sm:text-lg" style={{ color: 'var(--l-muted)' }}>
-            FEAI uses AI to help you set things up, but it never does the actual math. A real
-            CAD kernel builds the geometry, a mesher builds the mesh, and a finite element
-            solver does the calculation.
+            The assistant sits only at the front of the pipeline, turning a request into a
+            sequence of typed feature operations. From there a B-rep kernel builds the geometry,
+            a mesher discretizes it, and a sparse linear solver computes the result — the same
+            deterministic path whether the operations came from a prompt or were set by hand.
           </p>
         </Reveal>
 
@@ -302,32 +326,18 @@ export default function LandingPage() {
           </div>
         </Reveal>
 
-        <Reveal>
-          <article className="l-card mb-16 grid gap-6 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
-            <div>
-              <div className="l-index mb-4">{TECH_SECTIONS[0].index}/</div>
-              <h3 className="mb-3 text-xl font-medium">{TECH_SECTIONS[0].title}</h3>
-              <p className="text-base leading-relaxed" style={{ color: 'var(--l-muted)' }}>{TECH_SECTIONS[0].body}</p>
-            </div>
-            <div className="w-full sm:w-56">
-              <PartVisual mode="prompt" />
-            </div>
-          </article>
-        </Reveal>
-
         <div className="mb-20">
           <p className="l-eyebrow mb-3">The pipeline</p>
-          <h3 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Every request goes through the same six steps.</h3>
+          <h3 className="mb-3 text-2xl font-light tracking-tight sm:text-3xl">Six steps, in order, every time.</h3>
           <p className="mb-16 max-w-2xl text-base" style={{ color: 'var(--l-muted)' }}>
-            The assistant turns your request into real actions. From there, the geometry kernel,
-            mesher, and solver take over. Scroll through to see exactly where the AI's job ends
-            and the engineering begins.
+            Scroll through to see exactly where the language model's job ends and the
+            deterministic math begins.
           </p>
           <StickyScroll steps={PIPELINE} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
-          {TECH_SECTIONS.slice(1).map((s, i) => (
+          {TECH_SECTIONS.map((s, i) => (
             <Reveal key={s.index} delay={i * 100}>
               <TiltCard className="l-card flex h-full flex-col gap-5 p-6">
                 <div className="w-20">
@@ -335,7 +345,8 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <div className="l-index mb-3">{s.index}/</div>
-                  <h3 className="mb-3 text-lg font-medium">{s.title}</h3>
+                  <h3 className="mb-1 text-lg font-medium">{s.title}</h3>
+                  <p className="l-mono mb-3 text-[0.68rem]" style={{ color: 'var(--l-dim)' }}>{s.signature}</p>
                   <p className="text-sm leading-relaxed" style={{ color: 'var(--l-muted)' }}>{s.body}</p>
                 </div>
               </TiltCard>

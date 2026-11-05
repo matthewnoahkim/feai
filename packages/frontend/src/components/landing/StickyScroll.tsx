@@ -8,6 +8,7 @@ export interface StickyStep {
   index: string
   title: string
   body: string
+  signature?: string
   tags?: string[]
   visual: PartVisualMode
 }
@@ -92,7 +93,10 @@ export function StickyScroll({ steps }: { steps: StickyStep[] }) {
               <PartVisual mode={step.visual} progress={1} />
             </div>
             <div className="l-index mb-3">{step.index}/</div>
-            <h3 className="mb-3 text-xl font-medium md:text-2xl">{step.title}</h3>
+            <h3 className="mb-1 text-xl font-medium md:text-2xl">{step.title}</h3>
+            {step.signature && (
+              <p className="l-mono mb-3 text-[0.7rem]" style={{ color: 'var(--l-dim)' }}>{step.signature}</p>
+            )}
             <p className="max-w-md text-sm leading-relaxed sm:text-base" style={{ color: 'var(--l-muted)' }}>
               {step.body}
             </p>
