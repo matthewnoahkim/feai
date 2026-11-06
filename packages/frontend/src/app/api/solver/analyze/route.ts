@@ -29,9 +29,10 @@ export const maxDuration = 60;
 
 const SOLVE_BUDGET_MS = 52_000;
 const MAX_DECOMPRESSED_BYTES = 64 * 1024 * 1024;
-// Vercel caps a function response at 4.5 MB; the VTU export is optional, so it's dropped
-// (with results still returned) rather than risking the whole response.
-const MAX_VTU_CHARS = 3_500_000;
+// Vercel caps a function response at 4.5 MB. The per-node contour fields and the VTU
+// export share this budget: the fields drive the results page's color plot, so they go
+// first and the optional VTU is dropped if both don't fit.
+const MAX_PAYLOAD_CHARS = 4_000_000;
 
 function badRequest(error: string, details?: string[], status = 400) {
   return NextResponse.json({ error, ...(details ? { details } : {}) }, { status });
@@ -63,7 +64,12 @@ export async function POST(request: NextRequest) {
   try {
     const { results, vtu } = runAnalysis(payload, { deadline: Date.now() + SOLVE_BUDGET_MS });
     const jobId = randomUUID();
-    const includeVtu = vtu !== null && vtu.length <= MAX_VTU_CHARS;
+    let fieldChars = results.nodal_fields ? JSON.stringify(results.nodal_fields).length : 0;
+    if (fieldChars > MAX_PAYLOAD_CHARS) {
+      delete results.nodal_fields;
+      fieldChars = 0;
+    }
+    const includeVtu = vtu !== null && vtu.length + fieldChars <= MAX_PAYLOAD_CHARS;
     return NextResponse.json({
       job_id: jobId,
       status: 'completed',

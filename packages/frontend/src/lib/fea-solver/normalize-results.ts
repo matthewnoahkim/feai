@@ -65,6 +65,9 @@ export function normalizeAnalysisResults(raw: AnalysisResults | Record<string, u
         max_location: scalePoint(stressBlock?.von_mises?.max_location, dScale),
       },
     },
+    nodal_fields: r.nodal_fields
+      ? { ...r.nodal_fields, displacement: r.nodal_fields.displacement.map((v) => v * dScale) }
+      : undefined,
     safety_factors: r.safety_factors
       ? {
           ...r.safety_factors,

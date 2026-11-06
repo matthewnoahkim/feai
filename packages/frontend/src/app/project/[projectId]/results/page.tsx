@@ -24,8 +24,12 @@ import { useDocumentStore } from '@/store/documentStore';
 import { feaSolverClient } from '@/lib/fea-solver/client';
 import type { AnalysisResults } from '@/lib/fea-solver/types';
 import { buildAnalysisRequestFromWorkflow } from '@/lib/fea-solver/workflow-request';
+import { toAnalysisResultData } from '@/lib/fea-solver/workflow-results';
+
+import type { ContourField } from '@/components/fea/ResultsContourView';
 
 // Dynamically import 3D viewport
+const ResultsContourView = dynamic(() => import('@/components/fea/ResultsContourView').then(m => ({ default: m.ResultsContourView })), { ssr: false });
 const Viewport3D = dynamic(() => import('@/components/Viewport3D').then(m => ({ default: m.Viewport3D })), { ssr: false });
 
 // Simple bar chart component
@@ -114,6 +118,8 @@ export default function ResultsPage() {
 
   const [activeTab, setActiveTab] = useState<'summary' | 'displacement' | 'stress' | 'export'>('summary');
   const [jobId, setJobId] = useState<string | null>(null);
+  const [contourField, setContourField] = useState<ContourField>('vonMises');
+  const showContours = !!(meshData?.nodes?.length && analysisResults?.fields);
 
   useEffect(() => {
     setCurrentStep('results');
@@ -167,33 +173,7 @@ export default function ResultsPage() {
         },
       });
 
-      // Convert to our format
-      setAnalysisResults({
-        jobId: results.job_id,
-        status: 'completed',
-        displacements: {
-          max: results.displacements.max,
-          min: results.displacements.min,
-        },
-        stress: {
-          vonMises: results.stress.von_mises,
-          principal: results.stress.principal ? {
-            sigma1: results.stress.principal.sigma_1,
-            sigma2: results.stress.principal.sigma_2,
-            sigma3: results.stress.principal.sigma_3,
-          } : undefined,
-        },
-        reactions: results.reactions ? {
-          totalForce: results.reactions.total_force,
-          totalMoment: results.reactions.total_moment,
-        } : undefined,
-        safetyFactors: results.safety_factors ? {
-          min: results.safety_factors.min,
-          avg: results.safety_factors.avg,
-        } : undefined,
-        computationTime: results.computation_time,
-        outputFiles: results.output_files,
-      });
+      setAnalysisResults(toAnalysisResultData(results));
 
       updateStepStatus('results', 'complete');
       setRunProgress(100);
@@ -387,7 +367,11 @@ export default function ResultsPage() {
                   {(['summary', 'displacement', 'stress', 'export'] as const).map((tab) => (
                     <button
                       key={tab}
-                      onClick={() => setActiveTab(tab)}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        if (tab === 'stress') setContourField('vonMises');
+                        if (tab === 'displacement') setContourField('displacement');
+                      }}
                       className={`flex-1 py-3 text-sm font-sans font-medium border-b-2 transition-colors capitalize ${
                         activeTab === tab
                           ? 'text-cad-accent border-cad-accent'
@@ -627,7 +611,16 @@ export default function ResultsPage() {
                 </div>
                 
                 <div className="h-[600px] relative">
-                  <Viewport3D />
+                  {showContours ? (
+                    <ResultsContourView
+                      meshData={meshData!}
+                      results={analysisResults}
+                      field={contourField}
+                      onFieldChange={setContourField}
+                    />
+                  ) : (
+                    <Viewport3D />
+                  )}
                 </div>
               </div>
             </div>

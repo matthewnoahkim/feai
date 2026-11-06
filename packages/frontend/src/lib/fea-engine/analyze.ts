@@ -509,6 +509,21 @@ export function runAnalysis(req: AnalysisRequest, options: AnalyzeOptions = {}):
       if (sf < 2) below.b20 += V
     }
   }
+  // Nodal von Mises: volume-weighted average of the surrounding elements' values, the
+  // usual smoothing for a contour plot of constant-stress elements.
+  const vmNode = new Float64Array(n), wNode = new Float64Array(n)
+  for (let e = 0; e < ne; e++) for (let a = 0; a < 4; a++) {
+    const node = mesh.tets[4 * e + a]
+    vmNode[node] += vm[e] * volumes[e]
+    wNode[node] += volumes[e]
+  }
+  const sig = (v: number) => Number(v.toPrecision(6))
+  const nodalFields = {
+    node_ids: mesh.ids ? Array.from(mesh.ids) : null,
+    displacement: Array.from(u, sig),
+    von_mises: Array.from(vmNode, (v, i) => sig(wNode[i] > 0 ? v / wNode[i] : 0)),
+  }
+
   const centroid = (e: number): V3 => {
     const t = mesh.tets, N = mesh.nodes
     return [0, 1, 2].map((d) => (N[3 * t[4 * e] + d] + N[3 * t[4 * e + 1] + d] + N[3 * t[4 * e + 2] + d] + N[3 * t[4 * e + 3] + d]) / 4) as V3
@@ -536,6 +551,7 @@ export function runAnalysis(req: AnalysisRequest, options: AnalyzeOptions = {}):
     computation_time: (Date.now() - started) / 1000,
     solver: { iterations: cg.iterations, relative_residual: cg.relativeResidual },
     ...(warnings.length ? { warnings } : {}),
+    nodal_fields: nodalFields,
   }
   if (yieldStrength && Number.isFinite(sfMin)) {
     results.safety_factors = {

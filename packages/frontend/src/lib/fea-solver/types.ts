@@ -318,6 +318,19 @@ export interface AnalysisResults {
     vtk?: string;
     csv?: string;
   };
+  /** Per-node results for contour plots. Index i is the node with id node_ids[i] in the
+   * submitted mesh (null node_ids: a generated box mesh with no caller-side node ids). */
+  nodal_fields?: NodalFields;
+}
+
+export interface NodalFields {
+  node_ids: number[] | null;
+  /** x, y, z per node, interleaved. Metres from the solver; the app's normalized results
+   * are in millimetres, like the other displacement values. */
+  displacement: number[];
+  /** Von Mises stress (Pa) per node: the volume-weighted average of the element values
+   * around the node (linear tets have constant stress per element). */
+  von_mises: number[];
 }
 
 // ============================================================================

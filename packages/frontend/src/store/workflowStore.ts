@@ -127,6 +127,13 @@ export interface AnalysisResultData {
     vtk?: string;
     csv?: string;
   };
+  /** Per-node values for the results page's color plot. Index i belongs to the mesh node
+   * with id nodeIds[i]; displacement is x, y, z interleaved in mm, vonMises is in Pa. */
+  fields?: {
+    nodeIds: number[] | null;
+    displacement: number[];
+    vonMises: number[];
+  };
 }
 
 interface WorkflowState {

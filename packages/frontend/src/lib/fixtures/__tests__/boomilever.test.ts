@@ -70,3 +70,26 @@ test('1X cantilever is within 20% of beam theory and balances the applied load',
   expect(results.stress.von_mises.max).toBeGreaterThan(15e6)
   expect(results.safety_factors!.min).toBeGreaterThan(1)
 })
+
+test('per-node fields map back to the right mesh nodes for the color plot', () => {
+  const { meshData, results } = solve(2)
+  const f = results.nodal_fields!
+  expect(f.node_ids).toHaveLength(meshData.nodeCount)
+  const byId = new Map(meshData.nodes!.map((n) => [n.id, n]))
+
+  // Wall-face nodes are fixed (zero displacement: blue); the largest nodal displacement
+  // is at the free tip (red) and equals the reported maximum.
+  let maxMag = 0, maxY = 0
+  f.node_ids!.forEach((id, i) => {
+    const node = byId.get(id)!
+    const mag = Math.hypot(f.displacement[3 * i], f.displacement[3 * i + 1], f.displacement[3 * i + 2])
+    if (node.y === 0) expect(mag).toBe(0)
+    if (mag > maxMag) { maxMag = mag; maxY = node.y }
+  })
+  expect(maxY).toBe(120)
+  expect(maxMag).toBeCloseTo(results.displacements.max.magnitude, 4)
+
+  // Nodal (averaged) stress is highest near the wall, where the bending moment peaks.
+  const peak = f.von_mises.indexOf(Math.max(...f.von_mises))
+  expect(byId.get(f.node_ids![peak])!.y).toBeLessThan(20)
+})

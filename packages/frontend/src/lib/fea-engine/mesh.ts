@@ -15,6 +15,9 @@ export class SolverInputError extends Error {
 export interface TetMesh {
   nodes: Float64Array // 3 * nodeCount, xyz in the mesh's own length unit
   tets: Int32Array // 4 * tetCount
+  /** Source node id of each node (the MSH file's node numbers), so per-node results can be
+   * matched back to the caller's mesh. Absent for generated box meshes. */
+  ids?: Int32Array
 }
 
 export function nodeCount(m: TetMesh): number {
@@ -28,16 +31,18 @@ export function tetCount(m: TetMesh): number {
 /** Drops nodes no tet references (a Gmsh file also lists boundary-only nodes of lower-
  * dimensional elements) — an unreferenced node has no stiffness, which would leave a
  * singular row in the system. */
-function compact(nodesXYZ: Float64Array, tets: Int32Array): TetMesh {
+function compact(nodesXYZ: Float64Array, tets: Int32Array, sourceIds?: Int32Array): TetMesh {
   const used = new Int32Array(nodesXYZ.length / 3).fill(-1)
   let count = 0
   for (let i = 0; i < tets.length; i++) {
     if (used[tets[i]] < 0) used[tets[i]] = count++
   }
   const nodes = new Float64Array(count * 3)
+  const ids = sourceIds ? new Int32Array(count) : undefined
   for (let old = 0; old < used.length; old++) {
     const n = used[old]
     if (n >= 0) {
+      if (ids) ids[n] = sourceIds![old]
       nodes[3 * n] = nodesXYZ[3 * old]
       nodes[3 * n + 1] = nodesXYZ[3 * old + 1]
       nodes[3 * n + 2] = nodesXYZ[3 * old + 2]
@@ -45,7 +50,7 @@ function compact(nodesXYZ: Float64Array, tets: Int32Array): TetMesh {
   }
   const remapped = new Int32Array(tets.length)
   for (let i = 0; i < tets.length; i++) remapped[i] = used[tets[i]]
-  return { nodes, tets: remapped }
+  return ids ? { nodes, tets: remapped, ids } : { nodes, tets: remapped }
 }
 
 export function parseMsh22(text: string): TetMesh {
@@ -56,6 +61,7 @@ export function parseMsh22(text: string): TetMesh {
   let sawFormat = false
   const idToIndex = new Map<number, number>()
   let nodesXYZ = new Float64Array(0)
+  let fileIds = new Int32Array(0)
   const tetList: number[] = []
 
   while (i < lines.length) {
@@ -70,9 +76,11 @@ export function parseMsh22(text: string): TetMesh {
     } else if (line === '$Nodes') {
       const n = parseInt(next(), 10)
       nodesXYZ = new Float64Array(n * 3)
+      fileIds = new Int32Array(n)
       for (let k = 0; k < n; k++) {
         const parts = next().split(/\s+/)
-        idToIndex.set(parseInt(parts[0], 10), k)
+        fileIds[k] = parseInt(parts[0], 10)
+        idToIndex.set(fileIds[k], k)
         nodesXYZ[3 * k] = parseFloat(parts[1])
         nodesXYZ[3 * k + 1] = parseFloat(parts[2])
         nodesXYZ[3 * k + 2] = parseFloat(parts[3])
@@ -98,7 +106,7 @@ export function parseMsh22(text: string): TetMesh {
   if (tetList.length === 0) throw new SolverInputError('MSH file contains no linear tetrahedra (element type 4)')
   const bad = nodesXYZ.some((v) => !Number.isFinite(v))
   if (bad) throw new SolverInputError('MSH file contains non-finite node coordinates')
-  return compact(nodesXYZ, Int32Array.from(tetList))
+  return compact(nodesXYZ, Int32Array.from(tetList), fileIds)
 }
 
 /** Decodes a request's `mesh.data`: base64 (the default encodeFileMeshData produces) or

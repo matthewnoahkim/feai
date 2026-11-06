@@ -33,9 +33,13 @@ import type {
 } from '../../store/workflowStore'
 import type { SchematicNode, Connection } from '../../store/schematicStore'
 import type { Material } from '../../store/materialLibraryStore'
-import type { AnalysisResults } from '../fea-solver/types'
+export { toAnalysisResultData } from '../fea-solver/workflow-results'
 
 export const BOOMILEVER_PROJECT_NAME = 'boomilever'
+
+export function boomileverProjectName(variant: BoomileverVariant): string {
+  return `${BOOMILEVER_PROJECT_NAME} ${variant}X`
+}
 
 export type BoomileverVariant = 1 | 2 | 3 | 4
 
@@ -75,7 +79,7 @@ export function slotDepth(variant: BoomileverVariant): number {
 /** Evenly fills [a, b] with ceil((b - a) / target) cells, endpoints included. */
 function span(a: number, b: number, target: number): number[] {
   const n = Math.max(1, Math.ceil((b - a) / target - 1e-9))
-  return Array.from({ length: n + 1 }, (_, i) => a + ((b - a) * i) / n)
+  return Array.from({ length: n + 1 }, (_, i) => (i === n ? b : a + ((b - a) * i) / n))
 }
 
 function joinSpans(...spans: number[][]): number[] {
@@ -236,34 +240,6 @@ export function beamTheoryTipDeflectionMm(): number {
 // Results and the stored snapshot
 // ---------------------------------------------------------------------------
 
-/** The results page's own conversion from a normalized solver result to workflow state. */
-export function toAnalysisResultData(results: AnalysisResults): AnalysisResultData {
-  return {
-    jobId: results.job_id,
-    status: 'completed',
-    displacements: { max: results.displacements.max, min: results.displacements.min },
-    stress: {
-      vonMises: results.stress.von_mises,
-      principal: results.stress.principal ? {
-        sigma1: results.stress.principal.sigma_1,
-        sigma2: results.stress.principal.sigma_2,
-        sigma3: results.stress.principal.sigma_3,
-      } : undefined,
-    },
-    reactions: results.reactions ? {
-      totalForce: results.reactions.total_force,
-      totalMoment: results.reactions.total_moment,
-    } : undefined,
-    safetyFactors: results.safety_factors ? {
-      min: results.safety_factors.min,
-      avg: results.safety_factors.avg,
-    } : undefined,
-    computationTime: results.computation_time,
-    // No outputFiles: the VTU download is served from the solver client's in-memory job
-    // cache, which won't hold a job that was solved ahead of time.
-  }
-}
-
 /** Stored at project.data.workflow. ProjectLayout loads it into the browser-side
  * workflow and schematic stores the first time the project is opened in a browser. */
 export interface ProjectWorkflowSnapshot {
@@ -370,7 +346,7 @@ export function buildBoomileverDocument(input: {
   ]
   return {
     id: 'doc-boomilever',
-    name: BOOMILEVER_PROJECT_NAME,
+    name: boomileverProjectName(v),
     description: `Boomilever wall joint ${v}X with block ${v}X: cantilever test simulation`,
     units: 'mm',
     partStudios: [{

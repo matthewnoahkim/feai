@@ -1,14 +1,14 @@
 /**
- * Seeds the "boomilever" test simulation into a user's account: a Basswood material in
- * their library, plus a project holding the wall joint + block geometry, a conforming tet
+ * Seeds the boomilever test simulations into a user's account: a Basswood material in
+ * their library, plus one project per wall joint variant ("boomilever 1X" to "4X"), each holding the wall joint + block geometry, a conforming tet
  * mesh, setup (fixed wall face, 5 N tip load, self-weight), and results solved here
  * with the app's own FE solver (lib/fea-engine). Opening the project in the app loads all
  * of it into the workflow (see ProjectLayout / workflowStore.hydrateFromSnapshot).
  *
  * Run from the repo root (reads DATABASE_URL from .env):
- *   npm run seed:boomilever -w @feai/frontend -- [--email you@x.com] [--variant 1-4] [--dry-run]
+ *   npm run seed:boomilever -w @feai/frontend -- [--email you@x.com] [--variant 1-4|all] [--dry-run]
  *
- * Re-running it updates the existing "boomilever" project in place instead of making a
+ * Re-running it updates the existing projects in place instead of making a
  * new one.
  */
 
@@ -20,6 +20,7 @@ import {
   BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
   BOOMILEVER_PROJECT_NAME,
+  boomileverProjectName,
   beamTheoryTipDeflectionMm,
   buildBoomileverDocument,
   buildBoomileverMesh,
@@ -42,8 +43,9 @@ function arg(name: string): string | undefined {
 
 async function main() {
   const email = arg('email') ?? 'mattnoahkim@gmail.com'
-  const variant = Number(arg('variant') ?? 1) as BoomileverVariant
-  if (![1, 2, 3, 4].includes(variant)) throw new Error('--variant must be 1, 2, 3, or 4')
+  const variantArg = arg('variant') ?? 'all'
+  const variants = (variantArg === 'all' ? [1, 2, 3, 4] : [Number(variantArg)]) as BoomileverVariant[]
+  if (!variants.every((v) => [1, 2, 3, 4].includes(v))) throw new Error('--variant must be 1, 2, 3, 4, or all')
   const stlDir = resolve(arg('stl-dir') ?? resolve(REPO_ROOT, 'boomilever_wall_joints'))
   const dryRun = process.argv.includes('--dry-run')
 
@@ -66,6 +68,7 @@ async function main() {
       presetKey: null,
     }
 
+    for (const variant of variants) {
     // ---- mesh + solve, through the same request builder the results page uses ----
     const meshData = buildBoomileverMesh(variant)
     const built = buildAnalysisRequestFromWorkflow({
@@ -102,23 +105,31 @@ async function main() {
     console.log(`  project data     ${(JSON.stringify(data).length / 1e6).toFixed(2)} MB`)
 
     if (dryRun) {
-      console.log('Dry run: nothing written.')
-      return
+      console.log('  dry run: nothing written.')
+      continue
     }
 
     const description = `Test simulation: wall joint ${variant}X + block ${variant}X (basswood), cantilevered from the wall with a 5 N tip load.`
     const json = data as unknown as Prisma.InputJsonValue
-    const existing = await prisma.project.findFirst({ where: { userId: user.id, name: BOOMILEVER_PROJECT_NAME } })
+    const name = boomileverProjectName(variant)
+    // The first version of this script made a single project named just "boomilever" for
+    // 1X; that one becomes "boomilever 1X" rather than leaving a duplicate behind.
+    const existing =
+      (await prisma.project.findFirst({ where: { userId: user.id, name } })) ??
+      (variant === 1
+        ? await prisma.project.findFirst({ where: { userId: user.id, name: BOOMILEVER_PROJECT_NAME } })
+        : null)
     const project = existing
       ? await prisma.project.update({
           where: { id: existing.id },
-          data: { description, data: json },
+          data: { name, description, data: json },
         })
       : await prisma.project.create({
-          data: { name: BOOMILEVER_PROJECT_NAME, description, userId: user.id, data: json },
+          data: { name, description, userId: user.id, data: json },
         })
-    console.log(`${existing ? 'Updated' : 'Created'} project "${project.name}" (${project.id}) for ${email}`)
-    console.log(`  open: /project/${project.id}/schematic`)
+    console.log(`  ${existing ? 'Updated' : 'Created'} project "${project.name}" (${project.id}) for ${email}`)
+    console.log(`  open: /project/${project.id}/results`)
+    }
   } finally {
     await prisma.$disconnect()
   }
