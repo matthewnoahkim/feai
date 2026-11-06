@@ -8,9 +8,9 @@ import {
   BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
   TIP_LOAD_N,
-  barTheoryProngStretchMm,
+  beamTheoryProngRootStressPa,
+  beamTheoryProngTipDeflectionMm,
   boomileverBoundaryConditions,
-  nominalProngStressPa,
   boomileverVolumeMm3,
   buildBoomileverMesh,
   slotDepth,
@@ -58,24 +58,34 @@ test.each([1, 2, 3, 4] as BoomileverVariant[])('mesh for %iX is conforming and p
   expect(mesh.quality!.maxAspectRatio).toBeLessThan(15)
 })
 
-test('1X bolted to the wall, prongs pulled down it: matches bar theory and balances', () => {
-  const { results } = solve(1)
+test('1X bolted at the block, prong ends pushed down: bends like beam theory and balances', () => {
+  const { meshData, results } = solve(1)
   const weightN = BOOMILEVER_MATERIAL.density * 9.81 * boomileverVolumeMm3(1) * 1e-9
 
-  // The prongs stretch about P L / (E A); the solid end adds a little as it shears into
-  // the clamped patch under the block.
-  const bar = barTheoryProngStretchMm(1)
-  expect(results.displacements.max.y).toBeGreaterThan(1.0 * bar)
-  expect(results.displacements.max.y).toBeLessThan(1.5 * bar)
+  // Linear tets are a little stiff in bending, while the prong roots (beside the clamped
+  // patch, not on it) add some give, so the tip lands near Euler-Bernoulli.
+  const beam = beamTheoryProngTipDeflectionMm(1)
+  expect(-results.displacements.min.z).toBeGreaterThan(0.8 * beam)
+  expect(-results.displacements.min.z).toBeLessThan(1.2 * beam)
 
-  // The wall holds the pull plus self-weight, both down the wall (+Y).
-  expect(results.reactions!.total_force[1]).toBeCloseTo(-(TIP_LOAD_N + weightN), 3)
-  expect(Math.abs(results.reactions!.total_force[2])).toBeLessThan(1e-6)
+  // A straight-down load bends the prongs straight down: no sideways sway, and the two
+  // prongs mirror each other.
+  const f = results.nodal_fields!
+  const byId = new Map(meshData.nodes!.map((n) => [n.id, n]))
+  f.node_ids!.forEach((id, i) => {
+    const n = byId.get(id)!
+    if (n.y !== 120) return
+    expect(Math.abs(f.displacement[3 * i])).toBeLessThan(0.01 * beam)
+  })
+
+  // The support holds the push plus self-weight, both down (-Z).
+  expect(results.reactions!.total_force[2]).toBeCloseTo(TIP_LOAD_N + weightN, 3)
+  expect(Math.abs(results.reactions!.total_force[0])).toBeLessThan(1e-6)
+  expect(Math.abs(results.reactions!.total_force[1])).toBeLessThan(1e-6)
   expect(results.reactions!.equilibrium!.is_balanced).toBe(true)
 
-  // Peak stress sits at the prong roots and the clamp edge, above the nominal P / A.
-  expect(results.stress.von_mises.max).toBeGreaterThan(nominalProngStressPa())
-  expect(results.safety_factors!.min).toBeGreaterThan(1)
+  // Peak stress sits at the prong roots, a re-entrant corner, so at least the beam value.
+  expect(results.stress.von_mises.max).toBeGreaterThan(beamTheoryProngRootStressPa(1))
 })
 
 test.each([1, 4] as BoomileverVariant[])('mesh for %iX leaves the slot between the prongs open', (v) => {
@@ -95,7 +105,7 @@ test('per-node fields map back to the right mesh nodes for the color plot', () =
   const byId = new Map(meshData.nodes!.map((n) => [n.id, n]))
 
   // Nodes on the bolted patch (back face under the block) are fixed (zero displacement:
-  // blue); the largest nodal displacement is at the pulled prong ends (red) and equals
+  // blue); the largest nodal displacement is at the pushed prong ends (red) and equals
   // the reported maximum.
   let maxMag = 0, maxY = 0
   f.node_ids!.forEach((id, i) => {
@@ -107,7 +117,7 @@ test('per-node fields map back to the right mesh nodes for the color plot', () =
   expect(maxY).toBe(120)
   expect(maxMag).toBeCloseTo(results.displacements.max.magnitude, 4)
 
-  // Nodal (averaged) stress is highest near the bolted end: prong roots and clamp edge.
+  // Nodal (averaged) stress is highest at the prong roots, where the bending moment peaks.
   const peak = f.von_mises.indexOf(Math.max(...f.von_mises))
   expect(byId.get(f.node_ids![peak])!.y).toBeLessThan(20)
 })

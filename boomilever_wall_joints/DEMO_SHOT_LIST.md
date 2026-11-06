@@ -29,7 +29,7 @@ If either check fails, the project still has an old simulation stored. Deploy th
 3. Get to the **Geometry** step (in the schematic, double-click **Geometry**) and close that tab for now.
 
 ### A4. Do a dry run once
-- Run every shot below one time without recording. In particular, rehearse **Run Analysis Again** on 2X; it takes about 3 s.
+- Run every shot below one time without recording. In particular, rehearse **Run Analysis Again** on 2X; it takes about 6–9 s.
 - After the rehearsal, refresh each page so panels start in their default state.
 
 ### Never click these during the demo
@@ -95,36 +95,36 @@ Move the mouse **slowly**. Pause about 1 s after every click so the edit has roo
 ### Shot 6 · 1:05–1:15 · Mesh, boomilever 2X (about 10 s)
 1. Back on the **2X schematic tab** → **double-click Mesh**.
 2. The **Mesh Preview** shows the tet mesh. Orbit slowly, then zoom toward the **slot root**, where the prongs meet the solid end.
-3. Move the mouse over the **Mesh Generated** box, showing **Nodes 4,689**, **Elements 13,536** and **Element Type C3D4**. Then over **Quality Metrics** → **Avg Aspect Ratio**.
+3. Move the mouse over the **Mesh Generated** box, showing **Nodes 6,885**, **Elements 25,152** and **Element Type C3D4**. Then over **Quality Metrics** → **Avg Aspect Ratio**.
 4. Remember: **don't touch Generate Mesh or the 🗑 icon.**
 
 ### Shot 7 · 1:15–1:30 · Analysis Setup, boomilever 2X (about 15 s)
 1. Schematic tab → **double-click Setup**.
 2. On the **Boundary Conditions (1)** tab, hover the support **"Back face under block_2X bolted to wall."**
 3. Click the **› chevron** on that row to expand it and show the box region min/max. Click **›** again to collapse it. (Not the 👁 eye, not the 🗑 trash.)
-4. Click the **Loads (2)** tab. Hover **"Prongs pulled 5 N down the wall (+Y, along prongs)"** → click its **›** to expand it and show the force → collapse it.
-5. Hover **"Self-weight (down the wall)."**
+4. Click the **Loads (2)** tab. Hover **"Prong ends pushed 5 N down (-Z, orthogonal to the joint)"** → click its **›** to expand it and show the force → collapse it.
+5. Hover **"Self-weight (-Z)."**
 6. In **Setup Preview**, orbit so the fixed patch under the block and the load at the prong ends are both visible.
 
 ### Shot 8 · 1:30–1:52 · Results, boomilever 2X (about 22 s, the main shot)
 1. Schematic tab → **double-click Results**.
-2. Click **Run Analysis Again** (left panel, under the summary). Keep the progress on screen; it finishes in about 3 s with **Analysis Complete**.
+2. Click **Run Analysis Again** (left panel, under the summary). Keep the progress on screen; it finishes in about 6–9 s (speed it up in the edit) with **Analysis Complete**.
 3. **Summary** tab: hover, in order:
-   - **Max Displacement**, about **0.0089 mm** (8.9 µm)
-   - **Max Von Mises Stress**, about **0.75 MPa**
-   - **Safety Factor**: **Min about 43**
-   - **Reaction Forces**: **Fy about −5.0 N**
+   - **Max Displacement**, about **23.9 mm**
+   - **Max Von Mises Stress**, about **131 MPa**
+   - **Safety Factor**: **Min about 0.25** (below 1: the prong roots would yield)
+   - **Reaction Forces**: **Fz about 5.0 N**
 4. **Results Visualization** (right), with **Stress** selected:
    - Orbit to the **slot root / prong roots** (the hot spot) and zoom in a little.
    - Under **Parts**, **uncheck block_2X**. Hold 1 s to show inside the slot, then **re-check** it.
-5. Click **Displacement** (the toggle at top left of the viewer). In the dropdown, choose **Deformed (x…)**, the exaggerated option. Orbit slightly so the stretch reads.
+5. Click **Displacement** (the toggle at top left of the viewer). In the dropdown, choose **Deformed (true scale)**. The prongs bend visibly at true scale. Orbit to a side view so the bend reads.
 6. Left panel: click the **Stress** tab and hover the **Principal Stresses** values for 1 s.
 7. Click the **Export** tab and hover **Export CSV** (*"Spreadsheet-compatible format"*). If **Download VTK** (*"For ParaView visualization"*) is there, hover it too. Clicking is optional.
 
 ### Shot 9 · 1:52–2:00 · Compare 1X → 4X and close (about 8 s)
 **Prep before this shot:** have the **Results** pages for **1X** and **4X** already open in their own tabs, each on the **Summary** tab.
-1. Ctrl+Tab to **1X Results**. Hold 1.5 s on **Max Displacement**, about **10.1 µm**.
-2. Ctrl+Tab to **4X Results**. Hold 1.5 s on **Max Displacement**, about **8.1 µm**.
+1. Ctrl+Tab to **1X Results**. Hold 1.5 s on **Max Displacement**, about **27.1 mm**.
+2. Ctrl+Tab to **4X Results**. Hold 1.5 s on **Max Displacement**, about **18.3 mm**.
 3. *(Editing alternative: put the 1X and 4X results side by side in a split screen.)*
 4. End card: the FEAI logo on white, 2 s.
 
@@ -135,7 +135,7 @@ Move the mouse **slowly**. Pause about 1 s after every click so the edit has roo
 - Add a zoom-in on the cursor for: the search box, **Run Analysis Again**, the **block_2X** checkbox, and the **Deformed** dropdown.
 - Captions to put on screen:
   - Shot 2: *"4 joint variants · 1X–4X"*
-  - Shot 7: *"Bolted at the block · 5 N pull down the prongs"*
-  - Shot 8: *"Solved in the browser · ~3 s"*
-  - Shot 9: *"1X 10.1 µm → 4X 8.1 µm · safety factor ≈ 40"*
+  - Shot 7: *"Bolted at the block · 5 N pushing the prong ends down"*
+  - Shot 8: *"Solved in the browser · seconds"*
+  - Shot 9: *"1X 27.1 mm → 4X 18.3 mm tip deflection"*
 - If the video runs long, cut Shot 3's Toolbox hover and Shot 4's tooltip hovers first.

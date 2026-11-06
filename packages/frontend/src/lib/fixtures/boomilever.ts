@@ -10,21 +10,24 @@
  * (16 x N*4.7625 x 3.175) sits where the files place it, over the middle of the solid wall
  * end; the mesh tags those cells as the block.
  *
- * Load case (how the joint is tested): the plate lies flat against the wall, held by the
- * wall bolt through the solid end where the block sits, with the prongs hanging down the
- * wall. The joint + block are bonded as one basswood body. The back face (z = 0) of the
- * block's footprint is fixed, as if clamped to the wall by the bolt and washer. A 5 N
- * pull acts on the prong ends (y = 120) along the prongs, +Y, which is down the wall;
- * self-weight acts down the wall too.
+ * Load case (how the joint is tested): the joint is held by the bolt through the solid
+ * end where the block sits. The joint + block are bonded as one basswood body. The back
+ * face (z = 0) of the block's footprint is fixed, as if clamped by the bolt and washer.
+ * A 5 N load pushes the prong ends (y = 120) down, -Z, orthogonal to the joint's plate,
+ * so each prong bends as a cantilever off the solid end; self-weight acts down (-Z) too.
  *
  * The solver handles a single isotropic material only. Basswood is orthotropic, so this
- * model uses its along-grain (L) properties, the direction that governs prongs pulled
+ * model uses its along-grain (L) properties, the direction that governs prongs bending
  * along their length. Values are from the USDA Wood Handbook (basswood, 12% MC).
  *
  * The mesh is a structured, conforming linear-tet mesh of the real joint + block solid.
  * Grid lines fall on every edge of the slot, so each part is meshed on its own footprint
  * and the two share nodes at the glue line. Each hex cell is split into 6 tets with the
- * Kuhn split, so neighboring cells' tets meet face to face.
+ * Kuhn split, mirrored in every other cell along each axis. A mirrored neighbor shares
+ * the same diagonal on the face between them, so tets still meet face to face, and the
+ * alternating diagonals keep the split's built-in bias from adding up: with one
+ * orientation everywhere, a straight-down load on the prongs also swayed them sideways.
+ * Each prong is at least two cells wide for the same reason.
  */
 
 import type {
@@ -47,8 +50,10 @@ export const BOOMILEVER_PROJECT_NAME = 'boomilever'
  * v3: the slot between the prongs is left open, matching the real geometry (v2 meshed it
  * as solid plate).
  * v4: tested the way the joint is loaded: block bolted flat to the wall, prongs pulled
- * along their length (v3 was a cantilever off the end face with a sideways tip load). */
-export const BOOMILEVER_SEED = 'boomilever-v4'
+ * along their length (v3 was a cantilever off the end face with a sideways tip load).
+ * v5: the prong ends are pushed down, orthogonal to the plate (-Z), not pulled along
+ * the prongs. */
+export const BOOMILEVER_SEED = 'boomilever-v5'
 
 /** When the boomilever test projects were made: their created/updated dates, the solve
  * date in their result ids, and their workflow timestamps. */
@@ -70,10 +75,10 @@ export const PLATE_LENGTH = 120
 export const PRONG_WIDTH = PLATE_HALF_WIDTH - SLOT_HALF_WIDTH
 
 // ---- load case ----
-/** Total pull on the prong ends, along the prongs. */
+/** Total load on the prong ends, pushing them down (-Z), orthogonal to the plate. */
 export const TIP_LOAD_N = 5
-/** Down the wall: the prongs hang down from the bolt, along +Y. */
-export const GRAVITY: [number, number, number] = [0, 9.81, 0]
+/** Down is -Z, the same direction as the prong load. */
+export const GRAVITY: [number, number, number] = [0, 0, -9.81]
 
 /** Basswood (Tilia americana), along-grain, 12% moisture content. "Yield" is the
  * compressive strength parallel to grain, the first limit a bending member reaches. */
@@ -138,9 +143,9 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
   const depth = slotDepth(variant)
 
   const xs = joinSpans(
-    span(-PLATE_HALF_WIDTH, -SLOT_HALF_WIDTH, hx),
+    span(-PLATE_HALF_WIDTH, -SLOT_HALF_WIDTH, Math.min(hx, PRONG_WIDTH / 2)),
     span(-SLOT_HALF_WIDTH, SLOT_HALF_WIDTH, hx),
-    span(SLOT_HALF_WIDTH, PLATE_HALF_WIDTH, hx),
+    span(SLOT_HALF_WIDTH, PLATE_HALF_WIDTH, Math.min(hx, PRONG_WIDTH / 2)),
   )
   const ys = joinSpans(span(0, depth, hy), span(depth, PLATE_LENGTH, hy))
   const zs = Array.from({ length: layers + 1 }, (_, i) => (PLATE_THICKNESS * i) / layers)
@@ -168,8 +173,12 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
         const inMiddle = Math.abs(cx) < SLOT_HALF_WIDTH
         if (inMiddle && cy > depth) continue
         const region = inMiddle ? 1 : 0
-        const corner = [0, 1, 2, 3, 4, 5, 6, 7].map((c) =>
-          nodeId(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1)))
+        // Mirror the split in every other cell along each axis (flip the corner bits).
+        const mirror = (i & 1) | ((j & 1) << 1) | ((k & 1) << 2)
+        const corner = [0, 1, 2, 3, 4, 5, 6, 7].map((c0) => {
+          const c = c0 ^ mirror
+          return nodeId(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1))
+        })
         for (const t of KUHN_TETS) {
           let ids = t.map((c) => corner[c])
           // Positive orientation (right-handed), the convention gmsh and most viewers expect.
@@ -248,41 +257,43 @@ const TIP_FACE_AREA_M2 = (2 * PRONG_WIDTH * PLATE_THICKNESS) * 1e-6
 
 export const BOOMILEVER_LOADS: LoadDef[] = [
   {
-    id: 'load-boomilever-pull',
+    id: 'load-boomilever-push',
     type: 'surface_force',
-    name: `Prongs pulled ${TIP_LOAD_N} N down the wall (+Y, along prongs)`,
+    name: `Prong ends pushed ${TIP_LOAD_N} N down (-Z, orthogonal to the joint)`,
     target: {
       type: 'box',
       min: [-PLATE_HALF_WIDTH - EPS, PLATE_LENGTH - EPS, -EPS],
       max: [PLATE_HALF_WIDTH + EPS, PLATE_LENGTH + EPS, PLATE_THICKNESS + EPS],
     },
     // Uniform traction over the two 1.5875 x 3.175 mm prong end faces, totaling TIP_LOAD_N.
-    forcePerArea: [0, TIP_LOAD_N / TIP_FACE_AREA_M2, 0],
+    forcePerArea: [0, 0, -TIP_LOAD_N / TIP_FACE_AREA_M2],
     enabled: true,
   },
   {
     id: 'load-boomilever-gravity',
     type: 'gravity',
-    name: 'Self-weight (down the wall)',
+    name: 'Self-weight (-Z)',
     acceleration: GRAVITY,
     enabled: true,
   },
 ]
 
-/** Cross-section (mm^2) of the two prongs together. */
-export const PRONG_AREA_MM2 = 2 * PRONG_WIDTH * PLATE_THICKNESS
+/** Second moment of area (mm^4) of the two prongs together, bending about X. */
+export const PRONG_I_MM4 = (2 * PRONG_WIDTH * PLATE_THICKNESS ** 3) / 12
 
-/** Nominal tension stress (Pa) in the prongs, P / A, as a sanity reference. */
-export function nominalProngStressPa(): number {
-  return (TIP_LOAD_N / PRONG_AREA_MM2) * 1e6
+/** Euler-Bernoulli tip deflection (mm) of the prongs as a cantilever clamped at their
+ * roots (y = slot depth): P L^3 / (3 E I). The real roots sit beside the clamped patch,
+ * not on it, so the solid end adds some more rotation and the 3D answer runs higher. */
+export function beamTheoryProngTipDeflectionMm(variant: BoomileverVariant): number {
+  const E = BOOMILEVER_MATERIAL.youngsModulus / 1e6 // N/mm^2
+  const L = PLATE_LENGTH - slotDepth(variant)
+  return (TIP_LOAD_N * L ** 3) / (3 * E * PRONG_I_MM4)
 }
 
-/** Bar-theory stretch (mm) of the prongs alone, from their roots (y = slot depth) to the
- * pulled ends: P L / (E A). The solid end adds a little more, as it shears into the
- * clamped patch. */
-export function barTheoryProngStretchMm(variant: BoomileverVariant): number {
-  const E = BOOMILEVER_MATERIAL.youngsModulus / 1e6 // N/mm^2
-  return (TIP_LOAD_N * (PLATE_LENGTH - slotDepth(variant))) / (E * PRONG_AREA_MM2)
+/** Euler-Bernoulli bending stress (Pa) at the prong roots, M c / I. */
+export function beamTheoryProngRootStressPa(variant: BoomileverVariant): number {
+  const M = TIP_LOAD_N * (PLATE_LENGTH - slotDepth(variant)) // N*mm
+  return ((M * PLATE_THICKNESS) / 2 / PRONG_I_MM4) * 1e6
 }
 
 /** Solid volume (mm^3): the full-width wall end plus the two prongs. */

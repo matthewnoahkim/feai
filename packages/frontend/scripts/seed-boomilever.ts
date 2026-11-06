@@ -20,8 +20,8 @@ import {
   BOOMILEVER_PROJECT_NAME,
   boomileverProjectName,
   BOOMILEVER_CREATED_AT,
-  barTheoryProngStretchMm,
-  nominalProngStressPa,
+  beamTheoryProngRootStressPa,
+  beamTheoryProngTipDeflectionMm,
   buildBoomileverDocument,
   buildBoomileverSnapshot,
   parseBinaryStl,
@@ -70,9 +70,9 @@ async function main() {
     const { meshData, analysisResults, results } = solveBoomilever(variant, materialForSolve.id)
     console.log(`  mesh             ${meshData.nodeCount} nodes, ${meshData.elementCount} tets`)
 
-    const stretch = analysisResults.displacements.max.y
-    console.log(`  prong-end stretch ${(stretch * 1000).toFixed(2)} um  (bar theory, prongs alone ${(barTheoryProngStretchMm(variant) * 1000).toFixed(2)} um)`)
-    console.log(`  max von Mises    ${(analysisResults.stress.vonMises.max / 1e6).toFixed(2)} MPa  (nominal P/A ${(nominalProngStressPa() / 1e6).toFixed(2)} MPa)`)
+    const tip = -analysisResults.displacements.min.z
+    console.log(`  prong tip deflection ${tip.toFixed(3)} mm  (beam theory, prongs clamped at their roots ${beamTheoryProngTipDeflectionMm(variant).toFixed(3)} mm)`)
+    console.log(`  max von Mises    ${(analysisResults.stress.vonMises.max / 1e6).toFixed(2)} MPa  (beam theory at the roots ${(beamTheoryProngRootStressPa(variant) / 1e6).toFixed(2)} MPa)`)
     console.log(`  min safety factor ${analysisResults.safetyFactors?.min.toFixed(2)} (vs ${BOOMILEVER_MATERIAL.yieldStrength! / 1e6} MPa)`)
     console.log(`  reaction force   [${analysisResults.reactions?.totalForce.map((f) => f.toFixed(4)).join(', ')}] N`)
     console.log(`  solve time       ${analysisResults.computationTime?.toFixed(2)} s, equilibrium error ${results.reactions?.equilibrium?.force_error_percent?.toExponential(1)}%`)
@@ -95,7 +95,7 @@ async function main() {
       continue
     }
 
-    const description = `Test simulation: wall joint ${variant}X + block ${variant}X (basswood), bolted flat to the wall with the prongs pulled 5 N down the wall.`
+    const description = `Test simulation: wall joint ${variant}X + block ${variant}X (basswood), bolted at the block with the prong ends pushed 5 N down.`
     const json = data as unknown as Prisma.InputJsonValue
     const name = boomileverProjectName(variant)
     // The first version of this script made a single project named just "boomilever" for
