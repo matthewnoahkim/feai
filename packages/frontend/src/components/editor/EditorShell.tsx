@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ComponentType, type ReactNode } from 'react';
 import { Viewport3D } from '@/components/Viewport3D';
 import { FeatureTree } from '@/components/FeatureTree';
 import { Toolbar } from '@/components/Toolbar';
@@ -57,18 +57,33 @@ export const DIALOG_REGISTRY: Record<string, ComponentType> = {
 };
 
 /** Loads the project into the document store, autosaves every 30 s, flushes a final save
- * on unload, and exposes an explicit save for buttons/shortcuts. */
+ * on unload, and exposes an explicit save for buttons/shortcuts. The autosave and unload
+ * save only write when the document differs from what was last loaded or saved, so just
+ * opening a project doesn't change its modified date. */
 export function useEditorProject(projectId?: string) {
   const { fetchProject, saveProjectData } = useProjectStore();
   const { document, createNewDocument, loadDocumentFromData } = useDocumentStore();
   const { loadProjectChats } = useChatStore();
   const { addNotification } = useUIStore();
+  // Serialized form of the document as last loaded from or saved to the server.
+  const lastSavedRef = useRef<string | null>(null);
+  const isUnchanged = (data: unknown) => {
+    const json = JSON.stringify(data);
+    if (json === lastSavedRef.current) return true;
+    lastSavedRef.current = json;
+    return false;
+  };
 
   useEffect(() => {
+    lastSavedRef.current = null;
     if (projectId) {
       loadProjectChats(projectId);
       fetchProject(projectId).then(project => {
-        if (project?.data) loadDocumentFromData(project.data);
+        if (project?.data) {
+          loadDocumentFromData(project.data);
+          const loaded = useDocumentStore.getState().document;
+          if (loaded) lastSavedRef.current = JSON.stringify(serializeDocument(loaded));
+        }
         else createNewDocument(project?.name || 'New Part');
       });
     } else if (!document) {
@@ -80,7 +95,9 @@ export function useEditorProject(projectId?: string) {
   const save = useCallback(async () => {
     if (!projectId || !document) return;
     try {
-      await saveProjectData(projectId, serializeDocument(document));
+      const data = serializeDocument(document);
+      await saveProjectData(projectId, data);
+      lastSavedRef.current = JSON.stringify(data);
       addNotification('success', 'Project saved');
     } catch {
       addNotification('error', 'Failed to save project');
@@ -90,7 +107,9 @@ export function useEditorProject(projectId?: string) {
   useEffect(() => {
     if (!projectId || !document) return;
     const interval = setInterval(() => {
-      saveProjectData(projectId, serializeDocument(document)).catch(console.error);
+      const data = serializeDocument(document);
+      if (isUnchanged(data)) return;
+      saveProjectData(projectId, data).catch(console.error);
     }, 30000);
     return () => clearInterval(interval);
   }, [projectId, document, saveProjectData]);
@@ -100,11 +119,13 @@ export function useEditorProject(projectId?: string) {
     const flush = () => {
       // Unload-time requests are capped (~64 KB in flight). serializeDocument keeps the
       // payload small by dropping regenerable meshes; the interval save covers the rest.
+      const data = serializeDocument(document);
+      if (isUnchanged(data)) return;
       fetch(`/api/projects/${projectId}/data`, {
         method: 'PUT',
         keepalive: true,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: serializeDocument(document) }),
+        body: JSON.stringify({ data }),
       }).catch(() => {});
     };
     window.addEventListener('beforeunload', flush);
