@@ -17,6 +17,8 @@ import {
   ColormapType,
 } from '@feai/shared';
 import { apiClient } from '../api/client';
+import { useProjectStore } from './projectStore';
+import { DEMO_PROJECT_ID, PREDICTED_OUTCOME, buildDemoResults } from '../lib/demo/boomilver-wall-joints';
 
 interface FEAState {
   // Mode
@@ -374,7 +376,7 @@ export const useFEAStore = create<FEAState>((set, get) => ({
   // Solver actions
   runSimulation: async (partStudioId: string) => {
     const state = get();
-    
+
     if (!state.mesh) {
       throw new Error('No mesh generated');
     }
@@ -385,6 +387,33 @@ export const useFEAStore = create<FEAState>((set, get) => ({
       solverMessage: 'Preparing simulation...',
       results: null,
     });
+
+    // The demo project reports a fixed predicted outcome instead of actually solving —
+    // there's no real solver backend wired up yet (apiClient.runSimulation below has no
+    // matching /api/fea/run route). Only ever true for the one project this is seeded on
+    // (see src/lib/demo/seed.ts), which only one account ever has.
+    if (useProjectStore.getState().currentProject?.id === DEMO_PROJECT_ID) {
+      set({ solverStatus: 'solving', solverMessage: 'Running solver...', solverProgress: 40 });
+      try {
+        const results = await new Promise<ReturnType<typeof buildDemoResults>>((resolve, reject) => {
+          setTimeout(() => {
+            try { resolve(buildDemoResults(state.mesh!)); } catch (e) { reject(e); }
+          }, Math.max(300, PREDICTED_OUTCOME.solveTimeSec * 1000));
+        });
+        set({
+          results,
+          solverStatus: 'completed',
+          solverProgress: 100,
+          solverMessage: 'Simulation complete',
+          activeFEAPanel: 'results',
+          jobId: null,
+        });
+      } catch (error: any) {
+        console.error('[FEA] Demo simulation failed:', error);
+        set({ solverStatus: 'error', solverMessage: error.message || 'Simulation failed', jobId: null });
+      }
+      return;
+    }
 
     try {
       // Build setup

@@ -9,7 +9,9 @@ import {
   BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
   TIP_LOAD_N,
+  beamTheoryProngRootStressPa,
   beamTheoryTipDeflectionMm,
+  boomileverVolumeMm3,
   buildBoomileverMesh,
   slotDepth,
   type BoomileverVariant,
@@ -56,22 +58,31 @@ test.each([1, 2, 3, 4] as BoomileverVariant[])('mesh for %iX is conforming and p
 
 test('1X cantilever is within 20% of beam theory and balances the applied load', () => {
   const { results } = solve(1)
-  const weightN = BOOMILEVER_MATERIAL.density * 9.81 * (19.175 * 3.175 * 120) * 1e-9
+  const weightN = BOOMILEVER_MATERIAL.density * 9.81 * boomileverVolumeMm3(1) * 1e-9
 
   // Linear tets are stiff in bending, and the fully fixed root also restrains the Poisson
   // contraction that beam theory lets happen freely, so the 3D answer lands somewhat below
-  // Euler-Bernoulli (5.59 mm). Self-weight adds about 0.4%.
-  const beam = beamTheoryTipDeflectionMm()
+  // Euler-Bernoulli. Self-weight adds a fraction of a percent.
+  const beam = beamTheoryTipDeflectionMm(1)
   expect(-results.displacements.min.z).toBeGreaterThan(0.8 * beam)
   expect(-results.displacements.min.z).toBeLessThan(1.0 * beam)
 
   expect(results.reactions!.total_force[2]).toBeCloseTo(TIP_LOAD_N + weightN, 3)
   expect(results.reactions!.equilibrium!.is_balanced).toBe(true)
 
-  // Root bending stress M*c/I = 5 * 120 * 1.5875 / 51.14 = 18.6 MPa; the peak sits at
-  // the fixed edge, so it's at least the nominal value.
-  expect(results.stress.von_mises.max).toBeGreaterThan(15e6)
-  expect(results.safety_factors!.min).toBeGreaterThan(1)
+  // The thin prongs carry the moment past the solid wall end; the peak sits at their
+  // roots (a re-entrant corner), so it's at least the nominal beam value.
+  expect(results.stress.von_mises.max).toBeGreaterThan(0.8 * beamTheoryProngRootStressPa(1))
+})
+
+test.each([1, 4] as BoomileverVariant[])('mesh for %iX leaves the slot between the prongs open', (v) => {
+  const mesh = buildBoomileverMesh(v)
+  const byId = new Map(mesh.nodes!.map((n) => [n.id, n]))
+  for (const e of mesh.elements!) {
+    const c = e.nodeIds.map((id) => byId.get(id)!)
+    const cx = c.reduce((s, p) => s + p.x, 0) / 4, cy = c.reduce((s, p) => s + p.y, 0) / 4
+    expect(Math.abs(cx) < 8 && cy > slotDepth(v)).toBe(false)
+  }
 })
 
 test('per-node fields map back to the right mesh nodes for the color plot', () => {

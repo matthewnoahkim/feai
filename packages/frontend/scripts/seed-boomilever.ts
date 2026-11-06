@@ -85,7 +85,7 @@ async function main() {
     const analysisResults = toAnalysisResultData(normalizeAnalysisResults({ job_id: jobId, ...results }))
 
     const tip = -analysisResults.displacements.min.z
-    console.log(`  tip deflection   ${tip.toFixed(3)} mm  (Euler-Bernoulli ${beamTheoryTipDeflectionMm().toFixed(3)} mm)`)
+    console.log(`  tip deflection   ${tip.toFixed(3)} mm  (Euler-Bernoulli ${beamTheoryTipDeflectionMm(variant).toFixed(3)} mm)`)
     console.log(`  max von Mises    ${(analysisResults.stress.vonMises.max / 1e6).toFixed(2)} MPa`)
     console.log(`  min safety factor ${analysisResults.safetyFactors?.min.toFixed(2)} (vs ${BOOMILEVER_MATERIAL.yieldStrength! / 1e6} MPa)`)
     console.log(`  reaction force   [${analysisResults.reactions?.totalForce.map((f) => f.toFixed(4)).join(', ')}] N`)

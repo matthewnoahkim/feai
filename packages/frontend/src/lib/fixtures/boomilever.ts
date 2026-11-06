@@ -3,10 +3,12 @@
  * boundary conditions, loads, solved results), built from the wall_joint_NX / block_NX
  * parts in boomilever_wall_joints/.
  *
- * Geometry (mm, read from the uploaded STEP files): a 1/8" (3.175 mm) basswood plate,
- * 19.175 mm wide x 120 mm long. The plate has a 16 mm wide slot at the wall end (y = 0) that
- * is N x 4.7625 mm (N x 3/16") deep for the "NX" variant. block_NX (16 x N*4.7625 x 3.175)
- * fills that slot exactly.
+ * Geometry (mm, read from the uploaded STL/STEP files): a 1/8" (3.175 mm) basswood fork,
+ * 19.175 mm wide x 120 mm long. The wall end (y = 0 to N x 4.7625 mm, N x 3/16", for the
+ * "NX" variant) is solid across the full width. Past that, a 16 mm wide slot runs out
+ * through the free end (y = 120), leaving two 1.5875 mm prongs. block_NX
+ * (16 x N*4.7625 x 3.175) sits where the files place it, over the middle of the solid wall
+ * end; the mesh tags those cells as the block.
  *
  * Load case: the joint + block, bonded as one basswood body, cantilevered off the wall.
  * The whole wall face (y = 0) is fixed. A 5 N tip load acts in -Z on the free end face
@@ -38,8 +40,10 @@ export { toAnalysisResultData } from '../fea-solver/workflow-results'
 export const BOOMILEVER_PROJECT_NAME = 'boomilever'
 
 /** v2: mesh elements tagged by part (joint vs. block) so the results view can outline
- * each part, plus per-node fields for the color plot. */
-export const BOOMILEVER_SEED = 'boomilever-v2'
+ * each part, plus per-node fields for the color plot.
+ * v3: the slot between the prongs is left open, matching the real geometry (v2 meshed it
+ * as solid plate). */
+export const BOOMILEVER_SEED = 'boomilever-v3'
 
 export function boomileverProjectName(variant: BoomileverVariant): string {
   return `${BOOMILEVER_PROJECT_NAME} ${variant}X`
@@ -53,6 +57,8 @@ export const PLATE_HALF_WIDTH = 9.5875
 export const SLOT_HALF_WIDTH = 8
 export const SLOT_DEPTH_PER_X = 4.7625 // 3/16"
 export const PLATE_LENGTH = 120
+/** Width of each prong beside the slot. */
+export const PRONG_WIDTH = PLATE_HALF_WIDTH - SLOT_HALF_WIDTH
 
 // ---- load case ----
 export const TIP_LOAD_N = 5
@@ -144,9 +150,13 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
   for (let k = 0; k < zs.length - 1; k++)
     for (let j = 0; j < ny - 1; j++)
       for (let i = 0; i < nx - 1; i++) {
-        // Region 1 (the block) is the cells inside the slot; everything else is the joint.
+        // Past the solid wall end, the slot between the prongs is empty: no cells there.
+        // Region 1 (the block) is the middle of the wall end, where block_NX sits;
+        // everything else is the joint.
         const cx = (xs[i] + xs[i + 1]) / 2, cy = (ys[j] + ys[j + 1]) / 2
-        const region = Math.abs(cx) < SLOT_HALF_WIDTH && cy < depth ? 1 : 0
+        const inMiddle = Math.abs(cx) < SLOT_HALF_WIDTH
+        if (inMiddle && cy > depth) continue
+        const region = inMiddle ? 1 : 0
         const corner = [0, 1, 2, 3, 4, 5, 6, 7].map((c) =>
           nodeId(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1)))
         for (const t of KUHN_TETS) {
@@ -164,8 +174,13 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
         }
       }
 
+  // Grid nodes inside the open slot belong to no cell; leave them out.
+  const used = new Set<number>()
+  for (const e of elements) for (const id of e.nodeIds) used.add(id)
+  const meshNodes = nodes.filter((n) => used.has(n.id))
+
   return {
-    nodeCount: nodes.length,
+    nodeCount: meshNodes.length,
     elementCount: elements.length,
     elementType: 'C3D4',
     quality: {
@@ -174,7 +189,7 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
       maxAspectRatio: Math.max(...ratios),
       warningCount: ratios.filter((r) => r > 20).length,
     },
-    nodes,
+    nodes: meshNodes,
     elements,
     regions: { names: [`wall_joint_${variant}X`, `block_${variant}X`], elementRegion },
     boundingBox: {
@@ -214,7 +229,8 @@ export const BOOMILEVER_BOUNDARY_CONDITIONS: BoundaryConditionDef[] = [
   },
 ]
 
-const TIP_FACE_AREA_M2 = (2 * PLATE_HALF_WIDTH * PLATE_THICKNESS) * 1e-6
+// The free end face is just the two prong ends; the slot is open there.
+const TIP_FACE_AREA_M2 = (2 * PRONG_WIDTH * PLATE_THICKNESS) * 1e-6
 
 export const BOOMILEVER_LOADS: LoadDef[] = [
   {
@@ -226,7 +242,7 @@ export const BOOMILEVER_LOADS: LoadDef[] = [
       min: [-PLATE_HALF_WIDTH - EPS, PLATE_LENGTH - EPS, -EPS],
       max: [PLATE_HALF_WIDTH + EPS, PLATE_LENGTH + EPS, PLATE_THICKNESS + EPS],
     },
-    // Uniform traction over the 19.175 x 3.175 mm end face that totals TIP_LOAD_N.
+    // Uniform traction over the two 1.5875 x 3.175 mm prong end faces, totaling TIP_LOAD_N.
     forcePerArea: [0, 0, -TIP_LOAD_N / TIP_FACE_AREA_M2],
     enabled: true,
   },
@@ -239,11 +255,29 @@ export const BOOMILEVER_LOADS: LoadDef[] = [
   },
 ]
 
-/** Euler-Bernoulli tip deflection (mm) for the load case above, as a sanity reference. */
-export function beamTheoryTipDeflectionMm(): number {
+/** Euler-Bernoulli tip deflection (mm) for the tip load, as a sanity reference: a stepped
+ * cantilever, full width for the solid wall end, the two prongs alone past it. */
+export function beamTheoryTipDeflectionMm(variant: BoomileverVariant): number {
   const E = BOOMILEVER_MATERIAL.youngsModulus / 1e6 // N/mm^2
-  const I = (2 * PLATE_HALF_WIDTH * PLATE_THICKNESS ** 3) / 12 // mm^4
-  return (TIP_LOAD_N * PLATE_LENGTH ** 3) / (3 * E * I)
+  const t3 = PLATE_THICKNESS ** 3
+  const iRoot = (2 * PLATE_HALF_WIDTH * t3) / 12 // mm^4
+  const iProngs = (2 * PRONG_WIDTH * t3) / 12
+  const L = PLATE_LENGTH, free = L - slotDepth(variant)
+  return (TIP_LOAD_N / (3 * E)) * ((L ** 3 - free ** 3) / iRoot + free ** 3 / iProngs)
+}
+
+/** Euler-Bernoulli bending stress (Pa) at the prong roots, where the moment on the thin
+ * section peaks. */
+export function beamTheoryProngRootStressPa(variant: BoomileverVariant): number {
+  const iProngs = (2 * PRONG_WIDTH * PLATE_THICKNESS ** 3) / 12
+  const M = TIP_LOAD_N * (PLATE_LENGTH - slotDepth(variant)) // N*mm
+  return ((M * PLATE_THICKNESS) / 2 / iProngs) * 1e6
+}
+
+/** Solid volume (mm^3): the full-width wall end plus the two prongs. */
+export function boomileverVolumeMm3(variant: BoomileverVariant): number {
+  const d = slotDepth(variant)
+  return PLATE_THICKNESS * (2 * PLATE_HALF_WIDTH * d + 2 * PRONG_WIDTH * (PLATE_LENGTH - d))
 }
 
 // ---------------------------------------------------------------------------

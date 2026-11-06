@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, ApiErrors } from '@/lib/auth';
 import { createProjectSchema, validationErrorResponse } from '@/schemas';
+import { ensureDemoProjectSeeded } from '@/lib/demo/seed';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, error } = await requireAuth();
     if (error) return error;
+
+    await ensureDemoProjectSeeded(user);
 
     const projects = await prisma.project.findMany({
       where: { userId: user.id },
