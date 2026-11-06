@@ -19,6 +19,8 @@ import {
 import { buildAnalysisRequestFromWorkflow } from '../../fea-solver/workflow-request'
 import { normalizeAnalysisResults } from '../../fea-solver/normalize-results'
 import { runAnalysis } from '../../fea-engine/analyze'
+import { buildBoomileverSnapshot } from '../boomilever'
+import { solveBoomilever, upgradeStaleBoomileverData } from '../boomilever-solve'
 import type { Material } from '../../../store/materialLibraryStore'
 
 // Each solve below takes a few seconds; leave headroom when suites run in parallel.
@@ -118,4 +120,18 @@ test('mesh tags the block cells inside the slot as their own part', () => {
     const inSlot = Math.abs(cx) < 8 && cy < slotDepth(3)
     expect(mesh.regions!.elementRegion[i]).toBe(inSlot ? 1 : 0)
   })
+})
+
+test('a stored project from an older boomilever seed is re-meshed and re-solved', () => {
+  const { meshData, analysisResults } = solveBoomilever(1, 'basswood-test')
+  const current = buildBoomileverSnapshot({ materialId: 'basswood-test', meshData, analysisResults })
+  expect(upgradeStaleBoomileverData({ workflow: current })).toBeNull()
+  expect(upgradeStaleBoomileverData({ workflow: { version: 1 } })).toBeNull()
+
+  const stale = { name: 'doc', workflow: { ...current, seed: 'boomilever-v2-wall_joint_1X', meshData: { ...meshData, nodeCount: 1 } } }
+  const upgraded = upgradeStaleBoomileverData(stale) as { name: string; workflow: typeof current }
+  expect(upgraded.name).toBe('doc')
+  expect(upgraded.workflow.seed).toBe(current.seed)
+  expect(upgraded.workflow.meshData!.nodeCount).toBe(meshData.nodeCount)
+  expect(upgraded.workflow.analysisResults!.fields).toBeTruthy()
 })

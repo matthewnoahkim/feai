@@ -16,22 +16,16 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { PrismaClient, Prisma } from '@prisma/client'
 import {
-  BOOMILEVER_BOUNDARY_CONDITIONS,
-  BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
   BOOMILEVER_PROJECT_NAME,
   boomileverProjectName,
   beamTheoryTipDeflectionMm,
   buildBoomileverDocument,
-  buildBoomileverMesh,
   buildBoomileverSnapshot,
   parseBinaryStl,
-  toAnalysisResultData,
   type BoomileverVariant,
 } from '../src/lib/fixtures/boomilever'
-import { buildAnalysisRequestFromWorkflow } from '../src/lib/fea-solver/workflow-request'
-import { normalizeAnalysisResults } from '../src/lib/fea-solver/normalize-results'
-import { runAnalysis } from '../src/lib/fea-engine/analyze'
+import { solveBoomilever } from '../src/lib/fixtures/boomilever-solve'
 import type { Material } from '../src/store/materialLibraryStore'
 
 const REPO_ROOT = resolve(__dirname, '../../..')
@@ -70,19 +64,9 @@ async function main() {
 
     for (const variant of variants) {
     // ---- mesh + solve, through the same request builder the results page uses ----
-    const meshData = buildBoomileverMesh(variant)
-    const built = buildAnalysisRequestFromWorkflow({
-      meshData,
-      boundaryConditions: BOOMILEVER_BOUNDARY_CONDITIONS,
-      loads: BOOMILEVER_LOADS,
-      materials: [materialForSolve],
-      defaultMaterialId: materialForSolve.id,
-    })
-    if (!built.ok) throw new Error(built.error)
-    console.log(`Solving wall joint ${variant}X + block ${variant}X: ${meshData.nodeCount} nodes, ${meshData.elementCount} tets...`)
-    const { results } = runAnalysis(built.request, { deadline: Date.now() + 120_000 })
-    const jobId = `boomilever-${variant}x-${new Date().toISOString().slice(0, 10)}`
-    const analysisResults = toAnalysisResultData(normalizeAnalysisResults({ job_id: jobId, ...results }))
+    console.log(`Solving wall joint ${variant}X + block ${variant}X...`)
+    const { meshData, analysisResults, results } = solveBoomilever(variant, materialForSolve.id)
+    console.log(`  mesh             ${meshData.nodeCount} nodes, ${meshData.elementCount} tets`)
 
     const tip = -analysisResults.displacements.min.z
     console.log(`  tip deflection   ${tip.toFixed(3)} mm  (Euler-Bernoulli ${beamTheoryTipDeflectionMm(variant).toFixed(3)} mm)`)

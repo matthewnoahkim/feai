@@ -375,7 +375,15 @@ export const useWorkflowStore = create<WorkflowState>()(
           ? (state.analysisResults?.jobId?.startsWith('boomilever-') && !state.analysisResults.fields ? 'legacy' : null)
           : state.hydratedSeed;
         const isOlderSeed = !!legacySeed && !!snapshot?.seed && legacySeed !== snapshot.seed;
-        if (state.projectId !== projectId || !(isEmpty || isOlderSeed) || snapshot?.version !== 1) return false;
+        // A boomilever mesh from an older seed (v2 meshed the open slot between the prongs
+        // as solid plate) is wrong geometry, so anything solved on it is too, even if it
+        // was re-run here. Same part, different mesh than the stored seed: replace it.
+        const localPart = state.meshData?.regions?.names?.[0];
+        const isStaleFixtureMesh = !!snapshot?.seed?.startsWith('boomilever-') && !!localPart
+          && localPart.startsWith('wall_joint_')
+          && localPart === snapshot.meshData?.regions?.names?.[0]
+          && state.meshData!.nodeCount !== snapshot.meshData?.nodeCount;
+        if (state.projectId !== projectId || !(isEmpty || isOlderSeed || isStaleFixtureMesh) || snapshot?.version !== 1) return false;
         set({
           stepStatus: { ...INITIAL_STEP_STATUS, ...snapshot.stepStatus },
           defaultMaterialId: snapshot.defaultMaterialId,
