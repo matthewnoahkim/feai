@@ -48,7 +48,9 @@ export function solveBoomilever(variant: BoomileverVariant, materialId: string, 
 export function upgradeStaleBoomileverData(data: unknown): Record<string, unknown> | null {
   if (!data || typeof data !== 'object') return null
   const workflow = (data as { workflow?: ProjectWorkflowSnapshot }).workflow
+  // The first seed had no seed id; it's recognizable by its "boomilever-" result id.
   const seed = workflow?.seed
+    ?? (workflow?.analysisResults?.jobId?.startsWith('boomilever-') ? 'boomilever-v1' : undefined)
   if (!workflow || !seed?.startsWith('boomilever-')) return null
   const partName = workflow.meshData?.regions?.names[0] ?? ''
   const variant = Number(/^wall_joint_([1-4])X$/.exec(partName)?.[1]) as BoomileverVariant

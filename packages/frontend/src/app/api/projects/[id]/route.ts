@@ -4,7 +4,6 @@ import { requireAuth, ApiErrors } from '@/lib/auth';
 import { updateProjectSchema, validationErrorResponse } from '@/schemas';
 import { Prisma } from '@prisma/client';
 import { upgradeStaleBoomileverData } from '@/lib/fixtures/boomilever-solve';
-import { BOOMILEVER_CREATED_AT } from '@/lib/fixtures/boomilever';
 
 // Upgrading a stale boomilever seed re-solves it here, which takes a few seconds.
 export const maxDuration = 60;
@@ -33,7 +32,8 @@ export async function GET(
     // A seeded boomilever project from an older seed (v2 meshed the open slot as solid
     // plate; v3 loaded it as a cantilever rather than bolted and pulled down the wall) is
     // re-meshed and re-solved once, and saved, so every browser picks up the current
-    // geometry, setup, and results. It keeps the seed's own dates, not today's.
+    // geometry, setup, and results. Re-solving isn't an edit, so the project keeps its
+    // created and modified dates.
     let upgradedData: Record<string, unknown> | null = null;
     try {
       upgradedData = upgradeStaleBoomileverData(project.data);
@@ -43,7 +43,7 @@ export async function GET(
     if (upgradedData) {
       const updated = await prisma.project.update({
         where: { id: projectId },
-        data: { data: upgradedData as Prisma.InputJsonValue, createdAt: BOOMILEVER_CREATED_AT, updatedAt: BOOMILEVER_CREATED_AT },
+        data: { data: upgradedData as Prisma.InputJsonValue, updatedAt: project.updatedAt },
       });
       return NextResponse.json(updated);
     }
