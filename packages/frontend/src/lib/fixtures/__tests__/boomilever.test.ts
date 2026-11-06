@@ -7,6 +7,7 @@
 import {
   BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
+  BOOMILEVER_SEED,
   TIP_LOAD_N,
   beamTheoryProngRootStressPa,
   beamTheoryProngTipDeflectionMm,
@@ -146,4 +147,18 @@ test('a stored project from an older boomilever seed is re-meshed and re-solved'
   expect(upgraded.workflow.seed).toBe(current.seed)
   expect(upgraded.workflow.meshData!.nodeCount).toBe(meshData.nodeCount)
   expect(upgraded.workflow.analysisResults!.fields).toBeTruthy()
+})
+
+test('the first seed (no seed id, no part names) upgrades using the variant in its result id', () => {
+  const first = {
+    workflow: {
+      version: 1,
+      meshData: { nodeCount: 7686 },
+      analysisResults: { jobId: 'boomilever-3x-2026-11-06' },
+      boundaryConditions: [{ name: 'Wall face (y = 0) bonded to wall' }],
+    },
+  }
+  const upgraded = upgradeStaleBoomileverData(first) as { workflow: { seed: string; meshData: { regions: { names: string[] } } } }
+  expect(upgraded.workflow.seed).toBe(`${BOOMILEVER_SEED}-wall_joint_3X`)
+  expect(upgraded.workflow.meshData.regions.names[0]).toBe('wall_joint_3X')
 })

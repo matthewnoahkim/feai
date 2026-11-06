@@ -53,7 +53,11 @@ export function upgradeStaleBoomileverData(data: unknown): Record<string, unknow
     ?? (workflow?.analysisResults?.jobId?.startsWith('boomilever-') ? 'boomilever-v1' : undefined)
   if (!workflow || !seed?.startsWith('boomilever-')) return null
   const partName = workflow.meshData?.regions?.names[0] ?? ''
-  const variant = Number(/^wall_joint_([1-4])X$/.exec(partName)?.[1]) as BoomileverVariant
+  // The first seed's mesh had no part names; its variant is in the result id instead.
+  const variant = Number(
+    /^wall_joint_([1-4])X$/.exec(partName)?.[1]
+      ?? /^boomilever-([1-4])x-/.exec(workflow.analysisResults?.jobId ?? '')?.[1],
+  ) as BoomileverVariant
   if (!variant) return null
   if (seed === `${BOOMILEVER_SEED}-${partName}`) return null
 
