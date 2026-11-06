@@ -5,12 +5,12 @@
  */
 
 import {
-  BOOMILEVER_BOUNDARY_CONDITIONS,
   BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
   TIP_LOAD_N,
-  beamTheoryProngRootStressPa,
-  beamTheoryTipDeflectionMm,
+  barTheoryProngStretchMm,
+  boomileverBoundaryConditions,
+  nominalProngStressPa,
   boomileverVolumeMm3,
   buildBoomileverMesh,
   slotDepth,
@@ -32,7 +32,7 @@ function solve(variant: BoomileverVariant) {
   const meshData = buildBoomileverMesh(variant)
   const built = buildAnalysisRequestFromWorkflow({
     meshData,
-    boundaryConditions: BOOMILEVER_BOUNDARY_CONDITIONS,
+    boundaryConditions: boomileverBoundaryConditions(variant),
     loads: BOOMILEVER_LOADS,
     materials: [material],
     defaultMaterialId: material.id,
@@ -58,23 +58,24 @@ test.each([1, 2, 3, 4] as BoomileverVariant[])('mesh for %iX is conforming and p
   expect(mesh.quality!.maxAspectRatio).toBeLessThan(15)
 })
 
-test('1X cantilever is within 20% of beam theory and balances the applied load', () => {
+test('1X bolted to the wall, prongs pulled down it: matches bar theory and balances', () => {
   const { results } = solve(1)
   const weightN = BOOMILEVER_MATERIAL.density * 9.81 * boomileverVolumeMm3(1) * 1e-9
 
-  // Linear tets are stiff in bending, and the fully fixed root also restrains the Poisson
-  // contraction that beam theory lets happen freely, so the 3D answer lands somewhat below
-  // Euler-Bernoulli. Self-weight adds a fraction of a percent.
-  const beam = beamTheoryTipDeflectionMm(1)
-  expect(-results.displacements.min.z).toBeGreaterThan(0.8 * beam)
-  expect(-results.displacements.min.z).toBeLessThan(1.0 * beam)
+  // The prongs stretch about P L / (E A); the solid end adds a little as it shears into
+  // the clamped patch under the block.
+  const bar = barTheoryProngStretchMm(1)
+  expect(results.displacements.max.y).toBeGreaterThan(1.0 * bar)
+  expect(results.displacements.max.y).toBeLessThan(1.5 * bar)
 
-  expect(results.reactions!.total_force[2]).toBeCloseTo(TIP_LOAD_N + weightN, 3)
+  // The wall holds the pull plus self-weight, both down the wall (+Y).
+  expect(results.reactions!.total_force[1]).toBeCloseTo(-(TIP_LOAD_N + weightN), 3)
+  expect(Math.abs(results.reactions!.total_force[2])).toBeLessThan(1e-6)
   expect(results.reactions!.equilibrium!.is_balanced).toBe(true)
 
-  // The thin prongs carry the moment past the solid wall end; the peak sits at their
-  // roots (a re-entrant corner), so it's at least the nominal beam value.
-  expect(results.stress.von_mises.max).toBeGreaterThan(0.8 * beamTheoryProngRootStressPa(1))
+  // Peak stress sits at the prong roots and the clamp edge, above the nominal P / A.
+  expect(results.stress.von_mises.max).toBeGreaterThan(nominalProngStressPa())
+  expect(results.safety_factors!.min).toBeGreaterThan(1)
 })
 
 test.each([1, 4] as BoomileverVariant[])('mesh for %iX leaves the slot between the prongs open', (v) => {
@@ -93,19 +94,20 @@ test('per-node fields map back to the right mesh nodes for the color plot', () =
   expect(f.node_ids).toHaveLength(meshData.nodeCount)
   const byId = new Map(meshData.nodes!.map((n) => [n.id, n]))
 
-  // Wall-face nodes are fixed (zero displacement: blue); the largest nodal displacement
-  // is at the free tip (red) and equals the reported maximum.
+  // Nodes on the bolted patch (back face under the block) are fixed (zero displacement:
+  // blue); the largest nodal displacement is at the pulled prong ends (red) and equals
+  // the reported maximum.
   let maxMag = 0, maxY = 0
   f.node_ids!.forEach((id, i) => {
     const node = byId.get(id)!
     const mag = Math.hypot(f.displacement[3 * i], f.displacement[3 * i + 1], f.displacement[3 * i + 2])
-    if (node.y === 0) expect(mag).toBe(0)
+    if (node.z === 0 && Math.abs(node.x) <= 8 && node.y <= slotDepth(2)) expect(mag).toBe(0)
     if (mag > maxMag) { maxMag = mag; maxY = node.y }
   })
   expect(maxY).toBe(120)
   expect(maxMag).toBeCloseTo(results.displacements.max.magnitude, 4)
 
-  // Nodal (averaged) stress is highest near the wall, where the bending moment peaks.
+  // Nodal (averaged) stress is highest near the bolted end: prong roots and clamp edge.
   const peak = f.von_mises.indexOf(Math.max(...f.von_mises))
   expect(byId.get(f.node_ids![peak])!.y).toBeLessThan(20)
 })
@@ -124,7 +126,7 @@ test('mesh tags the block cells inside the slot as their own part', () => {
 
 test('a stored project from an older boomilever seed is re-meshed and re-solved', () => {
   const { meshData, analysisResults } = solveBoomilever(1, 'basswood-test')
-  const current = buildBoomileverSnapshot({ materialId: 'basswood-test', meshData, analysisResults })
+  const current = buildBoomileverSnapshot({ variant: 1, materialId: 'basswood-test', meshData, analysisResults })
   expect(upgradeStaleBoomileverData({ workflow: current })).toBeNull()
   expect(upgradeStaleBoomileverData({ workflow: { version: 1 } })).toBeNull()
 

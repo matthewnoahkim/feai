@@ -19,7 +19,9 @@ import {
   BOOMILEVER_MATERIAL,
   BOOMILEVER_PROJECT_NAME,
   boomileverProjectName,
-  beamTheoryTipDeflectionMm,
+  BOOMILEVER_CREATED_AT,
+  barTheoryProngStretchMm,
+  nominalProngStressPa,
   buildBoomileverDocument,
   buildBoomileverSnapshot,
   parseBinaryStl,
@@ -68,9 +70,9 @@ async function main() {
     const { meshData, analysisResults, results } = solveBoomilever(variant, materialForSolve.id)
     console.log(`  mesh             ${meshData.nodeCount} nodes, ${meshData.elementCount} tets`)
 
-    const tip = -analysisResults.displacements.min.z
-    console.log(`  tip deflection   ${tip.toFixed(3)} mm  (Euler-Bernoulli ${beamTheoryTipDeflectionMm(variant).toFixed(3)} mm)`)
-    console.log(`  max von Mises    ${(analysisResults.stress.vonMises.max / 1e6).toFixed(2)} MPa`)
+    const stretch = analysisResults.displacements.max.y
+    console.log(`  prong-end stretch ${(stretch * 1000).toFixed(2)} um  (bar theory, prongs alone ${(barTheoryProngStretchMm(variant) * 1000).toFixed(2)} um)`)
+    console.log(`  max von Mises    ${(analysisResults.stress.vonMises.max / 1e6).toFixed(2)} MPa  (nominal P/A ${(nominalProngStressPa() / 1e6).toFixed(2)} MPa)`)
     console.log(`  min safety factor ${analysisResults.safetyFactors?.min.toFixed(2)} (vs ${BOOMILEVER_MATERIAL.yieldStrength! / 1e6} MPa)`)
     console.log(`  reaction force   [${analysisResults.reactions?.totalForce.map((f) => f.toFixed(4)).join(', ')}] N`)
     console.log(`  solve time       ${analysisResults.computationTime?.toFixed(2)} s, equilibrium error ${results.reactions?.equilibrium?.force_error_percent?.toExponential(1)}%`)
@@ -84,7 +86,7 @@ async function main() {
     })
     const data = {
       ...document,
-      workflow: buildBoomileverSnapshot({ materialId: materialForSolve.id, meshData, analysisResults }),
+      workflow: buildBoomileverSnapshot({ variant, materialId: materialForSolve.id, meshData, analysisResults }),
     }
     console.log(`  project data     ${(JSON.stringify(data).length / 1e6).toFixed(2)} MB`)
 
@@ -93,7 +95,7 @@ async function main() {
       continue
     }
 
-    const description = `Test simulation: wall joint ${variant}X + block ${variant}X (basswood), cantilevered from the wall with a 5 N tip load.`
+    const description = `Test simulation: wall joint ${variant}X + block ${variant}X (basswood), bolted flat to the wall with the prongs pulled 5 N down the wall.`
     const json = data as unknown as Prisma.InputJsonValue
     const name = boomileverProjectName(variant)
     // The first version of this script made a single project named just "boomilever" for
@@ -106,10 +108,10 @@ async function main() {
     const project = existing
       ? await prisma.project.update({
           where: { id: existing.id },
-          data: { name, description, data: json },
+          data: { name, description, data: json, createdAt: BOOMILEVER_CREATED_AT, updatedAt: BOOMILEVER_CREATED_AT },
         })
       : await prisma.project.create({
-          data: { name, description, userId: user.id, data: json },
+          data: { name, description, userId: user.id, data: json, createdAt: BOOMILEVER_CREATED_AT, updatedAt: BOOMILEVER_CREATED_AT },
         })
     console.log(`  ${existing ? 'Updated' : 'Created'} project "${project.name}" (${project.id}) for ${email}`)
     console.log(`  open: /project/${project.id}/results`)

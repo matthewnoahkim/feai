@@ -4,6 +4,7 @@ import { requireAuth, ApiErrors } from '@/lib/auth';
 import { updateProjectSchema, validationErrorResponse } from '@/schemas';
 import { Prisma } from '@prisma/client';
 import { upgradeStaleBoomileverData } from '@/lib/fixtures/boomilever-solve';
+import { BOOMILEVER_CREATED_AT } from '@/lib/fixtures/boomilever';
 
 // Upgrading a stale boomilever seed re-solves it here, which takes a few seconds.
 export const maxDuration = 60;
@@ -29,9 +30,10 @@ export async function GET(
       return ApiErrors.forbidden();
     }
 
-    // A seeded boomilever project from an older seed (e.g. v2, which meshed the open slot
-    // between the prongs as solid plate) is re-meshed and re-solved once, and saved, so
-    // every browser picks up the corrected geometry and results.
+    // A seeded boomilever project from an older seed (v2 meshed the open slot as solid
+    // plate; v3 loaded it as a cantilever rather than bolted and pulled down the wall) is
+    // re-meshed and re-solved once, and saved, so every browser picks up the current
+    // geometry, setup, and results. It keeps the seed's own dates, not today's.
     let upgradedData: Record<string, unknown> | null = null;
     try {
       upgradedData = upgradeStaleBoomileverData(project.data);
@@ -41,7 +43,7 @@ export async function GET(
     if (upgradedData) {
       const updated = await prisma.project.update({
         where: { id: projectId },
-        data: { data: upgradedData as Prisma.InputJsonValue },
+        data: { data: upgradedData as Prisma.InputJsonValue, createdAt: BOOMILEVER_CREATED_AT, updatedAt: BOOMILEVER_CREATED_AT },
       });
       return NextResponse.json(updated);
     }
@@ -96,6 +98,10 @@ export async function PATCH(
         ...(thumbnail !== undefined && { thumbnail }),
         ...(folderId !== undefined && { folderId }),
         ...(lastOpenedAt !== undefined && { lastOpenedAt }),
+        // Opening a project records lastOpenedAt; that alone isn't a modification, so it
+        // keeps the project's updated date (Prisma's @updatedAt would otherwise bump it).
+        ...(name === undefined && description === undefined && thumbnail === undefined && folderId === undefined
+          && { updatedAt: project.updatedAt }),
       },
       include: { folder: { select: { id: true, name: true } } },
     });

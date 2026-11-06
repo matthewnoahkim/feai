@@ -6,10 +6,11 @@
  */
 
 import {
-  BOOMILEVER_BOUNDARY_CONDITIONS,
+  BOOMILEVER_CREATED_AT,
   BOOMILEVER_LOADS,
   BOOMILEVER_MATERIAL,
   BOOMILEVER_SEED,
+  boomileverBoundaryConditions,
   buildBoomileverMesh,
   buildBoomileverSnapshot,
   toAnalysisResultData,
@@ -26,14 +27,14 @@ export function solveBoomilever(variant: BoomileverVariant, materialId: string, 
   const meshData = buildBoomileverMesh(variant)
   const built = buildAnalysisRequestFromWorkflow({
     meshData,
-    boundaryConditions: BOOMILEVER_BOUNDARY_CONDITIONS,
+    boundaryConditions: boomileverBoundaryConditions(variant),
     loads: BOOMILEVER_LOADS,
     materials: [material],
     defaultMaterialId: material.id,
   })
   if (!built.ok) throw new Error(built.error)
   const { results } = runAnalysis(built.request, { deadline: Date.now() + deadlineMs })
-  const jobId = `boomilever-${variant}x-${new Date().toISOString().slice(0, 10)}`
+  const jobId = `boomilever-${variant}x-${BOOMILEVER_CREATED_AT.toISOString().slice(0, 10)}`
   const analysisResults = toAnalysisResultData(normalizeAnalysisResults({ job_id: jobId, ...results }))
   return { meshData, analysisResults, results }
 }
@@ -56,6 +57,6 @@ export function upgradeStaleBoomileverData(data: unknown): Record<string, unknow
 
   const materialId = workflow.defaultMaterialId ?? 'basswood'
   const { meshData, analysisResults } = solveBoomilever(variant, materialId, 45_000)
-  const upgraded = buildBoomileverSnapshot({ materialId, meshData, analysisResults })
-  return { ...(data as Record<string, unknown>), workflow: { ...upgraded, schematic: workflow.schematic ?? upgraded.schematic } }
+  const upgraded = buildBoomileverSnapshot({ variant, materialId, meshData, analysisResults })
+  return { ...(data as Record<string, unknown>), workflow: upgraded }
 }

@@ -10,13 +10,16 @@
  * (16 x N*4.7625 x 3.175) sits where the files place it, over the middle of the solid wall
  * end; the mesh tags those cells as the block.
  *
- * Load case: the joint + block, bonded as one basswood body, cantilevered off the wall.
- * The whole wall face (y = 0) is fixed. A 5 N tip load acts in -Z on the free end face
- * (y = 120), and self-weight acts in -Z.
+ * Load case (how the joint is tested): the plate lies flat against the wall, held by the
+ * wall bolt through the solid end where the block sits, with the prongs hanging down the
+ * wall. The joint + block are bonded as one basswood body. The back face (z = 0) of the
+ * block's footprint is fixed, as if clamped to the wall by the bolt and washer. A 5 N
+ * pull acts on the prong ends (y = 120) along the prongs, +Y, which is down the wall;
+ * self-weight acts down the wall too.
  *
  * The solver handles a single isotropic material only. Basswood is orthotropic, so this
- * model uses its along-grain (L) properties, which is the direction that governs a
- * cantilever in bending. Values are from the USDA Wood Handbook (basswood, 12% MC).
+ * model uses its along-grain (L) properties, the direction that governs prongs pulled
+ * along their length. Values are from the USDA Wood Handbook (basswood, 12% MC).
  *
  * The mesh is a structured, conforming linear-tet mesh of the real joint + block solid.
  * Grid lines fall on every edge of the slot, so each part is meshed on its own footprint
@@ -42,8 +45,14 @@ export const BOOMILEVER_PROJECT_NAME = 'boomilever'
 /** v2: mesh elements tagged by part (joint vs. block) so the results view can outline
  * each part, plus per-node fields for the color plot.
  * v3: the slot between the prongs is left open, matching the real geometry (v2 meshed it
- * as solid plate). */
-export const BOOMILEVER_SEED = 'boomilever-v3'
+ * as solid plate).
+ * v4: tested the way the joint is loaded: block bolted flat to the wall, prongs pulled
+ * along their length (v3 was a cantilever off the end face with a sideways tip load). */
+export const BOOMILEVER_SEED = 'boomilever-v4'
+
+/** When the boomilever test projects were made: their created/updated dates, the solve
+ * date in their result ids, and their workflow timestamps. */
+export const BOOMILEVER_CREATED_AT = new Date('2025-11-05T17:00:00.000Z')
 
 export function boomileverProjectName(variant: BoomileverVariant): string {
   return `${BOOMILEVER_PROJECT_NAME} ${variant}X`
@@ -61,8 +70,10 @@ export const PLATE_LENGTH = 120
 export const PRONG_WIDTH = PLATE_HALF_WIDTH - SLOT_HALF_WIDTH
 
 // ---- load case ----
+/** Total pull on the prong ends, along the prongs. */
 export const TIP_LOAD_N = 5
-export const GRAVITY: [number, number, number] = [0, 0, -9.81]
+/** Down the wall: the prongs hang down from the bolt, along +Y. */
+export const GRAVITY: [number, number, number] = [0, 9.81, 0]
 
 /** Basswood (Tilia americana), along-grain, 12% moisture content. "Yield" is the
  * compressive strength parallel to grain, the first limit a bending member reaches. */
@@ -215,63 +226,63 @@ function edgeRatio(p: MeshNodeRecord[]): number {
 
 const EPS = 0.01 // mm, slack around the selection boxes
 
-export const BOOMILEVER_BOUNDARY_CONDITIONS: BoundaryConditionDef[] = [
-  {
-    id: 'bc-boomilever-wall',
-    type: 'fixed',
-    name: 'Wall face (y = 0) bonded to wall',
-    target: {
-      type: 'box',
-      min: [-PLATE_HALF_WIDTH - EPS, -EPS, -EPS],
-      max: [PLATE_HALF_WIDTH + EPS, EPS, PLATE_THICKNESS + EPS],
+/** The back face (z = 0) of the block's footprint, clamped flat to the wall by the bolt. */
+export function boomileverBoundaryConditions(variant: BoomileverVariant): BoundaryConditionDef[] {
+  return [
+    {
+      id: 'bc-boomilever-bolt',
+      type: 'fixed',
+      name: `Back face under block_${variant}X bolted to wall`,
+      target: {
+        type: 'box',
+        min: [-SLOT_HALF_WIDTH - EPS, -EPS, -EPS],
+        max: [SLOT_HALF_WIDTH + EPS, slotDepth(variant) + EPS, EPS],
+      },
+      enabled: true,
     },
-    enabled: true,
-  },
-]
+  ]
+}
 
 // The free end face is just the two prong ends; the slot is open there.
 const TIP_FACE_AREA_M2 = (2 * PRONG_WIDTH * PLATE_THICKNESS) * 1e-6
 
 export const BOOMILEVER_LOADS: LoadDef[] = [
   {
-    id: 'load-boomilever-tip',
+    id: 'load-boomilever-pull',
     type: 'surface_force',
-    name: `Tip load ${TIP_LOAD_N} N (-Z) on free end`,
+    name: `Prongs pulled ${TIP_LOAD_N} N down the wall (+Y, along prongs)`,
     target: {
       type: 'box',
       min: [-PLATE_HALF_WIDTH - EPS, PLATE_LENGTH - EPS, -EPS],
       max: [PLATE_HALF_WIDTH + EPS, PLATE_LENGTH + EPS, PLATE_THICKNESS + EPS],
     },
     // Uniform traction over the two 1.5875 x 3.175 mm prong end faces, totaling TIP_LOAD_N.
-    forcePerArea: [0, 0, -TIP_LOAD_N / TIP_FACE_AREA_M2],
+    forcePerArea: [0, TIP_LOAD_N / TIP_FACE_AREA_M2, 0],
     enabled: true,
   },
   {
     id: 'load-boomilever-gravity',
     type: 'gravity',
-    name: 'Self-weight',
+    name: 'Self-weight (down the wall)',
     acceleration: GRAVITY,
     enabled: true,
   },
 ]
 
-/** Euler-Bernoulli tip deflection (mm) for the tip load, as a sanity reference: a stepped
- * cantilever, full width for the solid wall end, the two prongs alone past it. */
-export function beamTheoryTipDeflectionMm(variant: BoomileverVariant): number {
-  const E = BOOMILEVER_MATERIAL.youngsModulus / 1e6 // N/mm^2
-  const t3 = PLATE_THICKNESS ** 3
-  const iRoot = (2 * PLATE_HALF_WIDTH * t3) / 12 // mm^4
-  const iProngs = (2 * PRONG_WIDTH * t3) / 12
-  const L = PLATE_LENGTH, free = L - slotDepth(variant)
-  return (TIP_LOAD_N / (3 * E)) * ((L ** 3 - free ** 3) / iRoot + free ** 3 / iProngs)
+/** Cross-section (mm^2) of the two prongs together. */
+export const PRONG_AREA_MM2 = 2 * PRONG_WIDTH * PLATE_THICKNESS
+
+/** Nominal tension stress (Pa) in the prongs, P / A, as a sanity reference. */
+export function nominalProngStressPa(): number {
+  return (TIP_LOAD_N / PRONG_AREA_MM2) * 1e6
 }
 
-/** Euler-Bernoulli bending stress (Pa) at the prong roots, where the moment on the thin
- * section peaks. */
-export function beamTheoryProngRootStressPa(variant: BoomileverVariant): number {
-  const iProngs = (2 * PRONG_WIDTH * PLATE_THICKNESS ** 3) / 12
-  const M = TIP_LOAD_N * (PLATE_LENGTH - slotDepth(variant)) // N*mm
-  return ((M * PLATE_THICKNESS) / 2 / iProngs) * 1e6
+/** Bar-theory stretch (mm) of the prongs alone, from their roots (y = slot depth) to the
+ * pulled ends: P L / (E A). The solid end adds a little more, as it shears into the
+ * clamped patch. */
+export function barTheoryProngStretchMm(variant: BoomileverVariant): number {
+  const E = BOOMILEVER_MATERIAL.youngsModulus / 1e6 // N/mm^2
+  return (TIP_LOAD_N * (PLATE_LENGTH - slotDepth(variant))) / (E * PRONG_AREA_MM2)
 }
 
 /** Solid volume (mm^3): the full-width wall end plus the two prongs. */
@@ -313,7 +324,7 @@ const STEP_NAMES: Record<WorkflowStep, string> = {
   'engineering-data': 'Engineering Data', geometry: 'Geometry', mesh: 'Mesh', setup: 'Setup', results: 'Results',
 }
 
-export function completedSchematic(now = Date.now()): { nodes: SchematicNode[]; connections: Connection[] } {
+export function completedSchematic(now = BOOMILEVER_CREATED_AT.getTime()): { nodes: SchematicNode[]; connections: Connection[] } {
   const nodes: SchematicNode[] = STEPS.map((type, i) => ({
     id: `node-boomilever-${type}`,
     type,
@@ -333,6 +344,7 @@ export function completedSchematic(now = Date.now()): { nodes: SchematicNode[]; 
 
 export function buildBoomileverSnapshot(input: {
   materialId: string
+  variant: BoomileverVariant
   meshData: MeshData
   analysisResults: AnalysisResultData
 }): ProjectWorkflowSnapshot {
@@ -343,7 +355,7 @@ export function buildBoomileverSnapshot(input: {
     defaultMaterialId: input.materialId,
     meshSettings: { globalSize: DEFAULT_MESH.lengthSize, minSize: PLATE_THICKNESS / DEFAULT_MESH.thicknessLayers, maxSize: DEFAULT_MESH.widthSize, elementType: 'C3D4', growthRate: 1, curvatureSensitivity: 0.5 },
     meshData: input.meshData,
-    boundaryConditions: BOOMILEVER_BOUNDARY_CONDITIONS,
+    boundaryConditions: boomileverBoundaryConditions(input.variant),
     loads: BOOMILEVER_LOADS,
     analysisResults: input.analysisResults,
     schematic: completedSchematic(),
