@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -32,16 +32,28 @@ const FIELD_INFO: Record<ContourField, { label: string; unit: string; scale: num
   displacement: { label: 'Displacement', unit: 'mm', scale: 1 },
 };
 
-interface Surface {
+interface SurfacePart {
+  name: string;
   /** Node index (into the field arrays) of each surface triangle corner, 3 per triangle. */
   corners: Int32Array;
+}
+
+interface Surface {
+  parts: SurfacePart[];
   /** Rest position (mm) of every field node, xyz interleaved. */
   rest: Float32Array;
   center: THREE.Vector3;
   radius: number;
 }
 
-/** Outer surface of a linear-tet mesh: the faces only one tet uses, wound outward. */
+/**
+ * Boundary surface of each part of a linear-tet mesh: the faces only one tet of that part
+ * uses, wound outward. Parts come from meshData.regions. A mesh of bonded parts (the
+ * boomilever block glued into its slot) is one solid, so extracting a single outer
+ * surface would hide every face where the parts meet. Done per part, each part keeps its
+ * own faces (the slot walls, the block's sides), and either part can be hidden to show
+ * the other.
+ */
 function extractSurface(meshData: MeshData, fields: NonNullable<AnalysisResultData['fields']>): Surface | null {
   const nodes = meshData.nodes;
   const elements = meshData.elements;
@@ -62,37 +74,46 @@ function extractSurface(meshData: MeshData, fields: NonNullable<AnalysisResultDa
     rest[3 * i] = n.x; rest[3 * i + 1] = n.y; rest[3 * i + 2] = n.z;
   }
 
-  const faces = new Map<string, [number, number, number, number] | null>();
+  const regions = meshData.regions;
+  const useRegions = !!regions && regions.elementRegion.length === elements.length && regions.names.length > 0;
+  const names = useRegions ? regions!.names : ['Model'];
+  const faces = names.map(() => new Map<string, [number, number, number, number] | null>());
   const combos = [[0, 1, 2, 3], [0, 1, 3, 2], [0, 2, 3, 1], [1, 2, 3, 0]];
-  for (const el of elements) {
-    if (el.nodeIds.length < 4) continue;
+  elements.forEach((el, e) => {
+    if (el.nodeIds.length < 4) return;
     const t = el.nodeIds.slice(0, 4).map((id) => indexOf.get(id));
-    if (t.some((i) => i === undefined)) return null;
+    if (t.some((i) => i === undefined)) return;
+    const part = faces[useRegions ? regions!.elementRegion[e] : 0];
+    if (!part) return;
     for (const [a, b, c, opp] of combos) {
       const tri = [t[a]!, t[b]!, t[c]!];
       const key = [...tri].sort((x, y) => x - y).join(',');
-      if (faces.has(key)) faces.set(key, null); // shared by two tets: interior
-      else faces.set(key, [tri[0], tri[1], tri[2], t[opp]!]);
+      if (part.has(key)) part.set(key, null); // shared by two tets of this part: interior
+      else part.set(key, [tri[0], tri[1], tri[2], t[opp]!]);
     }
-  }
+  });
 
-  const corners: number[] = [];
   const p = (i: number) => new THREE.Vector3(rest[3 * i], rest[3 * i + 1], rest[3 * i + 2]);
-  for (const f of faces.values()) {
-    if (!f) continue;
-    const [a, b, c, opp] = f;
-    const pa = p(a);
-    const normal = new THREE.Vector3().crossVectors(p(b).sub(pa), p(c).sub(pa));
-    // Outward = pointing away from the tet's fourth node.
-    if (normal.dot(p(opp).sub(pa)) > 0) corners.push(a, c, b);
-    else corners.push(a, b, c);
-  }
-  if (corners.length === 0) return null;
+  const parts: SurfacePart[] = [];
+  faces.forEach((partFaces, r) => {
+    const corners: number[] = [];
+    for (const f of partFaces.values()) {
+      if (!f) continue;
+      const [a, b, c, opp] = f;
+      const pa = p(a);
+      const normal = new THREE.Vector3().crossVectors(p(b).sub(pa), p(c).sub(pa));
+      // Outward = pointing away from the tet's fourth node.
+      if (normal.dot(p(opp).sub(pa)) > 0) corners.push(a, c, b);
+      else corners.push(a, b, c);
+    }
+    if (corners.length) parts.push({ name: names[r], corners: Int32Array.from(corners) });
+  });
+  if (parts.length === 0) return null;
 
   const box = new THREE.Box3();
   for (let i = 0; i < count; i++) box.expandByPoint(p(i));
   const sphere = box.getBoundingSphere(new THREE.Sphere());
-  return { corners: Int32Array.from(corners), rest, center: sphere.center, radius: sphere.radius || 1 };
+  return { parts, rest, center: sphere.center, radius: sphere.radius || 1 };
 }
 
 function nodeValues(field: ContourField, fields: NonNullable<AnalysisResultData['fields']>): Float64Array {
@@ -143,31 +164,45 @@ export function ResultsContourView({
   const exaggeration = surface && maxDisp > 0 ? Math.max(1, Math.round((0.1 * 2 * surface.radius) / maxDisp)) : 1;
   const deformScale = deform === 'undeformed' ? 0 : deform === 'true' ? 1 : exaggeration;
 
-  const geometry = useMemo(() => {
-    if (!surface) return null;
-    const { corners, rest } = surface;
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
+  const partGeometries = useMemo(() => {
+    if (!surface) return [];
+    const { rest } = surface;
     const d = fields.displacement;
-    const positions = new Float32Array(corners.length * 3);
-    const colors = new Float32Array(corners.length * 3);
     const span = max - min;
     const c = new THREE.Color();
-    for (let k = 0; k < corners.length; k++) {
-      const i = corners[k];
-      for (let a = 0; a < 3; a++) positions[3 * k + a] = rest[3 * i + a] + deformScale * d[3 * i + a];
-      const [r, g, b] = interpolateColor(STOPS, span > 0 ? (values[i] - min) / span : 0);
-      c.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
-      colors[3 * k] = c.r; colors[3 * k + 1] = c.g; colors[3 * k + 2] = c.b;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
-    return geo;
+    return surface.parts.map(({ name, corners }) => {
+      const positions = new Float32Array(corners.length * 3);
+      const colors = new Float32Array(corners.length * 3);
+      for (let k = 0; k < corners.length; k++) {
+        const i = corners[k];
+        for (let a = 0; a < 3; a++) positions[3 * k + a] = rest[3 * i + a] + deformScale * d[3 * i + a];
+        const [r, g, b] = interpolateColor(STOPS, span > 0 ? (values[i] - min) / span : 0);
+        c.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+        colors[3 * k] = c.r; colors[3 * k + 1] = c.g; colors[3 * k + 2] = c.b;
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
+      // Feature edges of this part alone, so the outline of every part (the slot, the
+      // block) shows even where it sits flush with another part.
+      return { name, geometry, edges: new THREE.EdgesGeometry(geometry, 30) };
+    });
   }, [surface, fields, values, min, max, deformScale]);
 
-  const edges = useMemo(() => (geometry ? new THREE.EdgesGeometry(geometry, 30) : null), [geometry]);
+  useEffect(() => () => {
+    for (const g of partGeometries) { g.geometry.dispose(); g.edges.dispose(); }
+  }, [partGeometries]);
 
-  if (!surface || !geometry) {
+  const togglePart = (name: string) => setHidden((prev) => {
+    const next = new Set(prev);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    return next;
+  });
+
+  if (!surface || partGeometries.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-cad-text-dim font-sans">
         These results don&apos;t include per-node values. Run the analysis again to see the color plot.
@@ -193,14 +228,22 @@ export function ResultsContourView({
         <ambientLight intensity={0.9} />
         <directionalLight position={[radius, -radius, 2 * radius]} intensity={0.9} />
         <directionalLight position={[-radius, radius, -radius]} intensity={0.35} />
-        <mesh geometry={geometry}>
-          <meshLambertMaterial vertexColors side={THREE.DoubleSide} />
-        </mesh>
-        {edges && (
-          <lineSegments geometry={edges}>
-            <lineBasicMaterial color="#1f2937" transparent opacity={0.35} />
-          </lineSegments>
-        )}
+        {partGeometries.filter((g) => !hidden.has(g.name)).map((g) => (
+          <group key={g.name}>
+            <mesh geometry={g.geometry}>
+              <meshLambertMaterial
+                vertexColors
+                side={THREE.DoubleSide}
+                polygonOffset
+                polygonOffsetFactor={1}
+                polygonOffsetUnits={1}
+              />
+            </mesh>
+            <lineSegments geometry={g.edges}>
+              <lineBasicMaterial color="#111827" transparent opacity={0.7} />
+            </lineSegments>
+          </group>
+        ))}
         <OrbitControls target={center} makeDefault />
       </Canvas>
 
@@ -227,6 +270,17 @@ export function ResultsContourView({
           <option value="true">Deformed (true scale)</option>
           <option value="exaggerated">Deformed (x{exaggeration})</option>
         </select>
+        {partGeometries.length > 1 && (
+          <div className="bg-white/90 border border-cad-border text-xs font-sans px-2 py-1.5 space-y-1">
+            <div className="text-[10px] text-cad-text-dim">Parts</div>
+            {partGeometries.map((g) => (
+              <label key={g.name} className="flex items-center gap-1.5 text-cad-text cursor-pointer">
+                <input type="checkbox" checked={!hidden.has(g.name)} onChange={() => togglePart(g.name)} />
+                {g.name}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Color key */}

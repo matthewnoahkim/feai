@@ -96,6 +96,10 @@ export interface MeshData {
   };
   nodes?: MeshNodeRecord[];
   elements?: MeshElementRecord[];
+  /** Which part each element belongs to (elementRegion[i] indexes names, parallel to
+   * elements), for meshes of several bonded parts. Lets the results view draw each part's
+   * own surface and outline instead of one fused solid. */
+  regions?: { names: string[]; elementRegion: number[] };
   boundingBox?: MeshBoundingBox;
 }
 
@@ -205,6 +209,10 @@ interface WorkflowState {
    * `projectId`, but only into an empty workflow, so it never overwrites work done in
    * this browser. Returns whether it applied. */
   hydrateFromSnapshot: (projectId: string, snapshot: ProjectWorkflowSnapshot) => boolean;
+  /** Seed id of the stored workflow currently loaded, while it's still untouched; any
+   * edit to the mesh, setup, or results clears it. Lets a re-seeded project replace an
+   * older, unmodified seed in this browser without ever overwriting real work. */
+  hydratedSeed: string | null;
 
   // Reset
   resetWorkflow: () => void;
@@ -251,6 +259,7 @@ export const useWorkflowStore = create<WorkflowState>()(
       isRunning: false,
       runProgress: 0,
       runError: null,
+      hydratedSeed: null,
 
       // Actions
       setProject: (projectId) => {
@@ -268,6 +277,7 @@ export const useWorkflowStore = create<WorkflowState>()(
             loads: [],
             analysisResults: null,
             runError: null,
+            hydratedSeed: null,
           });
         }
       },
@@ -289,7 +299,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         meshSettings: { ...state.meshSettings, ...settings },
       })),
       
-      setMeshData: (data) => set({ meshData: data }),
+      setMeshData: (data) => set({ meshData: data, hydratedSeed: null }),
       setMeshing: (isMeshing) => set({ isMeshing }),
       setMeshError: (error) => set({ meshError: error }),
 
@@ -298,20 +308,24 @@ export const useWorkflowStore = create<WorkflowState>()(
         const id = `bc-${Date.now()}-${Math.random().toString(36).substring(7)}`;
         set((state) => ({
           boundaryConditions: [...state.boundaryConditions, { ...bc, id, enabled: true }],
+          hydratedSeed: null,
         }));
       },
       
       updateBoundaryCondition: (id, updates) => set((state) => ({
+        hydratedSeed: null,
         boundaryConditions: state.boundaryConditions.map((bc) =>
           bc.id === id ? { ...bc, ...updates } : bc
         ),
       })),
       
       removeBoundaryCondition: (id) => set((state) => ({
+        hydratedSeed: null,
         boundaryConditions: state.boundaryConditions.filter((bc) => bc.id !== id),
       })),
       
       toggleBoundaryCondition: (id) => set((state) => ({
+        hydratedSeed: null,
         boundaryConditions: state.boundaryConditions.map((bc) =>
           bc.id === id ? { ...bc, enabled: !bc.enabled } : bc
         ),
@@ -321,27 +335,31 @@ export const useWorkflowStore = create<WorkflowState>()(
         const id = `load-${Date.now()}-${Math.random().toString(36).substring(7)}`;
         set((state) => ({
           loads: [...state.loads, { ...load, id, enabled: true }],
+          hydratedSeed: null,
         }));
       },
       
       updateLoad: (id, updates) => set((state) => ({
+        hydratedSeed: null,
         loads: state.loads.map((load) =>
           load.id === id ? { ...load, ...updates } : load
         ),
       })),
       
       removeLoad: (id) => set((state) => ({
+        hydratedSeed: null,
         loads: state.loads.filter((load) => load.id !== id),
       })),
       
       toggleLoad: (id) => set((state) => ({
+        hydratedSeed: null,
         loads: state.loads.map((load) =>
           load.id === id ? { ...load, enabled: !load.enabled } : load
         ),
       })),
 
       // Results actions
-      setAnalysisResults: (results) => set({ analysisResults: results }),
+      setAnalysisResults: (results) => set({ analysisResults: results, hydratedSeed: null }),
       setRunning: (isRunning) => set({ isRunning }),
       setRunProgress: (progress) => set({ runProgress: progress }),
       setRunError: (error) => set({ runError: error }),
@@ -350,7 +368,14 @@ export const useWorkflowStore = create<WorkflowState>()(
         const state = get();
         const isEmpty = !state.meshData && !state.analysisResults
           && state.boundaryConditions.length === 0 && state.loads.length === 0;
-        if (state.projectId !== projectId || !isEmpty || snapshot?.version !== 1) return false;
+        // Browsers that loaded the first boomilever seed (before seeds were versioned) have
+        // no hydratedSeed; that seed is recognizable by its "boomilever-" job id and its
+        // missing per-node fields. Real runs get random job ids, so they never match.
+        const legacySeed = state.hydratedSeed === undefined || state.hydratedSeed === null
+          ? (state.analysisResults?.jobId?.startsWith('boomilever-') && !state.analysisResults.fields ? 'legacy' : null)
+          : state.hydratedSeed;
+        const isOlderSeed = !!legacySeed && !!snapshot?.seed && legacySeed !== snapshot.seed;
+        if (state.projectId !== projectId || !(isEmpty || isOlderSeed) || snapshot?.version !== 1) return false;
         set({
           stepStatus: { ...INITIAL_STEP_STATUS, ...snapshot.stepStatus },
           defaultMaterialId: snapshot.defaultMaterialId,
@@ -362,6 +387,7 @@ export const useWorkflowStore = create<WorkflowState>()(
           analysisResults: snapshot.analysisResults,
           meshError: null,
           runError: null,
+          hydratedSeed: snapshot.seed ?? null,
         });
         return true;
       },
@@ -379,6 +405,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         isRunning: false,
         runProgress: 0,
         runError: null,
+        hydratedSeed: null,
       }),
     }),
     {
@@ -393,6 +420,7 @@ export const useWorkflowStore = create<WorkflowState>()(
         boundaryConditions: state.boundaryConditions,
         loads: state.loads,
         analysisResults: state.analysisResults,
+        hydratedSeed: state.hydratedSeed,
       }),
     }
   )

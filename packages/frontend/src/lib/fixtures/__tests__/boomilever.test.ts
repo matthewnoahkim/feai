@@ -19,6 +19,9 @@ import { normalizeAnalysisResults } from '../../fea-solver/normalize-results'
 import { runAnalysis } from '../../fea-engine/analyze'
 import type { Material } from '../../../store/materialLibraryStore'
 
+// Each solve below takes a few seconds; leave headroom when suites run in parallel.
+jest.setTimeout(30_000)
+
 const material: Material = { ...BOOMILEVER_MATERIAL, id: 'basswood-test', isPreset: false, presetKey: null }
 
 function solve(variant: BoomileverVariant) {
@@ -92,4 +95,16 @@ test('per-node fields map back to the right mesh nodes for the color plot', () =
   // Nodal (averaged) stress is highest near the wall, where the bending moment peaks.
   const peak = f.von_mises.indexOf(Math.max(...f.von_mises))
   expect(byId.get(f.node_ids![peak])!.y).toBeLessThan(20)
+})
+
+test('mesh tags the block cells inside the slot as their own part', () => {
+  const mesh = buildBoomileverMesh(3)
+  const byId = new Map(mesh.nodes!.map((n) => [n.id, n]))
+  expect(mesh.regions!.names).toEqual(['wall_joint_3X', 'block_3X'])
+  mesh.elements!.forEach((e, i) => {
+    const c = e.nodeIds.map((id) => byId.get(id)!)
+    const cx = c.reduce((s, p) => s + p.x, 0) / 4, cy = c.reduce((s, p) => s + p.y, 0) / 4
+    const inSlot = Math.abs(cx) < 8 && cy < slotDepth(3)
+    expect(mesh.regions!.elementRegion[i]).toBe(inSlot ? 1 : 0)
+  })
 })

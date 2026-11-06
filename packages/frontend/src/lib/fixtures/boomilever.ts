@@ -37,6 +37,10 @@ export { toAnalysisResultData } from '../fea-solver/workflow-results'
 
 export const BOOMILEVER_PROJECT_NAME = 'boomilever'
 
+/** v2: mesh elements tagged by part (joint vs. block) so the results view can outline
+ * each part, plus per-node fields for the color plot. */
+export const BOOMILEVER_SEED = 'boomilever-v2'
+
 export function boomileverProjectName(variant: BoomileverVariant): string {
   return `${BOOMILEVER_PROJECT_NAME} ${variant}X`
 }
@@ -135,10 +139,14 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
 
   const pos = (id: number) => nodes[id - 1]
   const elements: MeshElementRecord[] = []
+  const elementRegion: number[] = []
   const ratios: number[] = []
   for (let k = 0; k < zs.length - 1; k++)
     for (let j = 0; j < ny - 1; j++)
       for (let i = 0; i < nx - 1; i++) {
+        // Region 1 (the block) is the cells inside the slot; everything else is the joint.
+        const cx = (xs[i] + xs[i + 1]) / 2, cy = (ys[j] + ys[j + 1]) / 2
+        const region = Math.abs(cx) < SLOT_HALF_WIDTH && cy < depth ? 1 : 0
         const corner = [0, 1, 2, 3, 4, 5, 6, 7].map((c) =>
           nodeId(i + (c & 1), j + ((c >> 1) & 1), k + ((c >> 2) & 1)))
         for (const t of KUHN_TETS) {
@@ -151,6 +159,7 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
           const det = a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0]) + a[2] * (b[0] * c[1] - b[1] * c[0])
           if (det < 0) ids = [ids[0], ids[2], ids[1], ids[3]]
           elements.push({ id: elements.length + 1, type: 'C3D4', nodeIds: ids })
+          elementRegion.push(region)
           ratios.push(edgeRatio(ids.map(pos)))
         }
       }
@@ -167,6 +176,7 @@ export function buildBoomileverMesh(variant: BoomileverVariant, opts: Boomilever
     },
     nodes,
     elements,
+    regions: { names: [`wall_joint_${variant}X`, `block_${variant}X`], elementRegion },
     boundingBox: {
       min: { x: -PLATE_HALF_WIDTH, y: 0, z: 0 },
       max: { x: PLATE_HALF_WIDTH, y: PLATE_LENGTH, z: PLATE_THICKNESS },
@@ -244,6 +254,9 @@ export function beamTheoryTipDeflectionMm(): number {
  * workflow and schematic stores the first time the project is opened in a browser. */
 export interface ProjectWorkflowSnapshot {
   version: 1
+  /** Identifies this seed; bump BOOMILEVER_SEED when the stored simulation changes so
+   * browsers holding an older, untouched copy pick up the new one. */
+  seed?: string
   stepStatus: Record<WorkflowStep, 'pending' | 'in-progress' | 'complete'>
   defaultMaterialId: string | null
   meshSettings: {
@@ -291,6 +304,7 @@ export function buildBoomileverSnapshot(input: {
 }): ProjectWorkflowSnapshot {
   return {
     version: 1,
+    seed: `${BOOMILEVER_SEED}-${input.meshData.regions?.names[0] ?? ''}`,
     stepStatus: Object.fromEntries(STEPS.map((s) => [s, 'complete'])) as ProjectWorkflowSnapshot['stepStatus'],
     defaultMaterialId: input.materialId,
     meshSettings: { globalSize: DEFAULT_MESH.lengthSize, minSize: PLATE_THICKNESS / DEFAULT_MESH.thicknessLayers, maxSize: DEFAULT_MESH.widthSize, elementType: 'C3D4', growthRate: 1, curvatureSensitivity: 0.5 },
